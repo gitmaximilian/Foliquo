@@ -35,6 +35,9 @@ jobs:
       - name: Install LibreOffice on macOS
         if: runner.os == 'macOS'
         run: brew install --cask libreoffice
+      - name: Install LibreOffice on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -o Acquire::Retries=2 -o Acquire::http::Timeout=30 && sudo apt-get install -y --no-install-recommends libreoffice-writer
       - run: npm ci --ignore-scripts
       - run: npm test
       - run: node --check desktop/main.mjs && node --check scripts/package-desktop.mjs
