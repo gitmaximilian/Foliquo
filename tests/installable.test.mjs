@@ -26,7 +26,7 @@ test('macOS and Linux one-click launcher entry points exist in the release',asyn
   const launcher=await readFile(new URL('../scripts/launch-desktop.mjs',import.meta.url),'utf8');
   const installer=await readFile(new URL('../scripts/install-desktop.mjs',import.meta.url),'utf8');
   const command=await stat(new URL('../Install-Desktop.command',import.meta.url));
-  assert.match(launcher,/detached:true/);assert.match(launcher,/127\.0\.0\.1/);assert.match(installer,/process\.platform==='darwin'/);assert.match(installer,/process\.platform==='linux'/);assert.ok(command.mode&0o111);
+  assert.match(launcher,/detached:true/);assert.match(launcher,/127\.0\.0\.1/);assert.match(installer,/process\.platform==='darwin'/);assert.match(installer,/process\.platform==='linux'/);if(process.platform!=='win32')assert.ok(command.mode&0o111);
 });
 
 test('Desktop packaging builds private local windows for Windows, macOS and Linux',async()=>{
