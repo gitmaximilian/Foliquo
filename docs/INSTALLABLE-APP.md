@@ -15,17 +15,16 @@ Der Nutzer soll auf GitHub die zum Computer passende Installationsdatei laden, T
 
 Die macOS-App ist nicht mit einer Apple Developer ID signiert oder notarisiert. Windows- und macOS-Systeme können deshalb eine Herausgeber-/Sicherheitsmeldung zeigen. Signierung verlangt Herausgeberkonten und Zertifikate; diese sind nicht vorhanden.
 
-## Noch offen
+## Status
 
-1. GitHub-Remote und Release-Tag einrichten, damit die vorbereitete Action die Pakete tatsächlich baut und hochlädt.
-2. Installer auf Windows, macOS ARM64, macOS Intel und Linux grafisch installieren und öffnen.
-3. Updates und private Datenmigration auf allen Plattformen verifizieren.
-4. Signieren/notarisieren, falls die Herausgeber-/Sicherheitsmeldungen beim Installieren vermieden werden sollen.
+Das neue öffentliche Repository ist [gitmaximilian/TranslateOCR](https://github.com/gitmaximilian/TranslateOCR). Die MIT-Lizenz und ein bereinigter Startverlauf sind enthalten; persönliche lokale Daten und die frühere Sites-Projekt-ID wurden nicht übertragen. Der automatisierte 0.8.3-Plattformbuild läuft.
+
+Noch ausstehend sind die tatsächlichen grafischen Installationstests auf Windows, macOS Intel/ARM und Linux sowie Updates und Datenmigration auf den Zielrechnern. macOS und Windows bleiben ohne Herausgeberzertifikate unsigniert und können beim Start Sicherheitsmeldungen anzeigen.
 
 ## Nicht im Ziel
 
 TranslateOCR bleibt eine lokale Einzelplatz-Desktop-Anwendung für Windows, macOS und Linux. Es wird kein öffentlicher Übersetzungsserver eingerichtet. Installer-Updates werden zunächst manuell vom GitHub-Release heruntergeladen; ein automatischer In-App-Updater ist noch nicht enthalten.
 
-## GitHub-Veröffentlichung
+## Releases herunterladen
 
-Vor einem öffentlichen Repository müssen Projektlizenz, Drittanbieter-Lizenzhinweise sowie persönliche Beispieldaten geprüft werden. `.gitignore` schließt `.local/`, `outputs/`, `node_modules/`, Buildressourcen und Logs aus. Die Windows-ZIP ist eine Quell-/Übergabeversion und kein fertiger Desktop-Installer.
+Installer werden in den [GitHub-Releases](https://github.com/gitmaximilian/TranslateOCR/releases/latest) veröffentlicht, sobald alle Plattformjobs für den Versions-Tag erfolgreich sind. Die Windows-ZIP ist nur eine Quell-/Übergabeversion und kein fertiger Desktop-Installer.

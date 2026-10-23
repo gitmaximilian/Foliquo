@@ -2,9 +2,15 @@
 
 Lokales Übersetzungsstudio für Bilder, PDFs und Word-Dokumente. Mehrere Dateien bilden einen Auftrag, beispielsweise Vorder- und Rückseite einer Urkunde. Die Anwendung unterstützt die fachliche Prüfung und anschließende Beglaubigung durch einen befugten Übersetzer.
 
-Stand: **0.8.0**, privates Entwicklungsprojekt. Öffentliche Veröffentlichung und Lizenzprüfung sind noch offen. Die interaktive Demo verwendet ausschließlich fiktive Beispieldaten.
+Stand: **0.8.3**. TranslateOCR ist Open Source unter MIT-Lizenz; die Demo verwendet ausschließlich fiktive Beispieldaten.
 
 ![TranslateOCR geführte Demo](docs/demo-preview.jpg)
+
+## Download für Windows, macOS und Linux
+
+Öffne die [aktuellen GitHub-Releases](https://github.com/gitmaximilian/TranslateOCR/releases/latest) und lade den Installer für dein Betriebssystem: Windows `.exe`, macOS `.dmg` oder Linux `.deb`/`.rpm`. Installieren und TranslateOCR über das App-Symbol starten. Dafür braucht man weder Node.js noch Terminal oder Browser.
+
+macOS und Windows können bei unsignierten Apps eine Sicherheitsmeldung anzeigen. Siehe [Desktop-Installer und Status](docs/INSTALLABLE-APP.md).
 
 ## Entwicklung starten
 
@@ -17,7 +23,7 @@ npm start
 
 Für die Entwicklung im nativen Desktopfenster: `npm run desktop:dev`. Den Paketbau pro Betriebssystem startet `npm run desktop:build`; er erzeugt einen Installer für das aktuelle Betriebssystem. Diese Befehle sind nur für Entwickler. Die bisherigen CMD- und macOS-Skripte bleiben als lokaler Entwicklungs-/Übergangsweg erhalten.
 
-Der GitHub-Release-Build für Windows, macOS ARM64/Intel und Linux ist vorbereitet. Ein Release ist erst verfügbar, wenn ein GitHub-Remote eingerichtet und ein Versionstag veröffentlicht wurde. Mobile Nutzung und öffentliches Hosting sind nicht Teil des aktuellen Ziels. Siehe [Desktop-Installer](docs/INSTALLABLE-APP.md).
+Die öffentlichen Installer werden automatisiert für Windows, macOS ARM64/Intel und Linux gebaut. Mobile Nutzung und öffentliches Hosting sind nicht Teil des aktuellen Ziels. Siehe [Desktop-Installer](docs/INSTALLABLE-APP.md).
 
 ChatGPT lässt sich persönlich über den Browser autorisieren. Alternativ kannst du API-Schlüssel für OpenAI, Claude oder DeepSeek lokal hinterlegen. API-Nutzung kann beim jeweiligen Anbieter separat verrechnet werden. Details zu Zugriff und Datenschutz: [Modellanbieter](docs/PROVIDERS.md). „Demo ohne Konto“ verwendet feste fiktive Daten und führt keine Modellanfrage aus.
 
