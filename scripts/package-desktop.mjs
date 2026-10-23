@@ -20,8 +20,8 @@ if(platform==='win32'){
  if(!match)throw new Error('LibreOffice.app konnte nicht als vollständiges macOS-Paket gefunden werden.');
  await cp(match[1],join(resources,'LibreOffice.app'),{recursive:true});
 }else{
- await findOffice();
- // Debian packages declare LibreOffice Writer as an installer-managed dependency.
+ // Linux packages declare LibreOffice Writer as an installer-managed dependency.
+ // The build host does not need LibreOffice installed to create those packages.
  await writeFile(join(resources,'.keep'),'');
 }
 
