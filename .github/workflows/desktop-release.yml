@@ -1,0 +1,64 @@
+name: Desktop installers
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows
+          - os: macos-latest
+            label: macos-arm64
+          - os: macos-15-intel
+            label: macos-x64
+          - os: ubuntu-latest
+            label: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install LibreOffice on Windows
+        if: runner.os == 'Windows'
+        run: choco install libreoffice-fresh -y --no-progress
+      - name: Install LibreOffice on macOS
+        if: runner.os == 'macOS'
+        run: brew install --cask libreoffice
+      - name: Install LibreOffice on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libreoffice-writer
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: node --check desktop/main.mjs && node --check scripts/package-desktop.mjs
+      - name: Build native installer
+        run: npm run desktop:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translateocr-${{ matrix.label }}
+          path: release-desktop/*
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Publish installers to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release-assets/* --generate-notes
