@@ -1,6 +1,6 @@
 {
   "name": "translateocr",
-  "version": "0.8.7",
+  "version": "0.9.0",
   "private": false,
   "license": "MIT",
   "author": {
@@ -8,22 +8,17 @@
     "email": "175149220+gitmaximilian@users.noreply.github.com"
   },
   "type": "module",
-  "main": "desktop/main.mjs",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test --test-force-exit tests/*.test.mjs",
     "benchmark": "node scripts/benchmark.mjs",
     "demo:build": "node scripts/build-demo.mjs",
     "acceptance": "node scripts/acceptance.mjs",
     "doctor": "node scripts/check-install.mjs",
-    "setup": "node scripts/bootstrap.mjs",
-    "desktop:dev": "electron .",
-    "desktop:icons": "node scripts/build-icons.mjs",
-    "desktop:smoke": "node scripts/smoke-desktop.mjs",
-    "desktop:build": "node scripts/package-desktop.mjs"
+    "setup": "node scripts/bootstrap.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/noto-serif": "^0.4.2",
@@ -35,76 +30,5 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.4.299",
     "sharp": "^0.35.5"
-  },
-  "devDependencies": {
-    "electron": "^45.0.0",
-    "electron-builder": "^26.15.3"
-  },
-  "build": {
-    "appId": "at.translateocr.desktop",
-    "productName": "TranslateOCR",
-    "directories": {
-      "output": "release-desktop"
-    },
-    "asar": true,
-    "files": [
-      "desktop/**",
-      "server.mjs",
-      "lib/**",
-      "dist/**",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "build/required/libreoffice",
-        "to": "libreoffice",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "win": {
-      "icon": "desktop/icons/TranslateOCR.ico",
-      "target": [
-        "nsis"
-      ],
-      "artifactName": "TranslateOCR-${version}-Windows-${arch}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": false,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "TranslateOCR"
-    },
-    "mac": {
-      "icon": "desktop/icons/TranslateOCR.icns",
-      "target": [
-        "dmg"
-      ],
-      "category": "public.app-category.productivity",
-      "artifactName": "TranslateOCR-${version}-macOS-${arch}.${ext}"
-    },
-    "linux": {
-      "icon": "dist/icons/icon-512.png",
-      "target": [
-        "deb",
-        "rpm"
-      ],
-      "category": "Office",
-      "artifactName": "TranslateOCR-${version}-Linux-${arch}.${ext}"
-    },
-    "deb": {
-      "depends": [
-        "libreoffice-writer"
-      ],
-      "maintainer": "TranslateOCR contributors"
-    },
-    "rpm": {
-      "depends": [
-        "libreoffice-writer"
-      ]
-    }
   }
 }

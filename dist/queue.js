@@ -1,5 +1,5 @@
 let queueState={jobs:[],paused:false},queueSubmitting=false,queuePollTimer=null,queuePolling=false,queueLastAnnouncement='';
-let clarificationJobId=null,clarificationSignature='',clarificationSubmitting=false;
+let clarificationJobId=null,clarificationSignature='',clarificationSubmitting=false,questionOriginalReady=Promise.resolve();
 const queueSnapshots=new Map(),queueResultCache=new Map(),queueAutoFetching=new Set();
 function savedSession(key,fallback){try{const value=sessionStorage.getItem(key);if(value)return JSON.parse(value);const result=fallback();sessionStorage.setItem(key,JSON.stringify(result));return result;}catch{return fallback();}}
 const queueClientId=savedSession('translateocr-queue-client',()=>crypto.randomUUID());
@@ -34,7 +34,7 @@ function renderQueue(){
   if(job.status==='awaiting_answers')actions.append(queueButton('Fragen beantworten','answer',job));
   if(['queued','running','awaiting_answers'].includes(job.status))actions.append(queueButton('Abbrechen','cancel',job));
   if(job.status==='failed')actions.append(queueButton('Erneut versuchen','retry',job));
-  if(job.hasResult)actions.append(queueButton('Prüfen & bearbeiten','review',job));
+  if(job.hasResult){actions.append(queueButton('PDF ↓','download',job),queueButton('Word ↓','word',job),queueButton('Beide ↓','bundle',job),queueButton('Bearbeiten','review',job));}
   if(['failed','cancelled','succeeded','expired'].includes(job.status))actions.append(queueButton('×','remove',job));
   if(actions.lastChild?.textContent==='×')actions.lastChild.setAttribute('aria-label',`${job.names.join(', ')} aus Liste entfernen`);
   const debug=document.createElement('details');debug.className='job-debug';debug.dataset.jobId=job.id;debug.open=openDebug.has(job.id);const summary=document.createElement('summary');summary.textContent=job.diagnostic?'Fehlerdetails & Diagnose':'Debug-Verlauf';const pre=document.createElement('pre');const report=JSON.stringify({jobId:job.id,status:job.status,provider:job.provider,model:job.model,fileCount:job.names.length,diagnostic:job.diagnostic,events:job.events},null,2);pre.textContent=report;const save=document.createElement('button');save.className='text-button';save.textContent='Diagnose herunterladen';save.onclick=()=>downloadBlob(new Blob([report],{type:'application/json'}),`translateocr-diagnose-${job.id.slice(0,8)}.json`);debug.append(summary,pre,save);copy.append(debug);row.append(icon,copy,actions);return row;
@@ -43,7 +43,7 @@ function renderQueue(){
  const announcement=`${active?.id||''}:${active?.stage||''}:${pending.length}:${jobs.filter(j=>j.status==='succeeded').length}:${jobs.filter(j=>j.status==='awaiting_answers').length}`;
  if(announcement!==queueLastAnnouncement){queueLastAnnouncement=announcement;$('#queue-live').textContent=active?`${phaseLabels[active.stage]}. ${pending.length} offene Aufträge.`:`${pending.length} in Bearbeitung oder wartend. ${jobs.filter(j=>j.status==='awaiting_answers').length} benötigen Antworten.`;}
  const waiting=jobs.filter(j=>j.status==='awaiting_answers');if(clarificationJobId){const current=waiting.find(j=>j.id===clarificationJobId);if(current)showClarifications(current,false);else if(!clarificationSubmitting)closeClarifications();}else if(waiting.length&&waiting.some(j=>j.clientId===queueClientId)&&!window.dismissedClarifications?.has(waiting.find(j=>j.clientId===queueClientId).id)){showClarifications(waiting.find(j=>j.clientId===queueClientId),false);}
- updateQueueButton();
+ updateQueueButton();if(typeof renderDocuments==='function'&&document.querySelector('#documents-view')&&!document.querySelector('#documents-view').hidden)renderDocuments();
 }
 async function jobResult(job){if(queueResultCache.has(job.id))return queueResultCache.get(job.id);const result=await localRequest(`/api/jobs/${job.id}/result`).then(r=>r.json());queueResultCache.set(job.id,result);while(queueResultCache.size>4)queueResultCache.delete(queueResultCache.keys().next().value);return result;}
 async function queueAction(action,job){
@@ -68,7 +68,7 @@ function queueFilename(job){const base=job.names[0]?.replace(/\.[^.]+$/,'').repl
 async function downloadBundle(job){const response=await localRequest(`/api/jobs/${job.id}/bundle`);downloadBlob(await response.blob(),queueFilename(job).replace(/\.pdf$/,'-PDF-Word.zip'));}
 async function autoDownload(job){
  if(job.clientId!==queueClientId||queueDownloaded.has(job.id)||!job.hasResult)return;
- markDownloaded(job.id);toast('Übersetzung bereit. Bitte im Prüfbereich kontrollieren.');if(!files.length&&!$('#additional-info').value.trim())await openReviewWorkspace(job.id);
+ markDownloaded(job.id);toast('Übersetzung bereit. PDF und Word kannst du direkt herunterladen.');if(!files.length&&!$('#additional-info').value.trim())await openReviewWorkspace(job.id);
 }
 async function pollQueue(){
  if(queuePolling)return;if(!localRuntime||!csrf){scheduleQueuePoll();return;}queuePolling=true;
@@ -94,14 +94,35 @@ scheduleQueuePoll();
 window.dismissedClarifications=new Set();
 function closeClarifications(){clarificationJobId=null;clarificationSignature='';$('#clarification-card').hidden=true;}
 function showClarifications(job,scroll){
- const signature=JSON.stringify([job.id,job.questions]);if(signature!==clarificationSignature){
-  clarificationJobId=job.id;clarificationSignature=signature;$('#clarification-extra').value='';void renderQuestionOriginal(job);$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
-  const fields=job.questions.map((q,i)=>{const field=document.createElement('div');field.className='clarification-field';const label=document.createElement('label');label.htmlFor=`answer-${q.id}`;label.textContent=`${i+1}. ${q.question}`;const context=document.createElement('p');context.className='question-context';context.textContent=q.context;const answer=document.createElement('textarea');answer.id=label.htmlFor;answer.dataset.questionId=q.id;answer.maxLength=4000;answer.required=true;answer.rows=2;answer.placeholder='Deine Antwort …';const locate=document.createElement('button');locate.type='button';locate.className='text-button';locate.textContent='Originalstelle ansehen';locate.onclick=()=>{if(typeof focusQuestionOriginal==='function')void focusQuestionOriginal(q);};field.append(label,context,locate,answer);return field;});$('#clarification-fields').replaceChildren(...fields);
+ const signature=JSON.stringify([job.id,job.questions.map(({box,...question})=>question)]);if(signature!==clarificationSignature){
+  const sameJob=clarificationJobId===job.id,drafts=new Map(sameJob?[...document.querySelectorAll('#clarification-fields textarea')].map(el=>[el.dataset.questionId,el.value]):[]);
+  clarificationJobId=job.id;clarificationSignature=signature;if(!sameJob)$('#clarification-extra').value='';questionOriginalReady=renderQuestionOriginal(job);$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
+  const fields=job.questions.map((q,i)=>{
+   const field=document.createElement('div');field.className='clarification-field';
+   const label=document.createElement('label');label.htmlFor=`answer-${q.id}`;label.textContent=`${i+1}. ${q.question}`;
+   const context=document.createElement('p');context.className='question-context';context.textContent=q.context;
+   const answer=document.createElement('textarea');answer.id=label.htmlFor;answer.dataset.questionId=q.id;answer.maxLength=4000;answer.required=true;answer.rows=2;answer.placeholder='Deine Antwort …';answer.value=drafts.get(q.id)||'';
+   const suggestion=document.createElement('div');suggestion.className='question-suggestion';suggestion.hidden=!q.suggestion;
+   if(q.suggestion){
+    const heading=document.createElement('strong');heading.textContent='Mögliche Lesung · bitte bestätigen';
+    const candidate=document.createElement('p');candidate.dataset.noTranslate='';candidate.dir='auto';candidate.textContent=q.suggestion;
+    const use=document.createElement('button');use.type='button';use.className='text-button';use.textContent='Vorschlag übernehmen';use.onclick=()=>{answer.value=q.suggestion;answer.dispatchEvent(new Event('input'));answer.focus();};
+    suggestion.append(heading,candidate,use);
+   }
+   const actions=document.createElement('div');actions.className='clarification-actions';
+   const locate=document.createElement('button');locate.type='button';locate.className='text-button';locate.textContent='Originalstelle ansehen';locate.onclick=async()=>{locate.disabled=true;locate.textContent='Originalstelle wird gesucht …';try{await questionOriginalReady;if(!q.box){const location=await localRequest(`/api/jobs/${job.id}/locate`,{questionId:q.id}).then(r=>r.json());Object.assign(q,location);}if(clarificationJobId===job.id&&typeof focusQuestionOriginal==='function')await focusQuestionOriginal(q);}catch(error){$('#clarification-error').textContent=error.message;}finally{locate.disabled=false;locate.textContent='Originalstelle ansehen';}};actions.append(locate);
+   if(q.kind==='unreadable'||/unleserlich|entziffer|nicht lesbar|illegible|unreadable/i.test(q.question+' '+q.context)){
+    const unreadable=document.createElement('button');unreadable.type='button';unreadable.className='text-button';unreadable.textContent='Unleserlich';
+    unreadable.onclick=async()=>{unreadable.disabled=true;try{await localRequest(`/api/jobs/${job.id}/unreadable`,{questionId:q.id});toast('Als unleserlich übernommen.');await pollQueue();}catch(error){$('#clarification-error').textContent=error.message;}finally{unreadable.disabled=false;}};
+    actions.append(unreadable);
+   }
+   field.append(label,context,suggestion,actions,answer);return field;
+  });$('#clarification-fields').replaceChildren(...fields);
  }$('#clarification-card').hidden=false;if(scroll){$('#clarification-card').scrollIntoView({behavior:'smooth',block:'start'});$('#clarification-fields textarea')?.focus({preventScroll:true});}
 }
 $('#clarification-close').onclick=()=>{if(clarificationJobId)window.dismissedClarifications.add(clarificationJobId);closeClarifications();};
 $('#clarification-form').onsubmit=async event=>{
- event.preventDefault();if(clarificationSubmitting||!clarificationJobId)return;const id=clarificationJobId,answers=[...document.querySelectorAll('#clarification-fields textarea')].map(el=>({id:el.dataset.questionId,answer:el.value.trim()}));
+ event.preventDefault();if(clarificationSubmitting||!clarificationJobId)return;const id=clarificationJobId,answers=[...document.querySelectorAll('#clarification-fields textarea')].map(el=>({id:el.dataset.questionId,answer:el.value.trim(),unreadable:el.dataset.unreadable==='true'}));
  if(answers.some(a=>!a.answer)){$('#clarification-error').textContent='Bitte jede Rückfrage beantworten.';return;}clarificationSubmitting=true;$('#clarification-submit').disabled=true;$('#clarification-error').textContent='';
  try{await localRequest(`/api/jobs/${id}/answer`,{answers,files:await documentsForRequest([...$('#clarification-extra').files])});closeClarifications();window.dismissedClarifications.delete(id);toast('Antworten übernommen. Der Auftrag wird fortgesetzt.');await pollQueue();}catch(error){$('#clarification-error').textContent=error.message;}finally{clarificationSubmitting=false;$('#clarification-submit').disabled=false;}
 };

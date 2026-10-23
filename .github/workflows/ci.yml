@@ -1,4 +1,4 @@
-name: Test and benchmark
+name: Test
 on: [push, pull_request]
 permissions:
   contents: read
@@ -24,12 +24,23 @@ jobs:
       - name: Install LibreOffice (macOS)
         if: runner.os == 'macOS'
         run: brew install --cask libreoffice
-      - run: npm ci --ignore-scripts
-      - run: node --check server.mjs && node --check desktop/main.mjs && node --check scripts/package-desktop.mjs && node --check scripts/build-icons.mjs && node --check scripts/smoke-desktop.mjs && node --check scripts/launch-desktop.mjs && node --check scripts/install-desktop.mjs
-      - run: node scripts/check-install.mjs
+      - run: node --check server.mjs && node --check scripts/start-browser.mjs && node --check dist/updates.js && node --check dist/workflow.js
+      - name: Run the Windows first-use setup check
+        if: runner.os == 'Windows'
+        run: .\Setup-TranslateOCR.cmd
+        env:
+          TRANSLATEOCR_SETUP_NO_START: '1'
+      - name: Run the macOS first-use setup check
+        if: runner.os == 'macOS'
+        run: ./Setup-TranslateOCR.command
+        env:
+          TRANSLATEOCR_SETUP_NO_START: '1'
+      - name: Run the Linux first-use setup check
+        if: runner.os == 'Linux'
+        run: ./Setup-TranslateOCR.sh
+        env:
+          TRANSLATEOCR_SETUP_NO_START: '1'
       - run: npm test
       - run: npm run benchmark
       - run: npm run demo:build
       - run: npm run acceptance
-      - name: Verify Windows handoff archive
-        run: node scripts/package-windows.mjs

@@ -1,13 +1,13 @@
 ---
-name: Fehler melden
-about: Reproduzierbaren Fehler mit fiktiven Daten beschreiben
+name: Report a bug
+about: Describe a reproducible issue using fictional data
 ---
-Betriebssystem / Node / LibreOffice / TranslateOCR-Version:
+Operating system / Node.js / LibreOffice / TranslateOCR version:
 
-Schritte mit fiktiven Beispieldaten:
+Steps using fictional sample data:
 
-Erwartet / tatsächlich:
+Expected / actual behavior:
 
-Bereinigte Diagnose-ID und Fehlercode:
+Redacted diagnostic ID and error code:
 
-Keine echten Urkunden, Namen, Kontodaten, Tokens oder Workspace-Backups anhängen.
+Do not attach real documents, names, account details, tokens, or workspace backups.

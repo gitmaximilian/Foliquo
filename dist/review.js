@@ -7,9 +7,9 @@ async function openReviewWorkspace(id){
 }
 function renderReviewControls(){
  const busy=reviewUnavailable||!reviewData||reviewData.busy||reviewSubmitting||reviewData.proposal;$('#review-busy').hidden=!reviewData?.busy&&!reviewSubmitting;$('#review-send').disabled=busy;$('#review-prompt').disabled=busy;
- const blocked=busy||Boolean(reviewData?.hasQuestions)||Boolean(reviewData?.proposal)||Boolean(reviewData?.checks?.some(c=>!c.confirmed));for(const id of ['review-final-pdf','review-final-word','review-final-both'])$("#"+id).disabled=blocked;
+ const blocked=reviewUnavailable||!reviewData?.result;for(const id of ['review-final-pdf','review-final-word','review-final-both'])$("#"+id).disabled=blocked;
  $('#review-version').textContent=reviewData?`Version ${reviewData.version}`:'Wird geladen';
- $('#review-final-status').textContent=reviewUnavailable?'Dieser Auftrag ist abgelaufen. Bitte zurückgehen und die Dateien erneut hochladen.':reviewData?.proposal?'Bitte zuerst den Änderungsvorschlag prüfen.':reviewData?.checks?.some(c=>!c.confirmed)?'Bitte zuerst die Prüffelder am Original bestätigen.':reviewData?.hasQuestions?'Bitte beantworte zuerst die Rückfrage im Chat.':busy?'Die aktuelle Bearbeitung wird zuerst abgeschlossen.':reviewData.finalizedVersion===reviewData.version?`Version ${reviewData.version} wurde zum finalen Download bereitgestellt.`:`Version ${reviewData.version} herunterladen – du kannst sie danach weiter bearbeiten.`;
+ $('#review-final-status').textContent=reviewUnavailable?'Dieser Auftrag ist abgelaufen. Bitte zurückgehen und die Dateien erneut hochladen.':!reviewData?.result?'Die Übersetzung wird geladen …':`Fassung ${reviewData.version} · Detailprüfung und Chatbearbeitung sind optional.`;
 }
 function renderReview(snapshot){
  reviewData=snapshot;if(snapshot.proposal&&!reviewHadProposal){$('#review-tools').open=true;$('#revision-card').open=true;}reviewHadProposal=Boolean(snapshot.proposal);$('#review-error').textContent=snapshot.error||'';
@@ -39,8 +39,8 @@ $('#review-prompt').onkeydown=event=>{if(event.key==='Enter'&&(event.ctrlKey||ev
 function reviewPreviewMode(mode){$('#review-pdf').hidden=mode!=='pdf';$('#review-text').hidden=mode!=='text';$('#review-show-pdf').classList.toggle('active',mode==='pdf');$('#review-show-text').classList.toggle('active',mode==='text');}
 $('#review-show-pdf').onclick=()=>reviewPreviewMode('pdf');$('#review-show-text').onclick=()=>reviewPreviewMode('text');
 async function downloadFinal(format){
- if(reviewUnavailable||!reviewData||reviewData.busy||reviewSubmitting||reviewData.hasQuestions)return;const id=reviewJobId,version=reviewData.version;
- try{const response=await localRequest(`/api/jobs/${id}/review/finalize`,{version,format,certification:$('#certification-confirm').checked});downloadBlob(await response.blob(),`translateocr-final-v${version}.${format==='bundle'?'zip':format==='pdf'?'pdf':'docx'}`);toast(`Finale Version ${version} wird heruntergeladen.`);await loadReview();}catch(error){$('#review-error').textContent=error.message;}
+ if(reviewUnavailable||!reviewData?.result)return;const id=reviewJobId,version=reviewData.version;
+ try{const response=await localRequest(`/api/jobs/${id}/review/finalize`,{version,format,certification:$('#certification-confirm').checked});downloadBlob(await response.blob(),`translateocr-v${version}.${format==='bundle'?'zip':format==='pdf'?'pdf':'docx'}`);toast(`Finale Version ${version} wird heruntergeladen.`);await loadReview();}catch(error){$('#review-error').textContent=error.message;}
 }
 $('#review-final-pdf').onclick=()=>downloadFinal('pdf');$('#review-final-word').onclick=()=>downloadFinal('word');$('#review-final-both').onclick=()=>downloadFinal('bundle');
 

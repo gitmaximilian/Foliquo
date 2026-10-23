@@ -1,0 +1,7 @@
+(() => {
+  const button=document.querySelector('#update-check'),status=document.querySelector('#update-status'),download=document.querySelector('#update-download');
+  if(!button||!status)return;
+  async function check(){button.disabled=true;status.textContent=window.TOCRI18n?.t('Die aktuelle Version wird geprüft …')||'Checking for updates …';download.hidden=true;try{const response=await fetch('/api/update-check',{credentials:'same-origin'});if(!response.ok)throw new Error('Update check failed');const data=await response.json(),tr=key=>window.TOCRI18n?.t(key)||key;if(data.unavailable){status.textContent=tr('Update-Server gerade nicht erreichbar.');return;}if(data.updateAvailable){status.textContent=`${tr('Neue Version verfügbar:')} v${data.latest} (v${data.current})`;download.hidden=false;download.href=data.url;}else status.textContent=tr('Keine neue Version verfügbar.');}catch{status.textContent=window.TOCRI18n?.t('Update-Server gerade nicht erreichbar.')||'Update server unavailable.';}finally{button.disabled=false;}}
+  button.addEventListener('click',check);window.addEventListener('translateocr-ready',check,{once:true});
+  const observer=new MutationObserver(()=>{if(status.dataset.checked==='yes')return;const version=document.querySelector('#app-version')?.textContent;if(version){status.dataset.checked='yes';setTimeout(check,1500);}});observer.observe(document.querySelector('#app-version')||document.body,{childList:true,subtree:true,characterData:true});
+})();

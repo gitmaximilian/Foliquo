@@ -1,87 +1,49 @@
 # TranslateOCR
 
-Lokales Übersetzungsstudio für Bilder, PDFs und Word-Dokumente. Mehrere Dateien bilden einen Auftrag, beispielsweise Vorder- und Rückseite einer Urkunde. Die Anwendung unterstützt die fachliche Prüfung und anschließende Beglaubigung durch einen befugten Übersetzer.
+TranslateOCR is an open-source, browser-based workspace for preparing document-translation drafts. It runs as a private local service on your computer and opens in your existing browser. There are no Windows, macOS, or Linux app packages.
 
-Stand: **0.8.3**. TranslateOCR ist Open Source unter MIT-Lizenz; die Demo verwendet ausschließlich fiktive Beispieldaten.
+> Translation drafts are not certified translations. A qualified translator must review and certify the final document.
 
-![TranslateOCR geführte Demo](docs/demo-preview.jpg)
+## Download and start
 
-## Download für Windows, macOS und Linux
+1. Download and extract the [latest source ZIP](https://github.com/gitmaximilian/TranslateOCR/archive/refs/heads/main.zip).
+2. Open the extracted folder and double-click the setup file for your computer: `Setup-TranslateOCR.cmd` on Windows, `Setup-TranslateOCR.command` on macOS, or `Setup-TranslateOCR.sh` on Linux.
+3. Follow any system permission prompt. Setup prepares the required tools, checks PDF and Word export, then opens TranslateOCR in your browser.
+4. Leave the small TranslateOCR window open while using the site. Close it to stop TranslateOCR. Next time, double-click the matching `Start-TranslateOCR` file.
 
-Öffne die [aktuellen GitHub-Releases](https://github.com/gitmaximilian/TranslateOCR/releases/latest) und lade den Installer für dein Betriebssystem: Windows `.exe`, macOS `.dmg` oder Linux `.deb`/`.rpm`. Installieren und TranslateOCR über das App-Symbol starten. Dafür braucht man weder Node.js noch Terminal oder Browser.
+On macOS, the setup file opens in Terminal; it is a setup script, not a TranslateOCR app. On Linux, use the file manager's **Run** or **Run as a Program** action if a double-click opens the script as text.
 
-macOS und Windows können bei unsignierten Apps eine Sicherheitsmeldung anzeigen. Siehe [Desktop-Installer und Status](docs/INSTALLABLE-APP.md).
+Setup uses the system package manager when available to prepare Node.js and LibreOffice, then installs the project files and opens the site automatically. If a supported package manager is unavailable, setup opens the official download page and guides you through the missing prerequisite; install it and run setup again. You do not need to enter commands. The first setup may ask for your computer password or permission to install these tools.
 
-## Entwicklung starten
+The service is bound to your own computer (`127.0.0.1`); other people cannot access it over your network. Use the browser page while the service is running. The app does not install a browser extension or a standalone web app.
 
-Node.js ab 22 und LibreOffice werden benötigt. Die Oberfläche und der Dienst laufen auf `http://127.0.0.1:4318/`.
+### Updates
+
+TranslateOCR checks the public GitHub release list when you open **Guide & updates**. If a newer release exists, choose **Download update**, extract its ZIP over the existing TranslateOCR folder, and run the setup file again. Keep the hidden `.local` folder in place: it contains your encrypted jobs, preferences, and provider credentials. The updater never sends document data to GitHub. If GitHub is temporarily unavailable, the app keeps working and you can check again later.
+
+## What it does
+
+- Accepts images, PDFs, and Word documents; several files can be combined into one job.
+- Detects the source language and document type, then groups completed jobs automatically in the library.
+- Supports ChatGPT sign-in and separately billed OpenAI, Claude, and DeepSeek API keys.
+- Creates PDF and editable Word drafts, supports clarifications, direct edits, a revision chat, and optional review tools.
+- Learns reusable layout and wording conventions from samples you explicitly add. It does not train a model and must not reuse personal facts from samples.
+- Includes an optional, fictional demo in English, German, and Arabic.
+
+## Requirements
+
+- Windows 10/11, a current macOS release, or a mainstream Linux distribution.
+- Node.js 22 or newer and LibreOffice Writer. Setup installs them with `winget` on Windows or Homebrew on macOS where available. On Linux, use the package manager instructions shown by setup if either is missing.
+- A modern browser. Keep the launcher terminal open while using the site.
+
+## Developer checks
 
 ```sh
 npm ci --ignore-scripts
-npm start
-```
-
-Für die Entwicklung im nativen Desktopfenster: `npm run desktop:dev`. Den Paketbau pro Betriebssystem startet `npm run desktop:build`; er erzeugt einen Installer für das aktuelle Betriebssystem. Diese Befehle sind nur für Entwickler. Die bisherigen CMD- und macOS-Skripte bleiben als lokaler Entwicklungs-/Übergangsweg erhalten.
-
-Die öffentlichen Installer werden automatisiert für Windows, macOS ARM64/Intel und Linux gebaut. Mobile Nutzung und öffentliches Hosting sind nicht Teil des aktuellen Ziels. Siehe [Desktop-Installer](docs/INSTALLABLE-APP.md).
-
-ChatGPT lässt sich persönlich über den Browser autorisieren. Alternativ kannst du API-Schlüssel für OpenAI, Claude oder DeepSeek lokal hinterlegen. API-Nutzung kann beim jeweiligen Anbieter separat verrechnet werden. Details zu Zugriff und Datenschutz: [Modellanbieter](docs/PROVIDERS.md). „Demo ohne Konto“ verwendet feste fiktive Daten und führt keine Modellanfrage aus.
-
-## Oberfläche
-
-Die Oberfläche ist auf Englisch voreingestellt und kann im Intro oder später auf Deutsch oder Arabisch umgestellt werden. Arabische Ansichten unterstützen die Schreibrichtung von rechts nach links; das TranslateOCR-Wortzeichen bleibt in seiner korrekten Leserichtung. Beim ersten Start führt eine kurze animierte Tour durch den Ablauf und speichert bevorzugte Sprache und Namen lokal.
-
-## Workflow
-
-1. Dateien in gewünschter Reihenfolge auswählen; Zielsprache und optional Vorlage/Ausgabeprofil festlegen.
-2. Zusatzinfos eingeben. Freigegebene Beispiele nur bewusst für diesen Auftrag aktivieren.
-3. Übersetzen. Fehlende Angaben beantworten und gegebenenfalls bessere Aufnahmen ergänzen.
-4. Original und Übersetzung prüfen; alle Prüfpunkte bestätigen.
-5. Werte direkt korrigieren oder Änderungen im Chat anfordern; bestätigte Angaben bei Bedarf schützen. Vorschläge einzeln übernehmen oder frühere Fassungen wiederherstellen.
-6. Finale PDF, bearbeitbares Word oder beide als ZIP herunterladen.
-
-Eine automatische Anfangsausgabe wird nicht ungefragt heruntergeladen. Die endgültige fachliche Kontrolle bleibt beim Benutzer. Automatische Prüffelder und Bildkoordinaten sind Hilfen und können falsch oder unvollständig sein. Die separate Erfassung der Originalfelder erhöht die Modellnutzung.
-
-Dossiers bündeln zusammengehörige Aufträge und bestätigte Schreibweisen. Scan-Arbeitskopien, feste Formularfelder, gezielte Referenzauswahl und separate Stempelprüfung unterstützen die Kontrolle. Vor dem finalen Download PDF-Seitenprüfung und Sichtprüfung durchführen.
-
-## Private Bibliothek
-
-- DOCX-Dateien als editierbaren Layoutvorschlag importieren, Vorschau prüfen und bestätigen.
-- Persönliche Ausgabeprofile mit Kopf-/Fußzeile und optionalem eigenem Beglaubigungstext.
-- Globale Fachbegriffe und auftragsbezogene Namensschreibweisen.
-- Ausdrücklich freigegebene Original-/Übersetzungspaare als Referenzsammlung; kein Modelltraining.
-- Verschlüsselte Aufträge und Chats mit Löschfrist sowie passwortgeschützten Backups.
-
-Persönliche Dokumente, Beispiele und Kontodaten liegen unter `.local/` und gehören weder in Git noch in Releasepakete. Bei echten Übersetzungen werden die aktuellen Dokumente und die gewählten Referenzen an den Modellanbieter übermittelt. Der lokale Betrieb bedeutet keine vollständig lokale Modellverarbeitung.
-
-## Neue Werkzeuge in 0.8
-
-- Vor der Übersetzung gezielte Rückfragen zu lateinischer Namensschreibweise und unleserlichen Stellen; Antworten bleiben dem Auftrag zugeordnet.
-- Originalfelder mit markierten Übersetzungsstellen abgleichen, sowie ein einzelnes Feld anhand der passenden Originalseite erneut vorschlagen lassen.
-- Gleiche Dateien erkennen, Vorder-/Rückseite kennzeichnen und PDF-Seiten in einer Arbeitskopie neu ordnen. Originalseiten im Anhang bleiben unverändert.
-- Layout live als PDF prüfen, Spaltenbreite und Absatzabstand einstellen und Tabellenzeilen zusammenhalten.
-- Wiederholte allgemeine Korrekturen nur als Vorschläge anzeigen; eine Glossarübernahme braucht eine bewusste Bestätigung. Namen, Daten und Nummern werden dabei ausgeschlossen.
-- Fiktive Praxis-Testprotokolle und ein lokaler Abnahmebericht unterstützen die Prüfung. Sie bewerten keine Übersetzungsqualität; ein Übersetzer muss zehn repräsentative Fälle selbst beurteilen.
-- Die separate `/demo/`-Seite ist auf Deutsch, Englisch und Arabisch verfügbar. Sie zeigt einen geskripteten Beispielablauf mit fiktiven, sprachgerechten Dokumenten und passenden PDF-/Word-Downloads. Sie ruft kein Modell auf.
-
-Das Windows-Paket und die Abnahmeanleitung sind aktualisiert. Der Code wurde hier auf macOS geprüft; die Windows-Installation muss noch auf dem tatsächlichen Ziel-PC abgenommen werden. Der öffentliche Quellcode steht unter MIT-Lizenz. Drittanbieter behalten ihre eigenen Lizenzen; insbesondere enthält das gebündelte LibreOffice-Paket eigene Lizenz- und NOTICE-Dateien. Für Grenzen und fachliche Kontrolle siehe [SECURITY.md](SECURITY.md) und [FEATURES.md](FEATURES.md).
-
-## Entwicklung
-
-```sh
-npm run setup
 npm test
 npm run benchmark
 npm run acceptance
-node scripts/check-install.mjs
-node scripts/package-windows.mjs
 npm run demo:build
 ```
 
-Das Windows-Paket wird aus einer Positivliste erzeugt. Es enthält keine `.local/`, Git-/Hosting-Metadaten, Abhängigkeiten oder persönlichen Dokumente. Die Adapter in `lib/providers.mjs` unterstützen ChatGPT-Anmeldung, OpenAI API, Claude und DeepSeek. Zugangsdaten liegen verschlüsselt im lokalen Workspace und werden aus Backups ausgelassen. Neue Adapter benötigen eigene Anbieter-, Datenschutz- und Fehlerbehandlungstests.
-
-Detaillierte Funktion und Grenzen: [FEATURES.md](FEATURES.md). Architektur und Arbeitsanweisungen: [CODEX-HANDOVER.md](CODEX-HANDOVER.md) und [AGENTS.md](AGENTS.md).
-
-PDF.js samt Lizenzhinweisen liegt unter `dist/vendor/pdfjs/`. Die Lizenzangaben der npm-Abhängigkeiten stehen in `package-lock.json` und in den jeweils mitgelieferten Paketdateien. LibreOffice wird mit seinen eigenen `LICENSE`- und `NOTICE`-Dateien gebündelt. Der MIT-Text gilt nur für TranslateOCR-eigene Beiträge.
-
-Mitarbeit, fiktive Benchmarks und Grenzen der CI: [CONTRIBUTING.md](CONTRIBUTING.md).
+See [Features and limitations](FEATURES.md), [security notes](SECURITY.md), and [contributing](CONTRIBUTING.md).

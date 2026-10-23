@@ -1,0 +1,15 @@
+name: Publish source release
+on:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish source-only release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" --verify-tag --title "TranslateOCR ${GITHUB_REF_NAME}" --notes "Browser-based TranslateOCR release. Download the source ZIP below and follow the README. This release contains no native desktop installers. Keep your hidden .local folder when updating."

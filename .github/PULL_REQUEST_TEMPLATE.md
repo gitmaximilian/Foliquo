@@ -1,9 +1,9 @@
-## Problem und resultierendes Verhalten
+## Problem and resulting behavior
 
-## Prüfung
+## Validation
 
-- Reproduzierbarer Test mit fiktiven Daten:
-- Browserprüfung, sofern Oberfläche betroffen:
-- PDF-/Word-Layoutprüfung, sofern Export betroffen:
+- Reproducible test with fictional data:
+- Browser check, if the UI changed:
+- PDF/Word layout check, if exports changed:
 
-Keine privaten Dokumente, Workspace-Dateien oder Zugangsdaten enthalten.
+Do not include private documents, workspace files, or credentials.

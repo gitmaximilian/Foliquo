@@ -3,3 +3,20 @@
 @media(max-width:480px){header{padding:0 15px;gap:9px}.brand{font-size:18px}.badge{padding:4px 7px;font-size:9px;letter-spacing:.04em}.quiet{display:none}main{padding:30px 14px 0}.intro{margin-bottom:26px}.intro h1{font-size:40px}.intro>p{font-size:15px}.notice{font-size:12px}.steps{gap:8px;overflow-x:auto}.steps li{font-size:12px}.steps span{margin-left:3px}.card{padding:17px;border-radius:14px}.section-heading{align-items:flex-start;flex-wrap:wrap}.actions{align-items:stretch;flex-direction:column-reverse}.actions button{width:100%}.paper{min-height:360px;padding:24px 14px}.paper h3{font-size:16px}.paper td{padding:9px 6px;font-size:13px}.preview .section-heading{align-items:center}.preview .tabs button{min-height:40px;padding:6px 10px;font-size:12px}.about{padding-top:40px}footer{align-items:flex-start;flex-direction:column;gap:8px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
 [dir="rtl"]{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-serif}[dir="rtl"] header{direction:rtl}[dir="rtl"] .badge{letter-spacing:0}[dir="rtl"] .intro .eyebrow{letter-spacing:0}[dir="rtl"] .paper table,[dir="rtl"] .paper .stamp{font-family:Tahoma,Arial,sans-serif}[dir="rtl"] .paper td:first-child{width:38%}[dir="rtl"] .field-choice,[dir="rtl"] .checks label{direction:rtl}[dir="rtl"] .field-choice input,[dir="rtl"] .checks input{margin-inline-start:0;margin-inline-end:0}[dir="rtl"] .quiet{margin-left:0;margin-right:auto}[dir="rtl"] .change{border-left:1px solid var(--line)}
+
+/* Give the guided workflow and document the same visual weight. */
+.back-to-app{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:7px 14px;border:1px solid var(--line);border-radius:999px;font-size:13px;line-height:1.4;text-align:center;margin-inline-start:auto;white-space:nowrap}
+.back-to-app:hover{background:var(--soft)}
+header .quiet{margin-inline-start:0}
+.workspace{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+.controls{display:flex;flex-direction:column}
+.controls #step-body{flex:1}
+.controls .actions{margin-top:auto;padding-top:24px}
+.preview{padding:24px}
+.paper{min-height:400px}
+.section-heading{min-height:42px;flex-wrap:wrap}
+.intro h1{font-size:clamp(40px,6vw,64px)}
+[dir="rtl"] .back-to-app{margin-inline-start:auto}
+@media(max-width:900px){header .quiet{display:none}.workspace{gap:16px}.card{padding:20px}}
+@media(max-width:800px){.workspace{grid-template-columns:minmax(0,1fr)}.controls #step-body{flex:initial}.controls .actions{margin-top:0}.paper{min-height:360px}}
+@media(max-width:560px){header{height:auto;min-height:64px;flex-wrap:wrap;padding-block:12px}.badge{display:none}.back-to-app{font-size:12px;padding-inline:10px}.language-picker{margin-inline-start:auto}.brand{font-size:17px}.card{padding:17px}}
