@@ -112,9 +112,9 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
       }
       queue.cleanup();const active=session(req,res);
       if(!active){json(res,{error:'Bitte die lokale Startseite neu öffnen.'},401);return;}
-      if(req.method==='GET' && url.pathname==='/api/session'){json(res,{local:true,...engineProvider.status(),preferences:workspace?.preferences()||{locale:'en',displayName:'',introComplete:false},csrf:active.csrf,version:'0.9.0',persistent:Boolean(workspace),storageError:persistError?'Lokales Speichern fehlgeschlagen. Ergebnisse herunterladen.':null});return;}
+      if(req.method==='GET' && url.pathname==='/api/session'){json(res,{local:true,...engineProvider.status(),preferences:workspace?.preferences()||{locale:'en',displayName:'',introComplete:false},csrf:active.csrf,version:'0.9.1',persistent:Boolean(workspace),storageError:persistError?'Lokales Speichern fehlgeschlagen. Ergebnisse herunterladen.':null});return;}
       if(req.method==='GET' && url.pathname==='/api/update-check'){
-        const current='0.9.0';
+        const current='0.9.1';
         try{
           const response=await networkFetch('https://api.github.com/repos/gitmaximilian/TranslateOCR/releases/latest',{headers:{accept:'application/vnd.github+json','user-agent':'TranslateOCR-update-check'},signal:AbortSignal.timeout(7000)},{stage:'update_check'},fetcher);
           if(!response.ok)throw new Error(`GitHub replied with ${response.status}`);

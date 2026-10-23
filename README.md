@@ -19,7 +19,7 @@ The service is bound to your own computer (`127.0.0.1`); other people cannot acc
 
 ### Updates
 
-TranslateOCR checks the public GitHub release list when you open **Guide & updates**. If a newer release exists, choose **Download update**, extract its ZIP over the existing TranslateOCR folder, and run the setup file again. Keep the hidden `.local` folder in place: it contains your encrypted jobs, preferences, and provider credentials. The updater never sends document data to GitHub. If GitHub is temporarily unavailable, the app keeps working and you can check again later.
+TranslateOCR checks the public GitHub release list when you open **Guide & updates**. If a newer release exists, choose **Download update**, close the TranslateOCR launcher window, extract the ZIP over the existing TranslateOCR folder, and run the setup file again. Keep the hidden `.local` folder in place: it contains your encrypted jobs, preferences, and provider credentials. The updater never sends document data to GitHub. If GitHub is temporarily unavailable, the app keeps working and you can check again later.
 
 ## What it does
 
