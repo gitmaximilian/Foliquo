@@ -13,4 +13,4 @@ jobs:
       - name: Publish source-only release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" --verify-tag --title "TranslateOCR ${GITHUB_REF_NAME}" --notes "Browser-based TranslateOCR release. Download the source ZIP below and follow the README. This release contains no native desktop installers. Keep your hidden .local folder when updating."
+        run: gh release create "${GITHUB_REF_NAME}" --verify-tag --title "TranslateOCR ${GITHUB_REF_NAME} - Browser source" --notes "Browser edition: source code only. Download Source code (zip), extract it, and open the Setup-TranslateOCR file for your computer. Setup starts the local service and opens your browser. Follow README.md for the full guide. Keep your hidden .local folder when updating."

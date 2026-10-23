@@ -9,4 +9,4 @@
 7. [x] Run the full test, benchmark, and acceptance suites; verify the three-language demo and run setup plus PDF/Word export on Apple Silicon. CI now runs each platform's setup script on Windows, macOS, and Linux. A clean-machine install on a separate Windows/Linux computer remains useful real-world acceptance.
 8. [x] Update the public GitHub repository and publish v0.9.1 as the latest source-only release after all platform checks pass.
 
-The public v0.8.7 desktop release predates the browser-only decision. Do not recommend or publish native installers. v0.9.1 is source-only; the in-app update button downloads the latest release's source ZIP directly.
+Legacy desktop releases and installer downloads have been removed from GitHub. The repository description and download guidance now describe browser use. Only the current source-code release is retained for the in-app update check.
