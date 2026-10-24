@@ -19,13 +19,15 @@ The service is bound to your own computer (`127.0.0.1`); other people cannot acc
 
 ### Updates
 
-TranslateOCR checks the public GitHub release list when you open **Guide & updates**. If a newer release exists, choose **Download update**, close the TranslateOCR launcher window, extract the ZIP over the existing TranslateOCR folder, and run the setup file again. Keep the hidden `.local` folder in place: it contains your encrypted jobs, preferences, and provider credentials. The updater never sends document data to GitHub. If GitHub is temporarily unavailable, the app keeps working and you can check again later.
+TranslateOCR checks the public GitHub release list when you open **Guide**. If a newer release exists, choose **Download update**, close the TranslateOCR launcher window, extract the ZIP over the existing TranslateOCR folder, and run the setup file again. Keep the hidden `.local` folder in place: it contains your encrypted jobs, preferences, and provider credentials. The updater never sends document data to GitHub. If GitHub is temporarily unavailable, the app keeps working and you can check again later.
 
 ## What it does
 
 - Accepts images, PDFs, and Word documents; several files can be combined into one job.
 - Detects the source language and document type, then groups completed jobs automatically in the library.
-- Supports ChatGPT sign-in and separately billed OpenAI, Claude, and DeepSeek API keys.
+- Supports ChatGPT sign-in and separately billed OpenAI, Claude, and DeepSeek API keys. AI setup is available in the first-run tour and from the header.
+- Keeps jobs in a compact status sidebar. Clarification drafts and added source images are saved in the encrypted local workspace; return to a job without losing partial answers.
+- Accepts suggested readings with one click or marks a source field as unreadable; each confirmed question closes immediately.
 - Creates PDF and editable Word drafts, supports clarifications, direct edits, a revision chat, and optional review tools.
 - Learns reusable layout and wording conventions from samples you explicitly add. It does not train a model and must not reuse personal facts from samples.
 - Includes an optional, fictional demo in English, German, and Arabic.

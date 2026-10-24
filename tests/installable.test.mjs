@@ -25,10 +25,10 @@ test('setup page explains browser-only use and keeps local workspace during manu
 });
 
 test('update check reports a newer GitHub release without exposing any workspace data',async t=>{
- const port=15982,connection={data:{},status:()=>({connected:false})};const app=createApp({connection,port,fetcher:async()=>new Response(JSON.stringify({tag_name:'v0.9.2',published_at:'2026-10-24T00:00:00Z'}),{status:200,headers:{'content-type':'application/json'}})});
+ const port=15982,connection={data:{},status:()=>({connected:false})};const app=createApp({connection,port,fetcher:async()=>new Response(JSON.stringify({tag_name:'v0.9.3',published_at:'2026-10-24T00:00:00Z'}),{status:200,headers:{'content-type':'application/json'}})});
  await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});t.after(()=>new Promise(resolve=>app.close(resolve)));
  const base=`http://127.0.0.1:${port}`,root=await fetch(base),cookie=root.headers.get('set-cookie').split(';')[0],result=await fetch(`${base}/api/update-check`,{headers:{cookie}}).then(r=>r.json());
- assert.equal(result.current,'0.9.1');assert.equal(result.latest,'0.9.2');assert.equal(result.updateAvailable,true);assert.equal(result.url,'https://github.com/gitmaximilian/TranslateOCR/archive/refs/tags/v0.9.2.zip');assert.equal(Object.hasOwn(result,'documents'),false);
+ assert.equal(result.current,'0.9.2');assert.equal(result.latest,'0.9.3');assert.equal(result.updateAvailable,true);assert.equal(result.url,'https://github.com/gitmaximilian/TranslateOCR/archive/refs/tags/v0.9.3.zip');assert.equal(Object.hasOwn(result,'documents'),false);
 });
 
 test('browser service no longer exposes native-app or PWA install endpoints',async t=>{

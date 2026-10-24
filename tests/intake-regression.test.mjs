@@ -61,12 +61,11 @@ test('A missing model label does not abort the job; answering the question allow
  assert.match(strFromU8(unzipSync(Buffer.from(result.word,'base64'))['word/document.xml']),/im Original unleserlich/);
 });
 
-test('Unreadable is an explicit answer for illegibility questions, never a substitute for a name spelling',()=>{
+test('Explicit unreadable confirmation also resolves a name without inventing a spelling',()=>{
  const queue=new TranslationQueue(async()=>{});queue.pause();
  const job=queue.add({owner:'fixture',requestId:'fixture',payload:{files:[],metadata:{}}});
  job.status='awaiting_answers';job.questions=[{id:'name',question:'Name laut Pass?',context:'Namensabgleich'}];
- assert.throws(()=>queue.answer(job.id,'fixture',[{id:'name',unreadable:true}]),/keine unleserliche/);
- assert.equal(job.status,'awaiting_answers');
+ queue.confirmUnreadable(job.id,'fixture','name');assert.equal(job.status,'queued');assert.equal(job.payload.metadata.clarifications[0].unreadable,true);assert.match(job.payload.metadata.clarifications[0].answer,/im Original unleserlich/);
 });
 
 test('Name and reading suggestions remain optional candidates until the user chooses an answer',()=>{

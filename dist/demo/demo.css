@@ -20,3 +20,9 @@ header .quiet{margin-inline-start:0}
 @media(max-width:900px){header .quiet{display:none}.workspace{gap:16px}.card{padding:20px}}
 @media(max-width:800px){.workspace{grid-template-columns:minmax(0,1fr)}.controls #step-body{flex:initial}.controls .actions{margin-top:0}.paper{min-height:360px}}
 @media(max-width:560px){header{height:auto;min-height:64px;flex-wrap:wrap;padding-block:12px}.badge{display:none}.back-to-app{font-size:12px;padding-inline:10px}.language-picker{margin-inline-start:auto}.brand{font-size:17px}.card{padding:17px}}
+
+/* Match the workspace's fixed, border-free footer. */
+body{padding-bottom:76px}
+footer{position:fixed;inset-inline:0;bottom:0;z-index:10;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:16px;min-height:48px;margin:0;padding:12px max(18px,calc((100vw - 1200px)/2));border:0;background:#fffffff5;font-size:11px;line-height:1.4}
+@media(max-width:480px){footer{padding:12px 14px;gap:10px;font-size:10px}footer .quiet{display:inline-flex;white-space:nowrap}}
+footer{background:#fff}

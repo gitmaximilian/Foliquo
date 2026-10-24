@@ -10,3 +10,13 @@
 8. [x] Update the public GitHub repository and publish v0.9.1 as the latest source-only release after all platform checks pass.
 
 Legacy desktop releases and installer downloads have been removed from GitHub. The repository description and download guidance now describe browser use. Only the current source-code release is retained for the in-app update check.
+
+## Browser workspace v0.9.2
+
+- [x] Move AI settings into the header and include live setup in onboarding.
+- [x] Add scan and clarification dialogs with encrypted draft persistence.
+- [x] Add a narrow jobs sidebar, per-job progress, accessible status colors and an active processing outline.
+- [x] Simplify the workspace, editing page, Guide, footer and three-language controls.
+- [x] Confirm suggestions individually and allow explicit unreadable answers for all questions.
+- [x] Match cancel/delete controls and clarify the start-page hierarchy.
+Release target: v0.9.2, distributed as browser source only.
