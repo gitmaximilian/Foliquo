@@ -38,7 +38,7 @@ async function refreshConnection(){
   providerReady=Boolean(data.connected&&data.planEnabled);$('#local-link').hidden=true;$('#provider-settings').hidden=false;
   if(providerReady){await loadProviderModels(activeProvider);}
   else{$('#model').replaceChildren();$('#model-label').hidden=true;}
-  updateProviderPanel();$('#translate').disabled=!providerReady||!$('#model').value;window.dispatchEvent(new Event('translateocr-ready'));
+  updateProviderPanel();if(typeof updateQueueButton==='function')updateQueueButton();window.dispatchEvent(new Event('translateocr-ready'));
  }catch(error){connectionError(error.message);providerReady=false;$('#translate').disabled=true;}
 }
 $('#provider-choice').onchange=async()=>{

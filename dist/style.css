@@ -310,7 +310,7 @@ main{max-width:1240px;margin:auto;padding:48px 40px 0}
 .library-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
 .library-grid .card{margin-bottom:0}
 .library-grid form,.workspace-options{display:grid;gap:14px}
-.library-grid label,.learning-card label,#workspace-view>section label{display:grid;gap:7px;font-size:14px;font-weight:550}
+.library-grid label,.learning-card label{display:grid;gap:7px;font-size:14px;font-weight:550}
 .library-grid input,.library-grid textarea,.library-grid select{width:100%;border:1px solid var(--strong-line);border-radius:10px;padding:10px 12px;background:#fff;color:var(--ink);font:inherit}
 .library-grid textarea{min-height:100px}
 .form-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
@@ -318,7 +318,7 @@ main{max-width:1240px;margin:auto;padding:48px 40px 0}
 .library-item strong{font-size:14px;font-weight:600;overflow-wrap:anywhere}
 .library-item small{display:block;margin-top:3px;color:var(--muted);font-size:13px}
 .library-item>div:last-child{display:flex;align-items:center;gap:4px}
-#workspace-view>.card,#dossiers-view .card{margin-top:18px}
+#dossiers-view .card{margin-top:18px}
 #workspace-view p{margin:9px 0;color:var(--muted);line-height:1.6}
 #workspace-view input[type=file]{max-width:100%;font-size:13px}
 #retention-form{display:flex;align-items:end;gap:14px;margin:14px 0}
@@ -841,3 +841,73 @@ main{padding-top:36px}
 .workspace-mastheads .review-heading-actions{justify-content:center;flex-wrap:wrap}
 @media(max-width:560px){.workspace-mastheads{padding-bottom:25px}.workspace-mastheads>.page-masthead{gap:9px}.workspace-mastheads>.page-masthead p{font-size:12px}}
 @media(min-width:901px){.workspace-mastheads>.review-heading{flex-direction:row;justify-content:space-between;text-align:start}.workspace-mastheads>.review-heading>div:first-child{min-width:0}.workspace-mastheads #review-names{max-width:700px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+
+/* A single document composer; secondary tools appear after file selection. */
+.workspace-mastheads{min-height:104px;padding-bottom:26px}
+.workspace-mastheads>.page-masthead,.workspace-mastheads>.studio-intro{min-height:70px}
+.translation-composer{padding:0;overflow:hidden}
+.translation-composer .studio-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:0;margin:0;align-items:start}
+.translation-composer .upload-card{min-width:0;padding:24px;background:none;border:0}
+.translation-composer .card-heading{margin:0 0 16px}
+.translation-composer .card-heading h2{font-size:16px;letter-spacing:-.3px}
+.translation-composer .card-marker{display:none}
+.translation-composer .dropzone{display:grid;grid-template-columns:64px minmax(0,1fr) auto;grid-template-rows:auto auto;align-items:center;gap:7px 16px;min-height:132px;padding:24px;border-radius:12px;text-align:start}
+.translation-composer .document-art{grid-column:1;grid-row:1/3;transform:scale(.72);transform-origin:center;margin:0;width:64px}
+.translation-composer .dropzone h3{grid-column:2;grid-row:1;align-self:end;font-size:17px;margin:0}
+.translation-composer .dropzone small{grid-column:2;grid-row:2;align-self:start;font-size:11px;margin:0;line-height:1.6}
+.translation-composer #pick{grid-column:3;grid-row:1/3;min-height:40px;padding:10px 18px;font-size:12px;margin:0}
+.translation-composer .multi-file-note{margin:12px 0 0;font-size:12px}
+.translation-composer .settings-card{display:grid;grid-template-columns:minmax(150px,1fr) minmax(180px,1.2fr) minmax(180px,1fr);align-items:start;gap:12px 24px;padding:22px 24px;min-width:0;border:0;border-top:1px solid var(--line);background:#fafbf9}
+.translation-composer .target-control{margin:0}
+.translation-composer .target-control label{font-size:13px}
+.translation-composer .target-control select{width:100%;margin-top:9px;min-height:42px}
+.translation-composer .settings-card .extra-info{grid-column:2;grid-row:1/3;margin:25px 0 0;min-width:0}
+.translation-composer .extra-info summary{cursor:pointer;display:flex;align-items:center;gap:7px;font-size:13px;font-weight:550;list-style:none;min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.translation-composer .extra-info summary::after{content:'+';margin-inline-start:auto;color:var(--muted);font-size:18px;font-weight:400}
+.translation-composer .extra-info[open] summary::after{content:'−'}
+.translation-composer .extra-info summary span{font-weight:400;color:var(--muted);font-size:11px}
+.translation-composer .extra-info textarea{margin-top:12px;min-height:100px;font-size:12px}
+.translation-composer .extra-info small{font-size:11px}
+.translation-composer .settings-card .action-row{grid-column:3;grid-row:1;margin:25px 0 0;padding:0;display:flex;gap:8px}
+.translation-composer .settings-card .action-row .primary{min-height:44px;font-size:14px;border-radius:10px}
+.translation-composer .composer-note{grid-column:3;grid-row:2;margin:-4px 0 0;font-size:11px;color:var(--muted);text-align:center;line-height:1.6}
+.upload-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:10px;margin-top:14px;max-width:420px}
+.upload-tools #scan-dialog-open,.upload-tools #continue{width:100%;min-width:0;min-height:38px;margin:0;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text);font-size:12px;line-height:1.4;display:inline-flex;justify-content:center;align-items:center;gap:7px;text-align:center}
+.upload-tools button:hover{color:var(--ink)}
+.translation-composer #error:empty,#workspace-error:empty,#learning-status:empty{display:none}
+.translation-composer .file-list:empty{display:none}
+/* One examples collection instead of competing upload and explanation cards. */
+.learning-collection{margin:0;padding:24px}
+.learning-collection>.card-heading{margin:0 0 18px}
+.learning-collection h2{font-size:17px;letter-spacing:-.4px}
+.learning-collection .learning-drop{position:relative;min-height:112px;box-sizing:border-box;margin:0;padding:20px;flex-direction:row;justify-content:flex-start;gap:16px;border-radius:12px;text-align:start}
+.learning-collection .learning-drop:focus-within{outline:2px solid var(--focus);outline-offset:3px}
+.learning-upload-copy{display:grid;gap:6px;min-width:0}
+.learning-upload-copy strong{font-size:14px;font-weight:550}
+.learning-upload-copy small{font-size:12px;font-weight:400}
+.learning-upload-arrow{margin-inline-start:auto;color:var(--muted)}
+.learning-collection .learning-upload-icon{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;display:grid;place-items:center;background:white;font-size:23px;flex-shrink:0}
+.learning-collection .learning-list{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:20px}
+.learning-collection .learning-list>.muted{margin:0;padding:22px 10px;text-align:center;font-size:13px}
+.learning-collection .learning-entry{padding:16px;border-radius:10px}
+.learning-entry-head>div{min-width:0}
+.learning-entry-head strong{overflow-wrap:anywhere;font-size:13px}
+.learning-entry-details>summary{font-size:12px;color:var(--muted);cursor:pointer}
+.learning-entry-actions{justify-content:flex-end}
+.learning-entry-actions button{font-size:12px}
+.learning-help{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.learning-help summary{cursor:pointer;color:var(--text)}
+.learning-help p{max-width:720px;line-height:1.7;margin:12px 0 0}
+.guide-layout>.local-storage-details{grid-column:1/-1;margin:0}
+
+@media(max-width:1050px){.translation-composer .settings-card{gap:12px 16px;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr)}}
+@media(max-width:760px){.translation-composer .dropzone{grid-template-columns:48px minmax(0,1fr);gap:8px 12px;min-height:128px;padding:18px}.translation-composer .document-art{width:48px}.translation-composer #pick{grid-column:2;grid-row:3;justify-self:start;margin-top:6px}.translation-composer .dropzone h3{font-size:15px}.translation-composer .settings-card{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.translation-composer .settings-card .extra-info{grid-column:2;grid-row:1;margin-top:25px}.translation-composer .settings-card .action-row{grid-column:1/-1;grid-row:2;margin-top:4px}.translation-composer .composer-note{grid-column:1/-1;grid-row:3}.translation-composer .upload-card,.translation-composer .settings-card,.learning-collection{padding:18px}.learning-collection .learning-drop{padding:16px;gap:12px}.learning-upload-copy strong{font-size:13px}.learning-upload-copy small{font-size:11px}}
+@media(max-width:440px){.translation-composer .settings-card{grid-template-columns:minmax(0,1fr)}.translation-composer .settings-card .extra-info{grid-column:1;grid-row:2;margin:0}.translation-composer .settings-card .action-row{grid-row:3}.translation-composer .composer-note{grid-row:4}.upload-tools{gap:8px}.upload-tools #scan-dialog-open,.upload-tools #continue{font-size:11px;padding:8px}}
+
+.learning-collection .learning-drop input{inset-inline-start:0;top:0}
+.learning-collection .learning-drop:has(input:disabled){opacity:.65;cursor:progress}
+
+.translation-composer .extra-info summary::-webkit-details-marker{display:none}
+.translation-composer:has(.file-item) .dropzone{min-height:90px;padding-block:14px}
+.translation-composer:has(.file-item) .document-art{transform:scale(.55);height:54px}
+.translation-composer .file-list{max-height:300px;overflow:auto}

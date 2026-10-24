@@ -29,7 +29,8 @@ TranslateOCR checks the public GitHub release list when you open **Guide**. If a
 - Keeps jobs in a collapsible sidebar opened from the header, with a live progress indicator and color-coded status. Clarification drafts and added source images are saved in the encrypted local workspace; return to a job without losing partial answers.
 - Accepts suggested readings with one click or marks a source field as unreadable; each confirmed question closes immediately.
 - Creates PDF and editable Word drafts, supports clarifications, direct edits, a revision chat, and optional review tools.
-- Learns reusable layout and wording conventions from samples you explicitly add. It does not train a model and must not reuse personal facts from samples.
+- Keeps file selection, target language, and optional notes in one translation workspace. Scan tools appear after selecting files.
+- Learns reusable layout and wording conventions from samples you explicitly add in **Learn style**. It does not train a model and must not reuse personal facts from samples. Uploads and saved examples share one collection; detected rules are expandable. Backup and retention controls are available in **Guide**.
 - Includes an optional, fictional demo in English, German, and Arabic.
 
 ## Requirements

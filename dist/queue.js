@@ -32,7 +32,13 @@ const providerLabels={chatgpt:'ChatGPT',openai:'OpenAI API',anthropic:'Claude AP
 const phaseLabels={preparing:'Dokumente werden vorbereitet',translating:'Modell prüft und übersetzt',pdf:'Deine PDF wird erstellt',word:'Deine Word-Datei wird erstellt',queued:'Wartet',done:'Fertig'};
 function queueButton(text,action,job){const b=document.createElement('button');b.type='button';b.className='text-button';b.dataset.queueAction=action;b.dataset.jobId=job.id;if(action==='cancel'||action==='remove'){b.classList.add('job-management');const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');icon.innerHTML=action==='remove'?'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7"/>':'<circle cx="12" cy="12" r="9"/><path d="m8 8 8 8m0-8-8 8"/>';b.append(icon);}const label=document.createElement('span');label.textContent=text;b.append(label);b.onclick=async()=>{b.disabled=true;b.setAttribute('aria-busy','true');try{await queueAction(action,job);}finally{if(b.isConnected){b.disabled=false;b.removeAttribute('aria-busy');}}};return b;}
 
-function updateQueueButton(){if(!$('#translate'))return;$('#translate').disabled=queueSubmitting||!providerReady||!$('#model').value;$('#translate').textContent=queueSubmitting?'Wird hinzugefügt …':queueState.jobs.some(j=>['queued','running','cancelling'].includes(j.status))?'Zur Warteschlange +':'Übersetzen & PDF + Word →';}
+function updateQueueButton(){
+ const button=$('#translate');if(!button)return;
+ button.disabled=queueSubmitting||!files.length||!providerReady||!$('#model').value;
+ button.textContent=queueSubmitting?'Wird hinzugefügt …':queueState.jobs.some(j=>['queued','running','cancelling'].includes(j.status))?'Zur Warteschlange +':'Übersetzen';
+ const note=$('#composer-note');if(note)note.textContent=!files.length?'Dateien hinzufügen, um zu starten.':!providerReady||!$('#model').value?'KI im Header verbinden, um zu übersetzen.':'PDF und Word werden erstellt.';
+}
+
 function renderQueue(){
  renderJobsHeader();
  const jobs=queueState.jobs,active=jobs.find(j=>['running','cancelling'].includes(j.status)),pending=jobs.filter(j=>['queued','running','cancelling'].includes(j.status));
