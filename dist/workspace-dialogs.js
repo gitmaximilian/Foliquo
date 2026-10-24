@@ -9,7 +9,7 @@
  for(const id of ['manual-editor-close','manual-editor-done'])document.querySelector('#'+id).addEventListener('click',window.hideManualEditor);
  manual.addEventListener('click',event=>{if(event.target===manual){const r=manual.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)window.hideManualEditor();}});
  const scan=document.querySelector('#scan-dialog');
- document.querySelector('#scan-dialog-open').addEventListener('click',()=>{if(!scan.open)scan.showModal();});
+ document.querySelector('#scan-dialog-open').addEventListener('click',()=>{if(!scan.open){scan.showModal();document.querySelector('#scan-analyze').click();}});
  for(const id of ['scan-dialog-close','scan-dialog-done'])document.querySelector('#'+id).addEventListener('click',()=>scan.close());
  scan.addEventListener('click',event=>{if(event.target===scan){const r=scan.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)scan.close();}});
  // Keep the mounted forms intact while hidden, including canvas and file input state.

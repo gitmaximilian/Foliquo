@@ -40,7 +40,7 @@ function updateQueueButton(){
 }
 
 function renderQueue(){
- renderJobsHeader();
+ renderJobsHeader();$('#doc-count').textContent=String(queueState.jobs.length);
  const jobs=queueState.jobs,active=jobs.find(j=>['running','cancelling'].includes(j.status)),pending=jobs.filter(j=>['queued','running','cancelling'].includes(j.status));
  $('#queue-card').classList.toggle('is-processing',Boolean(active));$('#queue-card').hidden=false;$('#queue-empty').hidden=Boolean(jobs.length);$('#queue-toggle').hidden=!pending.length;$('#queue-count').textContent=jobs.length?String(jobs.length):'';$('#queue-toggle').textContent=queueState.paused?'Fortsetzen':'Pausieren';$('#queue-toggle').disabled=!pending.length;
  $('#queue-message').hidden=!queueState.paused&&!queueState.connectionError&&!queueState.storageError;$('#queue-message').textContent=queueState.storageError||queueState.connectionError||(queueState.paused?(queueState.pauseReason||'Warteschlange pausiert. Der laufende Auftrag wird noch abgeschlossen.'):'');
@@ -167,27 +167,27 @@ function showClarifications(job,scroll){
  const storedDraft=clarificationDrafts.get(job.id);
  const signature=JSON.stringify([job.id,job.questions.map(({box,...question})=>question)]);if(signature!==clarificationSignature){
   const sameJob=clarificationJobId===job.id,drafts=new Map(sameJob?[...document.querySelectorAll('#clarification-fields textarea')].map(el=>[el.dataset.questionId,el.value]):(storedDraft.answers||[]).map(a=>[a.id,a.answer]));
-  clarificationJobId=job.id;clarificationSignature=signature;if(!sameJob)$('#clarification-extra').value='';questionOriginalReady=renderQuestionOriginal(job);$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
+  clarificationJobId=job.id;clarificationSignature=signature;if(!sameJob)$('#clarification-extra').value='';if(!sameJob)questionOriginalReady=renderQuestionOriginal(job);$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
   const fields=job.questions.map((q,i)=>{
-   const field=document.createElement('div');field.className='clarification-field';field.dataset.questionId=q.id;
+   const field=document.createElement('div');field.className='clarification-field';field.dataset.questionId=q.id;field.addEventListener('focusin',()=>{document.querySelectorAll('.clarification-field').forEach(el=>el.classList.toggle('is-current',el===field));});
    const label=document.createElement('label');label.htmlFor=`answer-${q.id}`;label.textContent=`${i+1}. ${q.question}`;
-   const context=document.createElement('p');context.className='question-context';context.textContent=q.context;
+   const context=document.createElement('details');context.className='question-context';const contextTitle=document.createElement('summary');contextTitle.textContent='Kontext';const contextText=document.createElement('p');contextText.textContent=q.context;context.append(contextTitle,contextText);
    const answer=document.createElement('textarea');answer.id=label.htmlFor;answer.dataset.questionId=q.id;answer.maxLength=4000;answer.required=true;answer.rows=2;answer.placeholder='Deine Antwort …';answer.value=drafts.get(q.id)||'';
    const suggestion=document.createElement('div');suggestion.className='question-suggestion';suggestion.hidden=!q.suggestion;
    const actions=document.createElement('div');actions.className='clarification-actions';
    if(q.suggestion){
-    const heading=document.createElement('strong');heading.textContent='Mögliche Lesung · bitte bestätigen';
+    const heading=document.createElement('strong');heading.textContent='Vorschlag';
     const candidate=document.createElement('p');candidate.dataset.noTranslate='';candidate.dir='auto';candidate.textContent=q.suggestion;
     const use=document.createElement('button');use.type='button';use.className='text-button question-action question-use';use.textContent='Vorschlag übernehmen';use.onclick=()=>void acceptClarification(job,q,q.suggestion);
     suggestion.append(heading,candidate);actions.append(use);
    }
-   const locate=document.createElement('button');locate.type='button';locate.className='text-button question-action question-source';locate.setAttribute('aria-pressed','false');locate.textContent='Originalstelle ansehen';locate.onclick=async()=>{locate.disabled=true;locate.textContent='Originalstelle wird gesucht …';try{await questionOriginalReady;if(!q.box){const location=await localRequest(`/api/jobs/${job.id}/locate`,{questionId:q.id}).then(r=>r.json());Object.assign(q,location);}if(clarificationJobId===job.id&&typeof focusQuestionOriginal==='function'){await focusQuestionOriginal(q);document.querySelectorAll('#clarification-fields .question-source').forEach(button=>button.setAttribute('aria-pressed',String(button===locate)));}}catch(error){$('#clarification-error').textContent=error.message;}finally{locate.disabled=false;locate.textContent='Originalstelle ansehen';}};actions.append(locate);
+   const locate=document.createElement('button');locate.type='button';locate.className='text-button question-action question-source';locate.setAttribute('aria-pressed','false');locate.textContent='Originalstelle ansehen';locate.onclick=async()=>{document.querySelectorAll('.clarification-field').forEach(el=>el.classList.toggle('is-current',el===field));locate.disabled=true;locate.textContent='Originalstelle wird gesucht …';try{await questionOriginalReady;if(!q.box){const location=await localRequest(`/api/jobs/${job.id}/locate`,{questionId:q.id}).then(r=>r.json());Object.assign(q,location);}if(clarificationJobId===job.id&&typeof focusQuestionOriginal==='function'){await focusQuestionOriginal(q);document.querySelectorAll('#clarification-fields .question-source').forEach(button=>button.setAttribute('aria-pressed',String(button===locate)));}}catch(error){$('#clarification-error').textContent=error.message;}finally{locate.disabled=false;locate.textContent='Originalstelle ansehen';}};actions.append(locate);
    {
     const unreadable=document.createElement('button');unreadable.type='button';unreadable.className='text-button question-action question-unreadable';unreadable.textContent='Unleserlich';
     unreadable.onclick=()=>void acceptClarification(job,q,null);
     actions.insertBefore(unreadable,locate);
    }
-   const hint=document.createElement('small');hint.className='question-action-hint';hint.textContent='Nicht lesbar? Mit „Unleserlich“ diese Rückfrage abschließen.';
+   const hint=document.createElement('small');hint.className='question-action-hint';hint.textContent='Oder eigene Antwort eingeben.';
    field.append(label,context,suggestion,actions,hint,answer);return field;
   });$('#clarification-fields').replaceChildren(...fields);
  }$('#clarification-card').hidden=false;renderSavedClarificationFiles(storedDraft);window.showClarificationDialog();if(scroll){$('#clarification-fields textarea')?.focus({preventScroll:true});}

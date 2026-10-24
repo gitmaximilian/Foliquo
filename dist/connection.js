@@ -13,6 +13,7 @@ async function localRequest(path,payload,signal){
 function providerInfo(id){return providerList.find(p=>p.id===id)||{id,label:id,help:''};}
 function updateProviderPanel(){
  const choice=$('#provider-choice').value,info=providerInfo(choice),configured=choice==='chatgpt'?Boolean(window.chatgptConnected):Boolean(info.configured),chatgpt=choice==='chatgpt';
+ const status=$('#provider-status');status.textContent=providerReady?'Verbunden':'Nicht verbunden';status.dataset.ready=String(providerReady);
  $('#provider-help').textContent=info.help||'';if(!chatgpt&&!configured)$('#provider-more').open=true;$('#provider-api-panel').hidden=chatgpt;$('#connect-chatgpt').hidden=!chatgpt||providerReady;
  $('#provider-key-clear').hidden=chatgpt||!info.configured;$('#provider-key-state').textContent=chatgpt?'':info.configured?'API-Schlüssel gespeichert.':'Noch kein API-Schlüssel gespeichert.';
  $('#provider-model-row')?.removeAttribute('hidden');$('#model-label').hidden=!configured||!providerReady||!$('#model').options.length;$('#load-models').hidden=chatgpt||!configured;$('#disconnect-chatgpt').hidden=!chatgpt||!window.chatgptConnected;

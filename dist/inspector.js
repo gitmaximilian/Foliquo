@@ -1,19 +1,19 @@
+let inspectionViewer=null,questionSourceViewer=null;
 let inspectResult=null,inspectSignature='',sourceGeneration=0,sourcePage=1,sourceIndex=0,sourceLocation=null;
 function textElement(tag,text,className=''){const el=document.createElement(tag);el.textContent=text;if(className)el.className=className;return el;}
-async function sourceCanvas(file,pageNumber=1){const bytes=Uint8Array.from(atob(file.data),c=>c.charCodeAt(0));if(file.type==='application/pdf'){const renderer=await import('/vendor/pdfjs/pdf.mjs');renderer.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/pdf.worker.mjs';const loading=renderer.getDocument({data:bytes,standardFontDataUrl:'/vendor/pdfjs/standard_fonts/',cMapUrl:'/vendor/pdfjs/cmaps/',cMapPacked:true,wasmUrl:'/vendor/pdfjs/wasm/',isEvalSupported:false});const doc=await loading.promise;try{const page=await doc.getPage(Math.min(pageNumber,doc.numPages)),v=page.getViewport({scale:1.3}),canvas=document.createElement('canvas');canvas.width=v.width;canvas.height=v.height;await page.render({canvas,viewport:v}).promise;return {canvas,pages:doc.numPages};}finally{await loading.destroy();}}
- const url=URL.createObjectURL(new Blob([bytes],{type:file.type}));try{const img=new Image();img.src=url;await img.decode();const canvas=document.createElement('canvas'),scale=Math.min(1,1600/img.width);canvas.width=img.width*scale;canvas.height=img.height*scale;canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);return {canvas,pages:1};}finally{URL.revokeObjectURL(url);}}
+async function sourceCanvas(file,pageNumber=1){const bytes=Uint8Array.from(atob(file.data),c=>c.charCodeAt(0));if(file.type==='application/pdf'){const renderer=await import('/vendor/pdfjs/pdf.mjs');renderer.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/pdf.worker.mjs';const loading=renderer.getDocument({data:bytes,standardFontDataUrl:'/vendor/pdfjs/standard_fonts/',cMapUrl:'/vendor/pdfjs/cmaps/',cMapPacked:true,wasmUrl:'/vendor/pdfjs/wasm/',isEvalSupported:false});const doc=await loading.promise;try{const page=await doc.getPage(Math.min(pageNumber,doc.numPages)),base=page.getViewport({scale:1}),v=page.getViewport({scale:Math.min(2.2,2600/base.width,Math.sqrt(8000000/(base.width*base.height)))}),canvas=document.createElement('canvas');canvas.width=v.width;canvas.height=v.height;await page.render({canvas,viewport:v}).promise;return {canvas,pages:doc.numPages};}finally{await loading.destroy();}}
+ const url=URL.createObjectURL(new Blob([bytes],{type:file.type}));try{const img=new Image();img.src=url;await img.decode();const canvas=document.createElement('canvas'),scale=Math.min(1,3200/img.width,Math.sqrt(8000000/(img.width*img.height)));canvas.width=img.width*scale;canvas.height=img.height*scale;canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);return {canvas,pages:1};}finally{URL.revokeObjectURL(url);}}
 async function drawInspection(){
  const gen=++sourceGeneration,file=inspectResult?.previews[sourceIndex];if(!file)return;
  $('#inspect-original').replaceChildren(textElement('p','Original wird geladen …'));$('#inspect-crop').replaceChildren();
  try{
   const {canvas,pages}=await sourceCanvas(file,sourcePage);if(gen!==sourceGeneration)return;
   canvas.setAttribute('aria-label',`Originalseite ${sourcePage}: ${file.name}`);
-  const stage=document.createElement('div');stage.className='question-source-page';stage.style.width=`${canvas.width}px`;stage.append(canvas);$('#inspect-original').replaceChildren(stage);
+  inspectionViewer?.destroy();inspectionViewer=createSourceViewer($('#inspect-original'));inspectionViewer.setCanvas(canvas,sourceLocation?.box||null);
   $('#inspect-page-label').textContent=`Seite ${sourcePage} von ${pages}`;$('#inspect-prev').disabled=sourcePage<=1;$('#inspect-next').disabled=sourcePage>=pages;
-  if(sourceLocation?.box){
-   const [x,y,w,h]=sourceLocation.box,box=document.createElement('div');box.className='source-highlight';box.setAttribute('role','img');box.setAttribute('aria-label','Markierte Originalstelle');box.style.cssText=`left:${x*100}%;top:${y*100}%;width:${w*100}%;height:${h*100}%`;stage.append(box);
-   const crop=document.createElement('canvas');crop.width=Math.max(1,canvas.width*w);crop.height=Math.max(1,canvas.height*h);crop.getContext('2d').drawImage(canvas,canvas.width*x,canvas.height*y,canvas.width*w,canvas.height*h,0,0,crop.width,crop.height);crop.setAttribute('aria-label','Zugeordneter Originalausschnitt');$('#inspect-crop').append(textElement('small','Farbig markierte Stelle · Position am Original mitprüfen.'),crop);box.scrollIntoView({block:'center',behavior:'smooth'});
-  }else if(sourceLocation)$('#inspect-crop').append(textElement('p','Für diese Stelle wurde keine Position erkannt. Bitte auf der Originalseite nachsehen.'));
+  if(sourceLocation?.box)inspectionViewer.focusRegion();
+  else if(sourceLocation)$('#inspect-crop').append(textElement('p','Für diese Stelle wurde keine Position erkannt. Bitte auf der Originalseite nachsehen.'));
+
  }catch{if(gen===sourceGeneration)$('#inspect-original').replaceChildren(textElement('p','Originalvorschau nicht verfügbar. Bitte Originaldatei extern prüfen.'));}
 }
 async function focusField(field){window.closeReviewTools?.();
@@ -38,36 +38,27 @@ $('#revision-reject').onclick=()=>void inspectorTask(()=>localRequest(`/api/jobs
 $('#revision-restore').onclick=()=>{if(confirm('Diese frühere Fassung als neue Version wiederherstellen?'))void inspectorTask(()=>localRequest(`/api/jobs/${reviewJobId}/revision`,{...protectionApproval(),action:'restore',version:reviewData.version,restoreVersion:Number($('#revision-history').value)}));};
 let focusQuestionOriginal=null;
 async function renderQuestionOriginal(job){
- const id=job.id;focusQuestionOriginal=null;
+ const id=job.id;focusQuestionOriginal=null;questionSourceViewer?.destroy();questionSourceViewer=null;
  const root=$('#clarification-original');root.replaceChildren(textElement('p','Original zur Rückfrage wird geladen …'));
  try{
   const result=await localRequest(`/api/jobs/${id}/source`).then(r=>r.json());if(clarificationJobId!==id)return;
+  const controls=document.createElement('div');controls.className='question-source-controls';
   const select=document.createElement('select');select.setAttribute('aria-label','Original zur Rückfrage auswählen');select.replaceChildren(...result.files.map((f,i)=>new Option(f.name,i)));
   const pageInput=document.createElement('input');pageInput.type='number';pageInput.min=1;pageInput.value=1;pageInput.setAttribute('aria-label','Originalseite zur Rückfrage');
-  const host=document.createElement('div');host.className='question-source-view';
-  const stage=document.createElement('div');stage.className='question-source-page';
-  const note=textElement('p','','source-location-note');note.setAttribute('role','status');
-  const cropHost=document.createElement('div');cropHost.className='inspect-crop';
-  host.append(stage,note,cropHost);let generation=0;
+  const host=document.createElement('div');const note=textElement('p','','source-location-note');note.setAttribute('role','status');controls.append(select,pageInput);root.replaceChildren(controls,host,note);let generation=0;
   async function show(location=null){
-   const current=++generation;note.textContent='';cropHost.replaceChildren();stage.replaceChildren(textElement('p','Original wird geladen …'));
+   const current=++generation;note.textContent='';questionSourceViewer?.destroy();questionSourceViewer=null;host.replaceChildren(textElement('p','Original wird geladen …'));
    try{
     const file=result.files[Number(select.value)];if(!file)throw new Error('Missing source');
     const {canvas,pages}=await sourceCanvas(file,Math.max(1,Number(pageInput.value)||1));
     if(current!==generation||clarificationJobId!==id)return;
-    pageInput.max=pages;pageInput.value=Math.min(Math.max(1,Number(pageInput.value)||1),pages);
-    canvas.setAttribute('aria-label',`Originalseite ${pageInput.value}: ${file.name}`);
-    stage.style.width=`${canvas.width}px`;stage.replaceChildren(canvas);
-    if(location?.box){
-     const [x,y,w,h]=location.box,highlight=document.createElement('div');highlight.className='source-highlight';highlight.setAttribute('role','img');highlight.setAttribute('aria-label','Markierte Originalstelle');
-     highlight.style.cssText=`left:${x*100}%;top:${y*100}%;width:${w*100}%;height:${h*100}%`;stage.append(highlight);
-     const crop=document.createElement('canvas');crop.width=Math.max(1,Math.round(canvas.width*w));crop.height=Math.max(1,Math.round(canvas.height*h));
-     crop.getContext('2d').drawImage(canvas,canvas.width*x,canvas.height*y,canvas.width*w,canvas.height*h,0,0,crop.width,crop.height);crop.setAttribute('aria-label','Zugeordneter Originalausschnitt');
-     note.textContent='Farbig markierte Stelle · Position am Original mitprüfen.';cropHost.append(crop);highlight.scrollIntoView({block:'center',behavior:'smooth'});
-    }else if(location){note.textContent='Für diese Stelle wurde keine Position erkannt. Bitte auf der Originalseite nachsehen.';stage.scrollIntoView({block:'center',behavior:'smooth'});}
-   }catch{if(current===generation&&clarificationJobId===id)stage.replaceChildren(textElement('p','Bitte Originaldatei extern öffnen.'));}
+    pageInput.max=pages;pageInput.value=Math.min(Math.max(1,Number(pageInput.value)||1),pages);canvas.setAttribute('aria-label',`Originalseite ${pageInput.value}: ${file.name}`);
+    questionSourceViewer=createSourceViewer(host);questionSourceViewer.setCanvas(canvas,location?.box||null);
+    if(location?.box){note.textContent='Markierte Stelle im Original';questionSourceViewer.focusRegion();}
+    else if(location)note.textContent='Für diese Stelle wurde keine Position erkannt. Bitte auf der Originalseite nachsehen.';
+   }catch{if(current===generation&&clarificationJobId===id)host.replaceChildren(textElement('p','Bitte Originaldatei extern öffnen.'));}
   }
   focusQuestionOriginal=async question=>{select.value=String(question.fileIndex||0);pageInput.value=question.page||1;await show(question);};
-  select.onchange=()=>{pageInput.value=1;void show();};pageInput.onchange=()=>void show();root.replaceChildren(select,pageInput,host);await show();
+  select.onchange=()=>{pageInput.value=1;void show();};pageInput.onchange=()=>void show();await show();
  }catch(error){if(clarificationJobId===id)root.textContent=error.message;}
 }

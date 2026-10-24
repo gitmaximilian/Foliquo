@@ -26,3 +26,9 @@ body{padding-bottom:76px}
 footer{position:fixed;inset-inline:0;bottom:0;z-index:10;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:16px;min-height:48px;margin:0;padding:12px max(18px,calc((100vw - 1200px)/2));border:0;background:#fffffff5;font-size:11px;line-height:1.4}
 @media(max-width:480px){footer{padding:12px 14px;gap:10px;font-size:10px}footer .quiet{display:inline-flex;white-space:nowrap}}
 footer{background:#fff}
+
+/* Match the application control sizes and restrained workspace proportions. */
+button,.downloads a,.back-to-app,.language-picker select{min-height:40px;border-radius:9px;font-size:13px}
+main{max-width:1120px;padding-top:36px}.intro{margin-bottom:28px}.intro h1{font-size:clamp(32px,4vw,48px);letter-spacing:-1.5px;margin:12px 0}.intro>p{font-size:15px}.notice{border-radius:8px;font-size:12px;padding:8px 12px;margin-top:12px}
+.workspace{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}.card{padding:20px;border-radius:14px}.section-heading h2{font-size:17px}.tabs{border-radius:9px}.tabs button{border-radius:6px;min-height:30px;font-size:11px}.tabs button.active{background:#fff;color:var(--ink);box-shadow:0 1px 4px #0001}.actions{justify-content:flex-end}.actions .primary{flex:0 1 220px}.steps{gap:16px}.steps li{font-size:12px}.about{padding-top:36px}.paper{box-shadow:none}.brand{direction:ltr;unicode-bidi:isolate}
+@media(max-width:760px){.workspace{grid-template-columns:minmax(0,1fr)}main{padding-inline:18px}.intro h1{font-size:32px}.actions .primary{flex:1}}

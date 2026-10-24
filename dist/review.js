@@ -17,7 +17,7 @@ function renderReview(snapshot){
  const signature=JSON.stringify(snapshot.messages);if(signature!==reviewMessageSignature){reviewMessageSignature=signature;$('#review-messages').replaceChildren(...snapshot.messages.map(message=>{const item=document.createElement('article');item.className=`review-message ${message.role==='user'?'from-user':'from-assistant'}`;const label=document.createElement('strong');label.textContent=message.role==='user'?'Du':'TranslateOCR';const text=document.createElement('p');text.textContent=message.text;item.append(label,text);return item;}));$('#review-messages').scrollTop=$('#review-messages').scrollHeight;}
  if(snapshot.result){
   $('#review-preview-note').textContent=snapshot.result.context?.layout?.includeOriginals===false?'PDF ohne Originalanhang · Word mit derselben bearbeitbaren Übersetzung':'PDF mit Originalseiten · Word mit derselben bearbeitbaren Übersetzung';$('#review-names').textContent=snapshot.names.join(' · ');$('#review-text').textContent=snapshot.result.text;
-  void setReviewPDF(snapshot.result.pdf);reviewPreviewVersion=snapshot.version;queueResultCache.delete(reviewJobId);
+  if(reviewPreviewVersion!==snapshot.version){void setReviewPDF(snapshot.result.pdf);reviewPreviewVersion=snapshot.version;}queueResultCache.delete(reviewJobId);
  }
  if(typeof renderInspector==='function')renderInspector(snapshot);if(typeof renderStudio==='function')renderStudio(snapshot);if(typeof renderWorkflow==='function')renderWorkflow(snapshot);
  renderReviewControls();
@@ -45,6 +45,7 @@ async function downloadFinal(format){
 }
 $('#review-final-pdf').onclick=()=>downloadFinal('pdf');$('#review-final-word').onclick=()=>downloadFinal('word');$('#review-final-both').onclick=()=>downloadFinal('bundle');
 
+let reviewPDFViewer=null;
 let pdfRenderer=null,pdfLoading=null,pdfDocument=null,pdfRenderTask=null,pdfPageIndex=1,pdfGeneration=0;
 async function setReviewPDF(base64){
  const generation=++pdfGeneration;$('#review-preview-error').textContent='';$('#review-page-label').textContent='Vorschau wird geladen …';$('#review-page-canvas').replaceChildren();pdfRenderTask?.cancel();if(pdfLoading)void pdfLoading.destroy();pdfDocument=null;
@@ -56,13 +57,13 @@ async function setReviewPDF(base64){
 async function renderReviewPDFPage(){
  if(!pdfDocument)return;const generation=pdfGeneration,index=pdfPageIndex;pdfRenderTask?.cancel();
  try{const page=await pdfDocument.getPage(index);if(generation!==pdfGeneration||index!==pdfPageIndex)return;const width=Math.max(240,$('#review-page-canvas').clientWidth||500),base=page.getViewport({scale:1}),ratio=Math.min(2,window.devicePixelRatio||1),viewport=page.getViewport({scale:width/base.width*ratio});
-  const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);canvas.style.width='100%';canvas.style.height='auto';canvas.setAttribute('aria-label',`PDF-Seite ${index} von ${pdfDocument.numPages}`);$('#review-page-canvas').replaceChildren(canvas);
+  const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);canvas.style.width='100%';canvas.style.height='auto';canvas.setAttribute('aria-label',`PDF-Seite ${index} von ${pdfDocument.numPages}`);reviewPDFViewer?.destroy();reviewPDFViewer=createSourceViewer($('#review-page-canvas'));reviewPDFViewer.setCanvas(canvas);
   $('#review-page-label').textContent=`Seite ${index} von ${pdfDocument.numPages}`;$('#review-page-prev').disabled=index===1;$('#review-page-next').disabled=index===pdfDocument.numPages;
   pdfRenderTask=page.render({canvas,viewport});await pdfRenderTask.promise;
  }catch(error){if(error.name!=='RenderingCancelledException'&&generation===pdfGeneration)$('#review-preview-error').textContent='Diese Seite konnte nicht dargestellt werden. Bitte die Textvorschau oder den PDF-Download verwenden.';}
 }
 $('#review-page-prev').onclick=()=>{if(pdfDocument&&pdfPageIndex>1){pdfPageIndex--;void renderReviewPDFPage();}};
 $('#review-page-next').onclick=()=>{if(pdfDocument&&pdfPageIndex<pdfDocument.numPages){pdfPageIndex++;void renderReviewPDFPage();}};
-let previewResizeTimer;new ResizeObserver(()=>{clearTimeout(previewResizeTimer);previewResizeTimer=setTimeout(()=>{if(!$('#review-pdf').hidden)void renderReviewPDFPage();},160);}).observe($('#review-pdf'));
+let previewResizeTimer,lastPDFPreviewWidth=0;new ResizeObserver(entries=>{const width=entries[0]?.contentRect.width||0;if(Math.abs(width-lastPDFPreviewWidth)<1)return;lastPDFPreviewWidth=width;clearTimeout(previewResizeTimer);previewResizeTimer=setTimeout(()=>{if(!$('#review-pdf').hidden)void renderReviewPDFPage();},160);}).observe($('#review-pdf'));
 
-function clearReviewPDF(){pdfGeneration++;pdfRenderTask?.cancel();if(pdfLoading)void pdfLoading.destroy();pdfDocument=null;$('#review-page-canvas').replaceChildren();}
+function clearReviewPDF(){reviewPDFViewer?.destroy();reviewPDFViewer=null;pdfGeneration++;pdfRenderTask?.cancel();if(pdfLoading)void pdfLoading.destroy();pdfDocument=null;$('#review-page-canvas').replaceChildren();}
