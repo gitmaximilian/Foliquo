@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <strong>From document to editable translation.</strong><br>
-  An open-source, browser-based workspace for OCR, clarifications and PDF + Word drafts.<br>
+  <strong>TranslateOCR Community · Public</strong><br>
+  A browser-based workspace for OCR, clarifications and PDF + Word drafts.<br>
   Runs on your computer. Opens in your browser.
 </p>
 
@@ -19,7 +19,7 @@
 
 <p align="center">
   <a href="https://github.com/gitmaximilian/TranslateOCR/actions/workflows/ci.yml"><img src="https://github.com/gitmaximilian/TranslateOCR/actions/workflows/ci.yml/badge.svg" alt="Tests"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-27272a" alt="MIT license"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-27272a" alt="PolyForm Noncommercial 1.0.0 license"></a>
   <img src="https://img.shields.io/badge/interface-EN%20%2F%20DE%20%2F%20AR-27272a" alt="English, German and Arabic interface">
 </p>
 
@@ -91,3 +91,9 @@ npm run demo:build
 ```
 
 See the [browser setup guide](docs/BROWSER-SETUP.md), [Features and limitations](FEATURES.md), [security notes](SECURITY.md), and [contributing](CONTRIBUTING.md).
+
+## TranslateOCR Community
+
+TranslateOCR Community is public source software under the [PolyForm Noncommercial License 1.0.0](LICENSE). It is free for noncommercial purposes covered by that license. The license permits covered noncommercial development and redistribution under its terms. Personal hobby, study, research, and testing uses must have no anticipated commercial application. The license also separately covers use by specified noncommercial organizations, including government institutions. Commercial use is not covered by this community license; consult the full license for the exact terms. Earlier releases published under MIT remain available under the terms that accompanied those versions. Third-party components retain their own licenses.
+
+**TranslateOCR Pro — Coming soon.** A separate B2B offering is planned. Commercial availability and its terms have not been announced. The future Pro offering does not change the license for this public Community release.

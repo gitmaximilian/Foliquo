@@ -9,7 +9,7 @@ async function drawInspection(){
  try{
   const {canvas,pages}=await sourceCanvas(file,sourcePage);if(gen!==sourceGeneration)return;
   canvas.setAttribute('aria-label',`Originalseite ${sourcePage}: ${file.name}`);
-  inspectionViewer?.destroy();inspectionViewer=createSourceViewer($('#inspect-original'));inspectionViewer.setCanvas(canvas,sourceLocation?.box||null);
+  inspectionViewer?.destroy();inspectionViewer=createSourceViewer($('#inspect-original'),{allowMarking:true});inspectionViewer.setCanvas(canvas,sourceLocation?.box||null);if(sourceLocation?.id)inspectionViewer.enableRegionSelection(async box=>{const target=sourceLocation,location=await localRequest(`/api/jobs/${reviewJobId}/locate`,{fieldId:target.id,fileIndex:sourceIndex,page:sourcePage,box}).then(r=>r.json());Object.assign(target,location);await drawInspection();});
   $('#inspect-page-label').textContent=`Seite ${sourcePage} von ${pages}`;$('#inspect-prev').disabled=sourcePage<=1;$('#inspect-next').disabled=sourcePage>=pages;
   if(sourceLocation?.box)inspectionViewer.focusRegion();
   else if(sourceLocation)$('#inspect-crop').append(textElement('p','Für diese Stelle wurde keine Position erkannt. Bitte auf der Originalseite nachsehen.'));
@@ -45,7 +45,7 @@ async function renderQuestionOriginal(job){
   const controls=document.createElement('div');controls.className='question-source-controls';
   const select=document.createElement('select');select.setAttribute('aria-label','Original zur Rückfrage auswählen');select.replaceChildren(...result.files.map((f,i)=>new Option(f.name,i)));
   const pageInput=document.createElement('input');pageInput.type='number';pageInput.min=1;pageInput.value=1;pageInput.setAttribute('aria-label','Originalseite zur Rückfrage');
-  const host=document.createElement('div');const note=textElement('p','','source-location-note');note.setAttribute('role','status');controls.append(select,pageInput);root.replaceChildren(controls,host,note);let generation=0;
+  const host=document.createElement('div');const note=textElement('p','','source-location-note');note.setAttribute('role','status');controls.append(select,pageInput);root.replaceChildren(controls,host,note);let generation=0,activeQuestion=null;
   async function show(location=null){
    const current=++generation;note.textContent='';questionSourceViewer?.destroy();questionSourceViewer=null;host.replaceChildren(textElement('p','Original wird geladen …'));
    try{
@@ -53,12 +53,12 @@ async function renderQuestionOriginal(job){
     const {canvas,pages}=await sourceCanvas(file,Math.max(1,Number(pageInput.value)||1));
     if(current!==generation||clarificationJobId!==id)return;
     pageInput.max=pages;pageInput.value=Math.min(Math.max(1,Number(pageInput.value)||1),pages);canvas.setAttribute('aria-label',`Originalseite ${pageInput.value}: ${file.name}`);
-    questionSourceViewer=createSourceViewer(host);questionSourceViewer.setCanvas(canvas,location?.box||null);
+    questionSourceViewer=createSourceViewer(host,{allowMarking:true});questionSourceViewer.setCanvas(canvas,location?.box||null);questionSourceViewer.enableRegionSelection(async box=>{if(!activeQuestion)return;const saved=await localRequest(`/api/jobs/${id}/locate`,{questionId:activeQuestion.id,fileIndex:Number(select.value),page:Number(pageInput.value),box}).then(r=>r.json());Object.assign(activeQuestion,saved);await show(saved);});
     if(location?.box){note.textContent='Markierte Stelle im Original';questionSourceViewer.focusRegion();}
     else if(location)note.textContent='Für diese Stelle wurde keine Position erkannt. Bitte auf der Originalseite nachsehen.';
    }catch{if(current===generation&&clarificationJobId===id)host.replaceChildren(textElement('p','Bitte Originaldatei extern öffnen.'));}
   }
-  focusQuestionOriginal=async question=>{select.value=String(question.fileIndex||0);pageInput.value=question.page||1;await show(question);};
+  focusQuestionOriginal=async question=>{activeQuestion=question;select.value=String(question.fileIndex||0);pageInput.value=question.page||1;await show(question);};
   select.onchange=()=>{pageInput.value=1;void show();};pageInput.onchange=()=>void show();await show();
  }catch(error){if(clarificationJobId===id)root.textContent=error.message;}
 }

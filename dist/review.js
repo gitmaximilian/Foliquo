@@ -8,6 +8,7 @@ async function openReviewWorkspace(id){
 function renderReviewControls(){
  const busy=reviewUnavailable||!reviewData||reviewData.busy||reviewSubmitting||reviewData.proposal;$('#review-busy').hidden=!reviewData?.busy&&!reviewSubmitting;$('#review-send').disabled=busy;$('#review-prompt').disabled=busy;
  const blocked=reviewUnavailable||!reviewData?.result;for(const id of ['review-final-pdf','review-final-word','review-final-both'])$("#"+id).disabled=blocked;
+ const styleNote=document.querySelector('#review-style-note');if(styleNote){const applied=reviewData?.result?.context?.appliedLearning||[];styleNote.hidden=!reviewData?.result;styleNote.textContent=applied.length?(window.TOCRI18n?.t('Verwendete Muster:')||'Verwendete Muster:')+' '+applied.map(x=>x.name).join(', '):(window.TOCRI18n?.t('Standardlayout verwendet.')||'Standardlayout verwendet.');}
  $('#review-version').textContent=reviewData?`Version ${reviewData.version}`:'Wird geladen';
  $('#review-final-status').textContent=reviewUnavailable?'Dieser Auftrag ist abgelaufen. Bitte zurückgehen und die Dateien erneut hochladen.':!reviewData?.result?'Die Übersetzung wird geladen …':`Version ${reviewData.version}`;
 }
