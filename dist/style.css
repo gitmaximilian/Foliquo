@@ -800,3 +800,44 @@ main{padding-top:36px}
 @media(max-width:560px){main{padding-top:26px}.studio-intro{gap:16px;margin-bottom:25px}.studio-intro h1{font-size:28px}}
 #review-view .preview-tabs button.active{color:var(--ink)}
 .queue-sidebar>.card-heading{position:sticky;top:0;z-index:3;background:#fff;padding-bottom:10px}
+
+/* One collapsible jobs rail shared by every workspace page. */
+.header-right{direction:ltr}
+.jobs-header-button{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.jobs-header-button[aria-expanded=true]{background:var(--soft);border-color:var(--strong-line)}
+.jobs-indicator{position:relative;width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#a2aaa5}
+.jobs-header-button[data-tone=error] .jobs-indicator{background:#d45d4e}
+.jobs-header-button[data-tone=attention] .jobs-indicator{background:#dca332}
+.jobs-header-button[data-tone=success] .jobs-indicator{background:#47a16b}
+.jobs-header-button.is-processing .jobs-indicator::after{content:'';position:absolute;inset:-4px;border:1.5px solid #dca33235;border-top-color:#b87d17;border-radius:50%;animation:jobs-header-spin 1s linear infinite}
+.jobs-header-progress{font-size:10px;font-variant-numeric:tabular-nums;color:var(--muted)}
+@keyframes jobs-header-spin{to{transform:rotate(360deg)}}
+.workspace-layout{grid-template-columns:minmax(0,1fr) 0px;gap:0;transition:grid-template-columns .32s ease,gap .32s ease}
+.workspace-layout.jobs-open{grid-template-columns:minmax(0,1fr) clamp(220px,20vw,280px);gap:24px}
+.queue-rail{min-width:0;align-self:stretch;overflow:clip;visibility:hidden;opacity:0;transform:translateX(16px);transition:opacity .22s ease,transform .32s ease,visibility 0s .32s}
+.jobs-open>.queue-rail{visibility:visible;opacity:1;transform:none;transition:opacity .25s .07s,transform .32s ease,visibility 0s}
+.queue-rail>#queue-card{position:sticky;top:96px;width:100%;max-width:none;max-height:calc(100dvh - 166px);overflow:auto;margin:0;padding:18px;border-radius:14px;min-width:220px;box-sizing:border-box}
+.queue-rail #queue-list{display:block}
+.queue-heading-actions{display:flex;align-items:center;gap:10px;margin-inline-start:auto}
+.queue-close{display:grid;place-items:center;width:28px;min-height:28px;padding:0;border-radius:7px;font-size:21px;line-height:1;color:var(--muted)}
+.queue-close:hover{background:var(--soft);color:var(--ink)}
+.queue-rail>#queue-card.is-processing{border-color:transparent;background:linear-gradient(#fff,#fff) padding-box,conic-gradient(from var(--jobs-border-angle),#e2e7ef 0%,#e2e7ef 40%,#6991e0 65%,#a6bde9 75%,#e2e7ef 92%) border-box;animation:jobs-border-turn 4s linear infinite}
+@media(min-width:901px){.workspace-content .studio-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){
+ .workspace-layout,.workspace-layout.jobs-open{grid-template-columns:minmax(0,1fr);gap:0}
+ .queue-rail{grid-row:1;max-height:0;transform:translateY(-8px);transition:max-height .32s ease,opacity .22s ease,transform .32s ease,visibility 0s .32s}
+ .jobs-open>.queue-rail{max-height:65dvh;margin-bottom:22px;transform:none;transition:max-height .32s ease,opacity .25s ease,transform .32s ease,visibility 0s}
+ .queue-rail>#queue-card{position:static;min-width:0;max-height:60dvh}
+}
+@media(prefers-reduced-motion:reduce){.workspace-layout,.queue-rail,.jobs-open>.queue-rail{transition:none}.jobs-header-button.is-processing .jobs-indicator::after,.queue-rail>#queue-card.is-processing{animation:none}}
+
+/* Page headings sit above the changing columns, so opening Jobs never moves them. */
+.workspace-mastheads{min-height:108px;padding-bottom:30px;box-sizing:border-box}
+.workspace-mastheads>.studio-intro{margin:0}
+.workspace-mastheads>.page-masthead{margin:0;min-height:78px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px}
+.workspace-mastheads>.page-masthead h1{margin:0;font-size:clamp(28px,2.6vw,34px);line-height:1.15;letter-spacing:-1px}
+.workspace-mastheads>.page-masthead p{margin:0;max-width:760px;color:var(--muted);font-size:13px;line-height:1.6}
+.workspace-mastheads>.review-heading{position:relative}
+.workspace-mastheads .review-heading-actions{justify-content:center;flex-wrap:wrap}
+@media(max-width:560px){.workspace-mastheads{padding-bottom:25px}.workspace-mastheads>.page-masthead{gap:9px}.workspace-mastheads>.page-masthead p{font-size:12px}}
+@media(min-width:901px){.workspace-mastheads>.review-heading{flex-direction:row;justify-content:space-between;text-align:start}.workspace-mastheads>.review-heading>div:first-child{min-width:0}.workspace-mastheads #review-names{max-width:700px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}

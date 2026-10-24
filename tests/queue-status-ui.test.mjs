@@ -12,3 +12,15 @@ test('Job statuses distinguish active work, action needed, failure and completio
 test('Per-job progress is rounded and bounded while completion is always 100 percent',()=>{
  assert.equal(status({status:'running',progress:42.6}).progress,43);assert.equal(status({status:'running',progress:-1}).progress,0);assert.equal(status({status:'running',progress:900}).progress,100);assert.equal(status({status:'running',progress:NaN}).progress,0);assert.equal(status({status:'succeeded',progress:2}).progress,100);
 });
+
+test('Header status prioritizes failed and unanswered jobs while retaining live progress',()=>{
+ const header=(jobs,paused=false)=>scope.queueHeaderStatus(jobs,paused);
+ assert.equal(header([]).tone,'muted');
+ assert.equal(header([{status:'succeeded'}]).tone,'success');
+ assert.equal(header([{status:'queued'}],true).label,'Pausiert');
+ assert.equal(header([{status:'running',progress:42.6}]).progress,43);
+ const questions=header([{status:'running',progress:25},{status:'awaiting_answers'}]);
+ assert.equal(questions.label,'Antwort benötigt');assert.equal(questions.working,true);assert.equal(questions.progress,25);
+ assert.equal(header([{status:'failed'},{status:'running'}]).tone,'error');
+ assert.equal(header([{status:'cancelled'},{status:'expired'}]).tone,'muted');
+});

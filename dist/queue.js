@@ -1,3 +1,24 @@
+let jobsPanelOpen=false;
+try{jobsPanelOpen=sessionStorage.getItem('translateocr-jobs-open')==='true';}catch{}
+function setJobsPanel(open,restoreFocus=false){
+ jobsPanelOpen=Boolean(open);
+ const rail=$('#queue-rail'),button=$('#jobs-open');
+ document.querySelector('.workspace-layout').classList.toggle('jobs-open',jobsPanelOpen);
+ rail.inert=!jobsPanelOpen;rail.setAttribute('aria-hidden',String(!jobsPanelOpen));
+ button.setAttribute('aria-expanded',String(jobsPanelOpen));
+ try{sessionStorage.setItem('translateocr-jobs-open',String(jobsPanelOpen));}catch{}
+ if(!jobsPanelOpen&&restoreFocus)button.focus({preventScroll:true});
+}
+$('#jobs-open').onclick=()=>setJobsPanel(!jobsPanelOpen);
+$('#jobs-close').onclick=()=>setJobsPanel(false,true);
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&jobsPanelOpen&&!document.querySelector('dialog[open],#onboarding:not([hidden])')){setJobsPanel(false,true);event.preventDefault();}});
+setJobsPanel(jobsPanelOpen);
+function renderJobsHeader(){
+ const state=queueHeaderStatus(queueState.jobs,queueState.paused),button=$('#jobs-open'),progress=$('#jobs-header-progress');
+ button.dataset.tone=state.tone;button.classList.toggle('is-processing',state.working);
+ progress.hidden=!state.working;progress.textContent=state.working?`${state.progress}%`:'';
+ const status=$('#jobs-header-status');if(status.dataset.status!==state.label){status.dataset.status=state.label;status.textContent=state.label;}
+}
 let queueMutationVersion=0;
 let queueState={jobs:[],paused:false},queueSubmitting=false,queuePollTimer=null,queuePolling=false,queueLastAnnouncement='';
 let clarificationJobId=null,clarificationSignature='',clarificationSubmitting=false,questionOriginalReady=Promise.resolve();
@@ -13,6 +34,7 @@ function queueButton(text,action,job){const b=document.createElement('button');b
 
 function updateQueueButton(){if(!$('#translate'))return;$('#translate').disabled=queueSubmitting||!providerReady||!$('#model').value;$('#translate').textContent=queueSubmitting?'Wird hinzugefügt …':queueState.jobs.some(j=>['queued','running','cancelling'].includes(j.status))?'Zur Warteschlange +':'Übersetzen & PDF + Word →';}
 function renderQueue(){
+ renderJobsHeader();
  const jobs=queueState.jobs,active=jobs.find(j=>['running','cancelling'].includes(j.status)),pending=jobs.filter(j=>['queued','running','cancelling'].includes(j.status));
  $('#queue-card').classList.toggle('is-processing',Boolean(active));$('#queue-card').hidden=false;$('#queue-empty').hidden=Boolean(jobs.length);$('#queue-toggle').hidden=!pending.length;$('#queue-count').textContent=jobs.length?String(jobs.length):'';$('#queue-toggle').textContent=queueState.paused?'Fortsetzen':'Pausieren';$('#queue-toggle').disabled=!pending.length;
  $('#queue-message').hidden=!queueState.paused&&!queueState.connectionError&&!queueState.storageError;$('#queue-message').textContent=queueState.storageError||queueState.connectionError||(queueState.paused?(queueState.pauseReason||'Warteschlange pausiert. Der laufende Auftrag wird noch abgeschlossen.'):'');
@@ -93,7 +115,7 @@ $('#translate').onclick=async()=>{
   const upload=await documentsForRequest(selected),result=await localRequest('/api/jobs',{files:upload,metadata:meta,model,provider:$('#provider-choice').value,clientId:queueClientId,requestId:crypto.randomUUID()}).then(r=>r.json());queueSnapshots.set(result.id,selected);
   if($('#additional-info').value.trim()===meta.additionalInfo)$('#additional-info').value='';
   if(files.length===selected.length&&files.every((f,i)=>f===selected[i])){files=[];invalidateDraft();resetPreview();renderFiles();$('#file').value='';}
-  await pollQueue();$('#queue-card').scrollIntoView({behavior:'smooth',block:'nearest'});toast('Auftrag hinzugefügt. Du kannst jetzt weitere Dateien auswählen.');
+  await pollQueue();setJobsPanel(true);$('#queue-card').scrollIntoView({behavior:'smooth',block:'nearest'});toast('Auftrag hinzugefügt. Du kannst jetzt weitere Dateien auswählen.');
  }catch(error){$('#error').textContent=error.message;}finally{queueSubmitting=false;updateQueueButton();}
 };
 $('#queue-toggle').onclick=async()=>{try{await localRequest(`/api/queue/${queueState.paused?'resume':'pause'}`,{});await pollQueue();}catch(error){toast(error.message);}};
@@ -114,7 +136,7 @@ async function saveClarificationDraft(){
 }
 function renderSavedClarificationFiles(draft){$('#clarification-saved-files').textContent=draft.savedFiles?.length?window.TOCRI18n.t('Zusätzliche Aufnahmen gespeichert:')+' '+draft.savedFiles.map(f=>f.name).join(' · '):'';}
 function scheduleClarificationDraft(){captureClarificationDraft();clearTimeout(clarificationDraftTimer);clarificationDraftTimer=setTimeout(()=>void saveClarificationDraft().catch(()=>{}),500);}
-async function dismissClarificationDialog(){try{await saveClarificationDraft();if(clarificationJobId)window.dismissedClarifications.add(clarificationJobId);closeClarifications();}catch{}}
+async function dismissClarificationDialog(){try{await saveClarificationDraft();if(clarificationJobId)window.dismissedClarifications.add(clarificationJobId);closeClarifications();setJobsPanel(true);}catch{}}
 $('#clarification-fields').addEventListener('input',scheduleClarificationDraft);
 $('#clarification-extra').addEventListener('change',()=>{const draft=captureClarificationDraft();if(draft){draft.filesToUpload=[...$('#clarification-extra').files];void saveClarificationDraft().catch(()=>{});}});
 $('#clarification-dialog').addEventListener('cancel',event=>{event.preventDefault();void dismissClarificationDialog();});

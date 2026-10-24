@@ -35,6 +35,8 @@
   Object.assign(dictionaries.ar,{"Nicht lesbar? Mit „Unleserlich“ diese Rückfrage abschließen.": "غير مقروء؟ اختر «غير مقروء» لحسم هذا السؤال.", "Antwort übernommen.": "تم اعتماد الإجابة."});
   Object.assign(dictionaries.en,{"Löschen": "Delete"});
   Object.assign(dictionaries.ar,{"Löschen": "حذف"});
+  Object.assign(dictionaries.en,{'Aufträge schließen':'Close jobs'});
+  Object.assign(dictionaries.ar,{'Aufträge schließen':'إغلاق المهام'});
   const providerNames=['ChatGPT-Konto','OpenAI API','Claude API','DeepSeek API'];
   for(const name of providerNames){const source=`Sprache und Dokumenttyp werden automatisch erkannt. Daten erscheinen als TT.MM.JJJJ. PDF und Word enthalten die Originalseiten. Beim Übersetzen werden Dateien an ${name} gesendet.`;dictionaries.en[source]=`Language and document type are detected automatically. Dates use DD.MM.YYYY. PDF and Word include the original pages. Files are sent to ${name==='ChatGPT-Konto'?'your ChatGPT account':name} when you translate.`;dictionaries.ar[source]=`يُكتشف نوع المستند ولغته تلقائياً. يُعرض التاريخ بصيغة يوم.شهر.سنة. يحتوي PDF وWord على الصفحات الأصلية. عند الترجمة، تُرسل الملفات إلى ${name==='ChatGPT-Konto'?'حساب ChatGPT الخاص بك':name}.`;}
     dictionaries.de={'Interface language':'Sprache der Benutzeroberfläche'};

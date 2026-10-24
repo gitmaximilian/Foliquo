@@ -26,7 +26,7 @@ TranslateOCR checks the public GitHub release list when you open **Guide**. If a
 - Accepts images, PDFs, and Word documents; several files can be combined into one job.
 - Detects the source language and document type, then groups completed jobs automatically in the library.
 - Supports ChatGPT sign-in and separately billed OpenAI, Claude, and DeepSeek API keys. AI setup is available in the first-run tour and from the header.
-- Keeps jobs in a compact status sidebar. Clarification drafts and added source images are saved in the encrypted local workspace; return to a job without losing partial answers.
+- Keeps jobs in a collapsible sidebar opened from the header, with a live progress indicator and color-coded status. Clarification drafts and added source images are saved in the encrypted local workspace; return to a job without losing partial answers.
 - Accepts suggested readings with one click or marks a source field as unreadable; each confirmed question closes immediately.
 - Creates PDF and editable Word drafts, supports clarifications, direct edits, a revision chat, and optional review tools.
 - Learns reusable layout and wording conventions from samples you explicitly add. It does not train a model and must not reuse personal facts from samples.

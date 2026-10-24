@@ -13,3 +13,14 @@ function queueStatus(job,paused=false){
  };
  return statuses[job.status]||{label:'Wartet',icon:'◷',tone:'muted'};
 }
+
+// Header summary preserves action-required signals even while other jobs run.
+function queueHeaderStatus(jobs=[],paused=false){
+ const active=jobs.find(job=>['running','cancelling'].includes(job.status));
+ const failed=jobs.some(job=>job.status==='failed');
+ const questions=jobs.some(job=>job.status==='awaiting_answers');
+ const pending=jobs.some(job=>job.status==='queued');
+ const tone=failed?'error':questions||active||pending?'attention':jobs.some(job=>job.status==='succeeded')?'success':'muted';
+ const label=failed?'Fehlgeschlagen':questions?'Antwort benötigt':active?'In Bearbeitung':pending?(paused?'Pausiert':'Wartet'):tone==='success'?'Fertig':'Noch keine Aufträge';
+ return {tone,label,working:Boolean(active),progress:active?queueStatus(active).progress:null};
+}
