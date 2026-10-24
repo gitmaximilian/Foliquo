@@ -911,3 +911,38 @@ main{padding-top:36px}
 .translation-composer:has(.file-item) .dropzone{min-height:90px;padding-block:14px}
 .translation-composer:has(.file-item) .document-art{transform:scale(.55);height:54px}
 .translation-composer .file-list{max-height:300px;overflow:auto}
+
+/* The manual editor uses the same dialog shell as scan preparation. */
+.manual-editor-dialog #editor{margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+.manual-editor-dialog .editor-tools{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 20px;font-size:12px}
+.manual-editor-dialog #draft-title{min-width:0;overflow-wrap:anywhere;color:var(--text)}
+.manual-editor-dialog #clear-files{margin-inline-start:auto;font-size:12px}
+.manual-editor-dialog .comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.manual-editor-dialog .comparison>div{min-width:0}
+.manual-editor-dialog .column-label{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:11px;font-weight:550;color:var(--text);letter-spacing:.5px}
+.manual-editor-dialog .column-label span{font-weight:400;color:var(--muted);letter-spacing:0}
+.manual-editor-dialog .preview{height:360px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--soft);padding:10px}
+.manual-editor-dialog .preview>select{width:100%;margin:0 0 8px;min-height:36px;font-size:12px}
+.manual-editor-dialog .preview iframe{width:100%;height:290px;border:0;border-radius:7px;background:#fff}
+.manual-editor-dialog .preview img{display:block;max-width:100%;height:auto;margin:auto}
+.manual-editor-dialog #translation{height:360px;min-height:220px;padding:14px;font-size:14px;line-height:1.8;box-sizing:border-box}
+.manual-editor-dialog .editor-actions{margin-top:18px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.manual-editor-dialog .editor-actions p{margin:0;color:var(--muted);font-size:11px;line-height:1.6}
+.manual-editor-dialog .export-actions{display:flex;flex-wrap:wrap;gap:8px}
+.manual-editor-dialog .export-actions button{min-height:36px;padding:8px 12px;font-size:12px}
+.manual-editor-dialog .workspace-dialog-footer{gap:10px}
+@media(max-width:760px){.manual-editor-dialog .comparison{grid-template-columns:minmax(0,1fr);gap:18px}.manual-editor-dialog .preview{height:250px}.manual-editor-dialog .preview iframe{height:185px}.manual-editor-dialog #translation{height:300px}.manual-editor-dialog .export-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.manual-editor-dialog .export-actions button{width:100%;white-space:normal}.manual-editor-dialog #clear-files{margin-inline-start:0}}
+@media print{#manual-editor-dialog,#manual-editor-dialog::backdrop{display:none!important}}
+
+/* Consistent physical action order: accept, unreadable, source. */
+.clarification-actions .question-use{grid-column:1}
+.clarification-actions .question-unreadable{grid-column:2}
+.clarification-actions .question-source{grid-column:3}
+.question-action{transition:background-color .16s,border-color .16s,box-shadow .16s}
+.question-use{background:#eff8f2;border-color:#c5dfcd;color:#27683d}
+.question-use:hover{background:#e2f1e7;border-color:#9ec6ab;color:#205a34}
+.question-unreadable{background:#fff3f1;border-color:#edcfc8;color:#984c40}
+.question-unreadable:hover{background:#fbe6e1;border-color:#dca99d;color:#823d32}
+.question-source{background:#fff9e9;border-color:#ebdcae;color:#87651d}
+.question-source:hover,.question-source[aria-pressed=true]{background:#fff0c9;border-color:#dbc17e;color:#795915}
+@media(prefers-reduced-motion:reduce){.question-action{transition:none}}

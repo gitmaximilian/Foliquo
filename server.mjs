@@ -1,4 +1,4 @@
-import {intakeQuestions,correctionCandidates,recordPractice,practiceSnapshot,practiceReport} from './lib/studio.mjs';
+import {resolvedAsUnreadable,intakeQuestions,correctionCandidates,recordPractice,practiceSnapshot,practiceReport} from './lib/studio.mjs';
 import {refineField} from './lib/refine.mjs';
 import {createHash} from 'node:crypto';
 import {editedResult,lockFields} from './lib/protection.mjs';
@@ -63,7 +63,19 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     if(inventory&&payload.revision)request.input[0].content.push({type:'input_text',text:'Unabhängig erfasste Originalfelder: '+JSON.stringify(inventory)});
     if(payload.revision){request.instructions+='\nBearbeite die aktuelle vollständige Übersetzung anhand des Bearbeitungs-Chats. Der letzte Nutzerbeitrag ist ein autorisierter Änderungsauftrag. Erhalte alle nicht betroffenen Inhalte. Bei Unklarheiten zuerst Rückfragen stellen. Bei ready die vollständige aktualisierte Übersetzung ausgeben.';request.input[0].content.unshift({type:'input_text',text:JSON.stringify({currentTranslation:payload.revision.text,editingChat:payload.revision.messages})});}
     const raw=await inStep('translation_stream',()=>engine.respond(request,timed,characters=>onStage('translating',{characters})));
-    timed.throwIfAborted();const parsed=await inStep('parse_translation',()=>parseTranslation(raw,payload.metadata.targetLanguage));if(parsed.requiresInput)return parsed;const {text,detected}=parsed;onStage('pdf');
+    timed.throwIfAborted();let parsed=await inStep('parse_translation',()=>parseTranslation(raw,payload.metadata.targetLanguage));
+    const decisions=payload.metadata.clarifications||[];
+    if(parsed.requiresInput){
+      const unresolved=parsed.questions.filter(question=>!resolvedAsUnreadable(question,decisions));
+      if(unresolved.length)return {...parsed,questions:unresolved};
+      // The user already decided all these locations. Ask for the finished text,
+      // rather than putting those final decisions back into the question queue.
+      request.instructions+='\nAlle jetzt erneut angefragten Stellen sind durch unreadable=true abschließend entschieden. Akzeptiere diese Entscheidungen ohne weitere Rückfrage zu denselben Stellen. Erstelle die vollständige Übersetzung mit einem Unleserlich-Vermerk an jeder betroffenen Stelle in der Zielsprache. Andere, tatsächlich neue Unklarheiten dürfen weiterhin als questions gemeldet werden.';
+      const completed=await inStep('translation_stream',()=>engine.respond(request,timed,characters=>onStage('translating',{characters})));
+      parsed=await inStep('parse_translation',()=>parseTranslation(completed,payload.metadata.targetLanguage));
+      if(parsed.requiresInput){const pending=parsed.questions.filter(question=>!resolvedAsUnreadable(question,decisions));if(pending.length)return {...parsed,questions:pending};throw new Error('Die Unleserlich-Entscheidungen sind gespeichert. Das Modell hat trotzdem keinen fertigen Text geliefert. Bitte den Auftrag erneut versuchen.');}
+    }
+    const {text,detected}=parsed;onStage('pdf');
     let fields=mergeInventory(sourceFields(parsed.rawFields,documents),inventory,definitions);
     fields=mapForm(fields,definitions);const missing=missingFormQuestions(fields,definitions);if(missing.length)return {requiresInput:true,detected,questions:missing};
     const regions=specialRegions(parsed.rawRegions||[],documents),references=referenceTrace(text,context.examples||[]);

@@ -108,7 +108,7 @@ async function autoDownload(job){
 }
 async function pollQueue(){
  if(queuePolling)return;if(!localRuntime||!csrf){scheduleQueuePoll();return;}queuePolling=true;
- try{const mutationVersion=queueMutationVersion;const incoming=await localRequest('/api/jobs').then(r=>r.json());if(mutationVersion!==queueMutationVersion)return;queueState=incoming;const visible=new Set(queueState.jobs.filter(j=>j.status!=='expired').map(j=>j.id));for(const id of queueSnapshots.keys())if(!visible.has(id))queueSnapshots.delete(id);for(const id of queueResultCache.keys())if(!visible.has(id))queueResultCache.delete(id);renderQueue();if(typeof resumeReviewWorkspace==='function')resumeReviewWorkspace(queueState.jobs);for(const job of queueState.jobs)if(job.status==='succeeded')void autoDownload(job);}
+ try{const mutationVersion=queueMutationVersion;const incoming=await localRequest('/api/jobs').then(r=>r.json());if(mutationVersion!==queueMutationVersion||clarificationSubmitting)return;queueState=incoming;const visible=new Set(queueState.jobs.filter(j=>j.status!=='expired').map(j=>j.id));for(const id of queueSnapshots.keys())if(!visible.has(id))queueSnapshots.delete(id);for(const id of queueResultCache.keys())if(!visible.has(id))queueResultCache.delete(id);renderQueue();if(typeof resumeReviewWorkspace==='function')resumeReviewWorkspace(queueState.jobs);for(const job of queueState.jobs)if(job.status==='succeeded')void autoDownload(job);}
  catch(error){queueState.connectionError='Verbindung unterbrochen. Der Status wird erneut abgefragt.';renderQueue();}
  finally{queuePolling=false;scheduleQueuePoll();}
 }
@@ -148,10 +148,16 @@ $('#clarification-extra').addEventListener('change',()=>{const draft=captureClar
 $('#clarification-dialog').addEventListener('cancel',event=>{event.preventDefault();void dismissClarificationDialog();});
 
 function closeClarifications(){clearTimeout(clarificationDraftTimer);clarificationJobId=null;clarificationSignature='';$('#clarification-card').hidden=true;window.hideClarificationDialog();}
+async function animateResolvedQuestion(questionId){
+ const field=[...document.querySelectorAll('#clarification-fields .clarification-field')].find(el=>el.dataset.questionId===questionId);
+ if(!field||matchMedia('(prefers-reduced-motion: reduce)').matches||typeof field.animate!=='function')return;
+ const height=field.getBoundingClientRect().height;
+ try{await field.animate([{opacity:1,height:`${height}px`,transform:'translateY(0)',overflow:'hidden'},{opacity:0,height:'0px',marginBottom:'0px',paddingTop:'0px',paddingBottom:'0px',transform:'translateY(-6px)',overflow:'hidden'}],{duration:220,easing:'ease-in-out',fill:'forwards'}).finished;}catch{}
+}
 async function acceptClarification(job,q,answer){
  if(clarificationSubmitting)return;clarificationSubmitting=true;queueMutationVersion++;$('#clarification-error').textContent='';
  document.querySelectorAll('#clarification-fields button,#clarification-submit').forEach(b=>b.disabled=true);
- try{await saveClarificationDraft();const updated=await localRequest(`/api/jobs/${job.id}/${answer===null?'unreadable':'answer-question'}`,{questionId:q.id,...(answer===null?{}:{answer})}).then(r=>r.json());queueMutationVersion++;queueState={...queueState,...updated};const remaining=updated.jobs.find(item=>item.id===job.id);if(remaining?.questions?.length)showClarifications(remaining,false);else{clarificationDrafts.delete(job.id);closeClarifications();}toast(answer===null?'Als unleserlich übernommen.':'Antwort übernommen.');renderQueue();}
+ try{await saveClarificationDraft();const updated=await localRequest(`/api/jobs/${job.id}/${answer===null?'unreadable':'answer-question'}`,{questionId:q.id,...(answer===null?{}:{answer})}).then(r=>r.json());queueMutationVersion++;await animateResolvedQuestion(q.id);queueState={...queueState,...updated};const remaining=updated.jobs.find(item=>item.id===job.id);if(remaining?.questions?.length)showClarifications(remaining,false);else{clarificationDrafts.delete(job.id);closeClarifications();}toast(answer===null?'Als unleserlich übernommen.':'Antwort übernommen.');renderQueue();}
  catch(error){$('#clarification-error').textContent=error.message;}
  finally{queueMutationVersion++;clarificationSubmitting=false;document.querySelectorAll('#clarification-fields button,#clarification-submit').forEach(b=>b.disabled=false);}
 }
@@ -163,7 +169,7 @@ function showClarifications(job,scroll){
   const sameJob=clarificationJobId===job.id,drafts=new Map(sameJob?[...document.querySelectorAll('#clarification-fields textarea')].map(el=>[el.dataset.questionId,el.value]):(storedDraft.answers||[]).map(a=>[a.id,a.answer]));
   clarificationJobId=job.id;clarificationSignature=signature;if(!sameJob)$('#clarification-extra').value='';questionOriginalReady=renderQuestionOriginal(job);$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
   const fields=job.questions.map((q,i)=>{
-   const field=document.createElement('div');field.className='clarification-field';
+   const field=document.createElement('div');field.className='clarification-field';field.dataset.questionId=q.id;
    const label=document.createElement('label');label.htmlFor=`answer-${q.id}`;label.textContent=`${i+1}. ${q.question}`;
    const context=document.createElement('p');context.className='question-context';context.textContent=q.context;
    const answer=document.createElement('textarea');answer.id=label.htmlFor;answer.dataset.questionId=q.id;answer.maxLength=4000;answer.required=true;answer.rows=2;answer.placeholder='Deine Antwort …';answer.value=drafts.get(q.id)||'';
@@ -179,7 +185,7 @@ function showClarifications(job,scroll){
    {
     const unreadable=document.createElement('button');unreadable.type='button';unreadable.className='text-button question-action question-unreadable';unreadable.textContent='Unleserlich';
     unreadable.onclick=()=>void acceptClarification(job,q,null);
-    actions.append(unreadable);
+    actions.insertBefore(unreadable,locate);
    }
    const hint=document.createElement('small');hint.className='question-action-hint';hint.textContent='Nicht lesbar? Mit „Unleserlich“ diese Rückfrage abschließen.';
    field.append(label,context,suggestion,actions,hint,answer);return field;
@@ -190,5 +196,5 @@ $('#clarification-close').onclick=()=>void dismissClarificationDialog();
 $('#clarification-form').onsubmit=async event=>{
  event.preventDefault();if(clarificationSubmitting||!clarificationJobId)return;const id=clarificationJobId,answers=[...document.querySelectorAll('#clarification-fields textarea')].map(el=>({id:el.dataset.questionId,answer:el.value.trim(),unreadable:el.dataset.unreadable==='true'}));
  if(answers.some(a=>!a.answer)){$('#clarification-error').textContent='Bitte jede Rückfrage beantworten.';return;}clarificationSubmitting=true;$('#clarification-submit').disabled=true;$('#clarification-error').textContent='';
- try{await saveClarificationDraft();await localRequest(`/api/jobs/${id}/answer`,{answers,files:[]});clarificationDrafts.delete(id);closeClarifications();window.dismissedClarifications.delete(id);toast('Antworten übernommen. Der Auftrag wird fortgesetzt.');await pollQueue();}catch(error){$('#clarification-error').textContent=error.message;}finally{clarificationSubmitting=false;$('#clarification-submit').disabled=false;}
+ try{await saveClarificationDraft();await localRequest(`/api/jobs/${id}/answer`,{answers,files:[]});await Promise.all(answers.map(answer=>animateResolvedQuestion(answer.id)));clarificationDrafts.delete(id);closeClarifications();window.dismissedClarifications.delete(id);toast('Antworten übernommen. Der Auftrag wird fortgesetzt.');await pollQueue();}catch(error){$('#clarification-error').textContent=error.message;}finally{clarificationSubmitting=false;$('#clarification-submit').disabled=false;}
 };

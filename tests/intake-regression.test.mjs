@@ -4,7 +4,7 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {PDFDocument} from 'pdf-lib';
-import {intakeQuestions} from '../lib/studio.mjs';
+import {intakeQuestions,resolvedAsUnreadable} from '../lib/studio.mjs';
 import {Workspace} from '../lib/workspace.mjs';
 import {createApp} from '../server.mjs';
 import {TranslationQueue} from '../lib/queue.mjs';
@@ -27,7 +27,7 @@ test('Incomplete uncertainty labels become answerable questions and retain the s
  assert.equal(intakeQuestions([], [{page:3}],meta,[],[{}]).length,1,'a different source page still needs an answer');
 });
 
-test('A missing model label does not abort the job; answering the question allows PDF and Word output',async t=>{
+test('A missing label remains answerable and a final unreadable decision is not reopened by the model',async t=>{
  const directory=await mkdtemp(join(tmpdir(),'translateocr-intake-regression-'));
  const workspace=await new Workspace(directory).init();
  let extractions=0,translations=0;
@@ -35,6 +35,7 @@ test('A missing model label does not abort the job; answering the question allow
   if(request.instructions.includes('Extrahiere')){extractions++;return JSON.stringify({documentType:'Fiktiv',fields:[],uncertainRegions:[{page:1,box:[.1,.2,.3,.1]}]});}
   translations++;
   assert.ok(request.input[0].content.some(c=>c.text?.includes('im Original unleserlich')));
+  if(translations===1)return JSON.stringify({status:'questions',sourceLanguage:'Englisch',documentType:'Fiktiv',text:'',questions:[{question:'Bitte den Stempel erneut lesen.',context:'Unleserliche Stelle: Unleserliche Stelle 1',fileIndex:0,page:1,box:[.1,.2,.3,.1]}]});
   return JSON.stringify({status:'ready',sourceLanguage:'Englisch',documentType:'Fiktiv',questions:[],text:'Stempel | [im Original unleserlich]',fields:[]});
  }};
  const port=15623,origin=`http://127.0.0.1:${port}`;
@@ -55,7 +56,7 @@ test('A missing model label does not abort the job; answering the question allow
  assert.equal((await post(`/api/jobs/${id}/unreadable`,{questionId:question.questions[0].id})).status,200);
  await wait('succeeded');
  const result=await fetch(origin+`/api/jobs/${id}/result`,{headers}).then(r=>r.json());
- assert.equal(extractions,1);assert.equal(translations,1);
+ assert.equal(extractions,1);assert.equal(translations,2);
  assert.equal(Buffer.from(result.pdf,'base64').subarray(0,5).toString(),'%PDF-');
  assert.ok(result.word);
  assert.match(strFromU8(unzipSync(Buffer.from(result.word,'base64'))['word/document.xml']),/im Original unleserlich/);
@@ -105,4 +106,24 @@ test('Missing source coordinates are located on the selected original page and r
  assert.equal((await locateSource(job,{fieldId:field.id},{respond:async()=>'{"found":false,"box":null}'})).found,false);
  assert.equal(field.box,null);
  await assert.rejects(locateSource(job,{fieldId:field.id},{respond:async()=>'{"found":true,"box":[0.9,0,0.5,0.1]}'}),/gültige Bildmarkierung/);
+});
+
+
+test('Final unreadability matches the same source area without hiding other fields or pages',()=>{
+ const answers=[{unreadable:true,context:'Stamp',question:'Read the stamp?',fileIndex:0,page:1,box:[.1,.2,.3,.1]}];
+ assert.equal(resolvedAsUnreadable({context:'Stamp',fileIndex:0,page:1},answers),true);
+ assert.equal(resolvedAsUnreadable({context:'New description',fileIndex:0,page:1,box:[.1,.2,.3,.1]},answers),true);
+ assert.equal(resolvedAsUnreadable({context:'Stamp',fileIndex:0,page:2},answers),false);
+ assert.equal(resolvedAsUnreadable({context:'Stamp',fileIndex:1,page:1},answers),false);
+ assert.equal(resolvedAsUnreadable({context:'Date',fileIndex:0,page:1,box:[.1,.6,.3,.1]},answers),false);
+ assert.equal(resolvedAsUnreadable({context:'Stamp'},[{...answers[0],unreadable:false}]),false);
+});
+
+test('Final unreadability remains accepted at the clarification round limit',()=>{
+ const queue=new TranslationQueue(async()=>{});queue.pause();
+ const job=queue.add({owner:'fixture',requestId:'limit',payload:{files:[],metadata:{}}});
+ job.status='awaiting_answers';job.clarificationRound=8;job.questions=[{id:'name',question:'Name?',context:'Name'}];
+ queue.confirmUnreadable(job.id,'fixture','name');
+ assert.equal(job.status,'queued');assert.equal(job.payload.metadata.clarifications[0].unreadable,true);
+ queue.confirmUnreadable(job.id,'fixture','name');assert.equal(job.payload.metadata.clarifications.length,1);
 });
