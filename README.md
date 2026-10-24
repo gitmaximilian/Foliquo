@@ -1,8 +1,55 @@
-# TranslateOCR
+<p align="center">
+  <a href="https://maximilianauer.at/projects/translateocr/demo/?lang=en">
+    <img src="docs/images/cover.svg" alt="TranslateOCR — From document to editable translation. Images, PDF and Word in one local browser workspace." width="100%">
+  </a>
+</p>
 
-TranslateOCR is an open-source, browser-based workspace for preparing document-translation drafts. It runs as a private local service on your computer and opens in your existing browser. There are no Windows, macOS, or Linux app packages.
+<p align="center">
+  <strong>From document to editable translation.</strong><br>
+  An open-source, browser-based workspace for OCR, clarifications and PDF + Word drafts.<br>
+  Runs on your computer. Opens in your browser.
+</p>
 
-> Translation drafts are not certified translations. A qualified translator must review and certify the final document.
+<p align="center">
+  <a href="https://maximilianauer.at/projects/translateocr/demo/?lang=en"><strong>Try the demo</strong></a> ·
+  <a href="https://github.com/gitmaximilian/TranslateOCR/archive/refs/heads/main.zip"><strong>Download</strong></a> ·
+  <a href="docs/BROWSER-SETUP.md">Setup guide</a> ·
+  <a href="https://maximilianauer.at/projects/translateocr/">Project story</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/gitmaximilian/TranslateOCR/actions/workflows/ci.yml"><img src="https://github.com/gitmaximilian/TranslateOCR/actions/workflows/ci.yml/badge.svg" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-27272a" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/interface-EN%20%2F%20DE%20%2F%20AR-27272a" alt="English, German and Arabic interface">
+</p>
+
+## See the workflow
+
+[![TranslateOCR translation workspace](docs/images/workspace.png)](https://maximilianauer.at/projects/translateocr/demo/?lang=en)
+
+**Upload → clarify → refine → download.** Combine the front and back of a document, confirm an uncertain reading, then export PDF and editable Word. Optional review tools stay out of the way until you need them.
+
+The [interactive demo](https://maximilianauer.at/projects/translateocr/demo/?lang=en) walks through all four steps with a fictional driving licence. No account, installation or model request is needed. It includes downloadable PDF and Word examples, and supports English, German and Arabic.
+
+## Made for document work
+
+| One coherent workflow | What it does |
+| --- | --- |
+| **Add every page** | Images, PDFs and Word files can be grouped into one job. Source language and document type are detected automatically. |
+| **Resolve uncertainty** | Accept a suggested spelling, answer a question, or explicitly mark a field unreadable. View the highlighted original with zoom and pan. |
+| **Keep moving** | A job queue shows progress and requests for answers. Partial answers and revisions stay saved locally. |
+| **Make it your own** | Upload finished translation examples to reuse layout and wording conventions. This supplies reference rules; it does not train model weights. |
+| **Refine the result** | Compare original and translation, make direct edits or request changes in a revision chat. Download PDF and Word directly. |
+| **Choose your provider** | ChatGPT account authorization, or separately billed OpenAI, Claude and DeepSeek APIs. Connect during onboarding or from the header. |
+
+<details>
+<summary><strong>A closer look at source review</strong></summary>
+
+![Zooming a marked source region in a fictional document](docs/images/source-zoom.png)
+
+Wheel or trackpad zoom, drag-to-pan, fit-to-view, keyboard controls and a larger view keep small print accessible. The highlight scales with the image, and the view survives unchanged job polling.
+
+</details>
 
 ## Download and start
 
@@ -21,18 +68,11 @@ The service is bound to your own computer (`127.0.0.1`); other people cannot acc
 
 TranslateOCR checks the public GitHub release list when you open **Guide**. If a newer release exists, choose **Download update**, close the TranslateOCR launcher window, extract the ZIP over the existing TranslateOCR folder, and run the setup file again. Keep the hidden `.local` folder in place: it contains your encrypted jobs, preferences, and provider credentials. The updater never sends document data to GitHub. If GitHub is temporarily unavailable, the app keeps working and you can check again later.
 
-## What it does
+## Local workspace, clear boundaries
 
-- Accepts images, PDFs, and Word documents; several files can be combined into one job.
-- Detects the source language and document type, then groups completed jobs automatically in the library.
-- Supports ChatGPT sign-in and separately billed OpenAI, Claude, and DeepSeek API keys. AI setup is available in the first-run tour and from the header.
-- Keeps jobs in a collapsible sidebar opened from the header, with a live progress indicator and color-coded status. Clarification drafts and added source images are saved in the encrypted local workspace; return to a job without losing partial answers.
-- Accepts suggested readings with one click or marks a source field as unreadable; each confirmed question closes immediately.
-- Creates PDF and editable Word drafts, supports clarifications, direct edits, a revision chat, and optional review tools.
-- Keeps file selection, target language, and optional notes in one compact translation workspace. The library includes document search, type filtering, aligned statuses, and direct PDF/Word downloads. Scan tools appear after selecting files. Manual editing uses a matching dialog that preserves the draft when closed.
-- Offers local image zoom, wheel/trackpad zoom, drag-to-pan, fit-to-view, highlight magnification, keyboard controls, and a larger view for source documents. Confirmed highlights scale with the original.
-- Learns reusable layout and wording conventions from samples you explicitly add in **Learn style**. It does not train a model and must not reuse personal facts from samples. Uploads and saved examples share one collection; detected rules are expandable. Backup and retention controls are available in **Guide**.
-- Includes an optional, fictional demo in English, German, and Arabic.
+Jobs, preferences and provider credentials are stored in the encrypted local workspace. The service binds to `127.0.0.1`. When you request translation or another model-assisted action, your selected provider receives the required document content. Provider usage and subscription limits still apply.
+
+**TranslateOCR prepares drafts.** A qualified translator must review and certify a document where certification is required. AI can misread or omit information; the public demo illustrates the workflow, not translation accuracy. See [features and limitations](FEATURES.md) and [security notes](SECURITY.md).
 
 ## Requirements
 
