@@ -1,6 +1,6 @@
 # Implementation status
 
-TranslateOCR currently provides a local browser workflow for image, PDF, and Word documents; target-language selection; ChatGPT and API provider connections; an encrypted local job queue; clarification prompts; translation revision chat; direct edits; PDF and Word exports; optional style samples; and an English, German, and Arabic interface and demo.
+Foliquo currently provides a local browser workflow for image, PDF, and Word documents; target-language selection; ChatGPT and API provider connections; an encrypted local job queue; clarification prompts; translation revision chat; direct edits; PDF and Word exports; optional style samples; and an English, German, and Arabic interface and demo.
 
 The main view uses a compact upload-and-settings bento layout. The library groups jobs by the detected document type. Users can choose an image crop visually by dragging over its preview. Optional diagnostic and review details are collapsed until needed.
 

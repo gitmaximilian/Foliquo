@@ -1,6 +1,6 @@
 # Maintainer handover
 
-TranslateOCR is an open-source local browser application. The Node.js service binds to `127.0.0.1:4318`; browser JavaScript talks to that service using same-origin requests and CSRF tokens. Do not expose the service publicly or add native desktop/PWA packages.
+Foliquo is an open-source local browser application. The Node.js service binds to `127.0.0.1:4318`; browser JavaScript talks to that service using same-origin requests and CSRF tokens. Do not expose the service publicly or add native desktop/PWA packages.
 
 ## Main files
 
@@ -8,7 +8,7 @@ TranslateOCR is an open-source local browser application. The Node.js service bi
 - `lib/`: document conversion, queue, provider adapters, encrypted workspace, learning samples, diagnosis, revisions, PDF/Word export.
 - `dist/index.html`, `dist/style.css`, and `dist/*.js`: browser UI and the English/German/Arabic dictionaries.
 - `scripts/start-browser.mjs`: starts the local service and opens the user's existing browser.
-- `Setup-TranslateOCR.*` and `Start-TranslateOCR.*`: one-click package setup and browser launcher per OS.
+- `Setup-Foliquo.*` and `Start-Foliquo.*`: one-click package setup and browser launcher per OS.
 - `dist/demo/`: fictional three-language demo.
 
 ## Privacy and releases
@@ -19,4 +19,4 @@ Publish source-only releases. Do not attach EXE, DMG, DEB, RPM, Electron, or PWA
 
 ## Checks
 
-Use Node.js 22+, install dependencies with `npm ci --ignore-scripts`, and run `npm test`, `npm run benchmark`, `npm run demo:build`, and `npm run acceptance`. `docs/WINDOWS-ABNAHME.md` lists platform checks still requiring actual user machines.
+Use Node.js 22+, install dependencies with `npm ci --ignore-scripts`, and run `npm test`, `npm run benchmark`, `npm run demo:build`, and `npm run acceptance`. `docs/WINDOWS-ACCEPTANCE.md` lists platform checks still requiring actual user machines.

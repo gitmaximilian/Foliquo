@@ -8,7 +8,7 @@ test('LibreOffice lookup supports native Windows paths, Linux and explicit overr
  const win=officeCandidates({platform:'win32',env:{ProgramFiles:'C:\\Program Files','ProgramFiles(x86)':'C:\\Program Files (x86)'}});assert.equal(win[0],'C:\\Program Files\\LibreOffice\\program\\soffice.com');assert.ok(win.includes('C:\\Program Files\\LibreOffice\\program\\soffice.exe'));assert.equal(win.some(p=>p.includes('/Users/')),false);
  assert.equal(officeCandidates({platform:'linux',env:{TRANSLATEOCR_SOFFICE:'/custom/soffice'}})[0],'/custom/soffice');assert.ok(officeCandidates({platform:'linux',env:{}}).includes('/usr/bin/libreoffice'));
  assert.ok(officeCandidates({platform:'win32',env:{},resources:'C:\\App\\Resources'}).includes('C:\\App\\Resources\\libreoffice\\program\\soffice.com'));
- assert.ok(officeCandidates({platform:'darwin',env:{},resources:'/Applications/TranslateOCR.app/Contents/Resources'}).includes('/Applications/TranslateOCR.app/Contents/Resources/libreoffice/LibreOffice.app/Contents/MacOS/soffice'));
+ assert.ok(officeCandidates({platform:'darwin',env:{},resources:'/Applications/Foliquo.app/Contents/Resources'}).includes('/Applications/Foliquo.app/Contents/Resources/libreoffice/LibreOffice.app/Contents/MacOS/soffice'));
 });
 test('BMP colours decode correctly without a platform executable',async()=>{
  const bytes=Buffer.alloc(62);bytes.write('BM');bytes.writeUInt32LE(62,2);bytes.writeUInt32LE(54,10);bytes.writeUInt32LE(40,14);bytes.writeInt32LE(2,18);bytes.writeInt32LE(1,22);bytes.writeUInt16LE(1,26);bytes.writeUInt16LE(24,28);bytes.writeUInt32LE(8,34);Buffer.from([0,0,255,255,0,0,0,0]).copy(bytes,54);

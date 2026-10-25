@@ -1,6 +1,6 @@
 # Security and privacy
 
-TranslateOCR is designed for one person using a local browser interface and a loopback-only service.
+Foliquo is designed for one person using a local browser interface and a loopback-only service.
 
 - The HTTP service binds to `127.0.0.1`; it is not intended to be exposed to the internet or a local network.
 - The encrypted workspace, sessions, credentials, jobs, and samples live in `.local/`. Never commit this folder or share it in a public issue.

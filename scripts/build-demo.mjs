@@ -57,5 +57,5 @@ const archive={};
 for(const name of ['index.html','demo.css','demo.js'])archive[name]=new Uint8Array(await readFile(join(root,'dist/demo',name)));
 for(const name of [...Object.keys(locales).map(locale=>`original-${locale}.pdf`),...Object.keys(locales).flatMap(locale=>['initial','final'].flatMap(version=>[`${locale}-${version}.pdf`,`${locale}-${version}.docx`,`${locale}-${version}.zip`]))])archive[`assets/${name}`]=new Uint8Array(await readFile(join(out,name)));
 await mkdir(join(root,'outputs'),{recursive:true});
-await writeFile(join(root,'outputs/TranslateOCR-Demo.zip'),zipSync(archive,{level:6}));
-console.log('Public fixture demo built in English, German, and Arabic: dist/demo; outputs/TranslateOCR-Demo.zip. No private files read.');
+await writeFile(join(root,'outputs/Foliquo-Demo.zip'),zipSync(archive,{level:6}));
+console.log('Public fixture demo built in English, German, and Arabic: dist/demo; outputs/Foliquo-Demo.zip. No private files read.');

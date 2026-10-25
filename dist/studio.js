@@ -10,7 +10,7 @@ $('#review-source-tab').onclick=()=>setReviewPane('source');$('#review-output-ta
 $('#refine-send').onclick=()=>void inspectorTask(()=>localRequest(`/api/jobs/${reviewJobId}/refine`,{version:reviewData.version,requestId:crypto.randomUUID(),fieldId:$('#refine-field').value,notes:$('#refine-notes').value}));
 $('#practice-start').onclick=()=>void inspectorTask(()=>localRequest(`/api/jobs/${reviewJobId}/practice`,{version:reviewData.version,action:'start'}));
 $('#practice-finish').onclick=()=>void inspectorTask(()=>localRequest(`/api/jobs/${reviewJobId}/practice`,{version:reviewData.version,action:'finish',manualMinutes:Number($('#practice-minutes').value),rating:Number($('#practice-rating').value),notes:$('#practice-notes').value}));
-$('#practice-export').onclick=()=>void inspectorTask(async()=>{const data=await localRequest('/api/practice/report').then(r=>r.json());downloadBlob(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),'translateocr-praxistest-anonym.json');});
+$('#practice-export').onclick=()=>void inspectorTask(async()=>{const data=await localRequest('/api/practice/report').then(r=>r.json());downloadBlob(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),'foliquo-practice-report.json');});
 
 const baseFocusField=focusField;focusField=function(field){baseFocusField(field);document.querySelectorAll('.field-check').forEach(row=>row.classList.toggle('selected-field',row.querySelector('[data-check-id]')?.dataset.checkId===field.id));void jumpToTranslatedField(field).catch(()=>{});};
 

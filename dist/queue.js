@@ -73,7 +73,7 @@ function renderQueue(){
   if(job.hasResult){actions.append(queueButton('PDF ↓','download',job),queueButton('Word ↓','word',job),queueButton('Beide ↓','bundle',job),queueButton('Bearbeiten','review',job));}
   if(['failed','cancelled','succeeded','expired'].includes(job.status))actions.append(queueButton('Löschen','remove',job));
   if(actions.lastChild?.dataset.queueAction==='remove')actions.lastChild.setAttribute('aria-label',`${job.names.join(', ')} aus Liste entfernen`);
-  const debug=document.createElement('details');debug.className='job-debug';debug.dataset.jobId=job.id;debug.open=openDebug.has(job.id);const summary=document.createElement('summary');summary.textContent=job.diagnostic?'Fehlerdetails & Diagnose':'Details';const pre=document.createElement('pre');const report=JSON.stringify({jobId:job.id,status:job.status,provider:job.provider,model:job.model,fileCount:job.names.length,diagnostic:job.diagnostic,events:job.events},null,2);pre.textContent=report;const save=document.createElement('button');save.className='text-button';save.textContent='Diagnose herunterladen';save.onclick=()=>downloadBlob(new Blob([report],{type:'application/json'}),`translateocr-diagnose-${job.id.slice(0,8)}.json`);debug.append(summary,pre,save);copy.append(debug);row.append(icon,copy,actions);return row;
+  const debug=document.createElement('details');debug.className='job-debug';debug.dataset.jobId=job.id;debug.open=openDebug.has(job.id);const summary=document.createElement('summary');summary.textContent=job.diagnostic?'Fehlerdetails & Diagnose':'Details';const pre=document.createElement('pre');const report=JSON.stringify({jobId:job.id,status:job.status,provider:job.provider,model:job.model,fileCount:job.names.length,diagnostic:job.diagnostic,events:job.events},null,2);pre.textContent=report;const save=document.createElement('button');save.className='text-button';save.textContent='Diagnose herunterladen';save.onclick=()=>downloadBlob(new Blob([report],{type:'application/json'}),`foliquo-diagnostics-${job.id.slice(0,8)}.json`);debug.append(summary,pre,save);copy.append(debug);row.append(icon,copy,actions);return row;
  });$('#queue-list').replaceChildren(...rows);
  if(focusedId&&focusedAction)document.querySelector(`[data-job-id="${focusedId}"][data-queue-action="${focusedAction}"]`)?.focus({preventScroll:true});
  const announcement=`${active?.id||''}:${active?.stage||''}:${pending.length}:${jobs.filter(j=>j.status==='succeeded').length}:${jobs.filter(j=>j.status==='awaiting_answers').length}`;
@@ -100,7 +100,7 @@ async function queueAction(action,job){
   await localRequest(`/api/jobs/${job.id}/${action}`,{});if(action==='remove'){queueSnapshots.delete(job.id);queueResultCache.delete(job.id);}await pollQueue();
  }catch(error){toast(error.message);}
 }
-function queueFilename(job){const base=job.names[0]?.replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,70)||'translateocr';return `${base}-${job.targetLanguage}-uebersetzung.pdf`;}
+function queueFilename(job){const base=job.names[0]?.replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,70)||'Foliquo';return `${base}-${job.targetLanguage}-translation.pdf`;}
 async function downloadBundle(job){const response=await localRequest(`/api/jobs/${job.id}/bundle`);downloadBlob(await response.blob(),queueFilename(job).replace(/\.pdf$/,'-PDF-Word.zip'));}
 async function autoDownload(job){
  if(job.clientId!==queueClientId||queueDownloaded.has(job.id)||!job.hasResult)return;

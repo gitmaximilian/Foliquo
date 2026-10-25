@@ -1,4 +1,4 @@
-# TranslateOCR 0.9.2
+# Foliquo 0.9.2
 
 This browser-only update simplifies setup, translation and editing.
 
@@ -12,7 +12,7 @@ This browser-only update simplifies setup, translation and editing.
 
 ## Install or update
 
-Download the source ZIP, extract it and open the Setup-TranslateOCR file for your computer. For an update, stop the local service before replacing program files and keep the hidden `.local` folder. See the README for full instructions.
+Download the source ZIP, extract it and open the Setup-Foliquo file for your computer. For an update, stop the local service before replacing program files and keep the hidden `.local` folder. See the README for full instructions.
 
 No native app installers or installable PWA are included. Translation drafts still require professional review and certification where applicable.
 

@@ -27,17 +27,17 @@ jobs:
       - run: node --check server.mjs && node --check scripts/start-browser.mjs && node --check dist/updates.js && node --check dist/workflow.js
       - name: Run the Windows first-use setup check
         if: runner.os == 'Windows'
-        run: .\Setup-TranslateOCR.cmd
+        run: .\Setup-Foliquo.cmd
         env:
           TRANSLATEOCR_SETUP_NO_START: '1'
       - name: Run the macOS first-use setup check
         if: runner.os == 'macOS'
-        run: ./Setup-TranslateOCR.command
+        run: ./Setup-Foliquo.command
         env:
           TRANSLATEOCR_SETUP_NO_START: '1'
       - name: Run the Linux first-use setup check
         if: runner.os == 'Linux'
-        run: ./Setup-TranslateOCR.sh
+        run: ./Setup-Foliquo.sh
         env:
           TRANSLATEOCR_SETUP_NO_START: '1'
       - run: npm test

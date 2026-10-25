@@ -2,7 +2,7 @@
 name: Report a bug
 about: Describe a reproducible issue using fictional data
 ---
-Operating system / Node.js / LibreOffice / TranslateOCR version:
+Operating system / Node.js / LibreOffice / Foliquo version:
 
 Steps using fictional sample data:
 

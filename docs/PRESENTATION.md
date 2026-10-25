@@ -1,6 +1,6 @@
 # Project presentation
 
-The repository presents TranslateOCR through a restrained cover, an actual workspace screenshot, a short workflow, and direct demo / download / setup links. The website at https://maximilianauer.at/projects/translateocr/ provides an English-first project story with a German switch.
+The repository presents Foliquo through a restrained cover, an actual workspace screenshot, a short workflow, and direct demo / download / setup links. The website at https://maximilianauer.at/projects/foliquo/ provides an English-first project story with a German switch.
 
 ## Visual direction
 
@@ -12,7 +12,7 @@ GitHub READMEs support Markdown and a limited HTML subset, so the cover and scre
 
 ```sh
 npm run demo:build
-node scripts/export-public-demo.mjs /absolute/path/to/site/projects/translateocr/demo
+node scripts/export-public-demo.mjs /absolute/path/to/site/projects/foliquo/demo
 ```
 
 The exporter copies only the explicit fictional demo files and changes its return link to the project story. It never packages application code, server routes, provider credentials, local uploads or workspace data. The local application keeps its original return-to-workspace behavior.

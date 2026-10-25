@@ -1,8 +1,8 @@
-# TranslateOCR 0.10.0
+# Foliquo 0.10.0
 
 This browser-only release hardens everyday use and keeps the public demo aligned with the local workspace.
 
-The current TranslateOCR Community source is offered under PolyForm Noncommercial 1.0.0. Earlier releases published under MIT remain available under the terms that accompanied those versions. TranslateOCR Pro is a planned separate B2B offering; commercial terms and availability have not been announced.
+The current Foliquo Community source is offered under PolyForm Noncommercial 1.0.0. Earlier releases published under MIT remain available under the terms that accompanied those versions. Foliquo Pro is a planned separate B2B offering; commercial terms and availability have not been announced.
 
 - Style samples are selected only when both document type and target language match; unmatched documents keep the default layout.
 - Version reporting comes from the package metadata. Release publication requires validation on Windows, macOS and Linux.

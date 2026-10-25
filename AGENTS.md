@@ -1,6 +1,6 @@
-# TranslateOCR repository notes
+# Foliquo repository notes
 
-TranslateOCR is a browser-only application backed by a local Node.js service. Do not add native desktop packages or installable PWA behavior. Keep the local service bound to loopback (`127.0.0.1`) and preserve the browser-only setup and update guide.
+Foliquo is a browser-only application backed by a local Node.js service. Do not add native desktop packages or installable PWA behavior. Keep the local service bound to loopback (`127.0.0.1`) and preserve the browser-only setup and update guide.
 
 ## Development
 

@@ -44,7 +44,7 @@ jobs:
         run: |
           release_notes="docs/RELEASE-${GITHUB_REF_NAME#v}.md"
           if [ -f "$release_notes" ]; then
-            gh release create "${GITHUB_REF_NAME}" --verify-tag --title "TranslateOCR ${GITHUB_REF_NAME} - Browser source" --notes-file "$release_notes"
+            gh release create "${GITHUB_REF_NAME}" --verify-tag --title "Foliquo ${GITHUB_REF_NAME} - Browser source" --notes-file "$release_notes"
           else
-            gh release create "${GITHUB_REF_NAME}" --verify-tag --title "TranslateOCR ${GITHUB_REF_NAME} - Browser source" --notes "Browser edition: source code only. Download Source code (zip), extract it, and open the Setup-TranslateOCR file for your computer. Follow README.md and keep your hidden .local folder when updating."
+            gh release create "${GITHUB_REF_NAME}" --verify-tag --title "Foliquo ${GITHUB_REF_NAME} - Browser source" --notes "Browser edition: source code only. Download Source code (zip), extract it, and open the Setup-Foliquo file for your computer. Follow README.md and keep your hidden .local folder when updating."
           fi

@@ -488,7 +488,7 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:18px;ma
 @keyframes sheet-front-in{from{opacity:0;transform:translate(-29px,14px) rotate(-12deg)}to{opacity:1;transform:translate(-9px,5px) rotate(-5deg)}}
 @keyframes orbit-in{from{opacity:0;scale:.5}to{opacity:1;scale:1}}
 @media(max-width:560px){.intro-backdrop{padding:12px}.intro-dialog{border-radius:17px}.intro-art{height:142px}.intro-copy{padding:21px 20px 14px}.intro-copy h1{font-size:24px}.intro-copy>p:not(#intro-error){min-height:70px;font-size:13px}.intro-topbar{padding:15px 18px}.intro-bottom{padding:13px 18px 17px}.welcome-greeting{top:10px;max-width:calc(100% - 28px);white-space:nowrap}}
-/* Preserve the Latin TranslateOCR wordmark when the surrounding interface is RTL. */
+/* Preserve the Latin Foliquo wordmark when the surrounding interface is RTL. */
 .brand{direction:ltr;unicode-bidi:isolate;flex-direction:row}
 /* Keep provider setup on its own row so the connection heading keeps readable width. */
 .connection-card{align-items:flex-start;flex-wrap:wrap}

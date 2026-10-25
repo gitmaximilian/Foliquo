@@ -1,6 +1,6 @@
 # Features and limitations
 
-TranslateOCR is a local browser application for preparing translation drafts from images, PDFs, and Word documents. It is not a certified translation service.
+Foliquo is a local browser application for preparing translation drafts from images, PDFs, and Word documents. It is not a certified translation service.
 
 ## Workflow
 

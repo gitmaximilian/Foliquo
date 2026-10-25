@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve TranslateOCR. Keep contributions focused on the local browser workflow and preserve its clear boundary: this tool prepares drafts; a qualified translator remains responsible for certification.
+Thanks for helping improve Foliquo. Keep contributions focused on the local browser workflow and preserve its clear boundary: this tool prepares drafts; a qualified translator remains responsible for certification.
 
 ## Local development
 
