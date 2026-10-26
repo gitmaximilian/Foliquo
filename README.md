@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://maximilianauer.at/projects/foliquo/demo/?lang=en">
-    <img src="docs/images/cover.svg" alt="Foliquo — From document to editable translation. Images, PDF and Word in one local browser workspace." width="100%">
+    <img src="docs/images/cover.png" alt="Foliquo — From document to editable translation. Images, PDF and Word in one local browser workspace." width="100%">
   </a>
 </p>
 
