@@ -3,6 +3,7 @@ import {CURRENT_VERSION} from '../lib/version.mjs';
 import {dataDirectory,migrateWorkspace} from '../lib/data-directory.mjs';
 
 try {
+ if(Number(process.versions.node.split('.')[0])<22)throw new Error('Node.js 22 or newer is required; use Node.js 24 LTS.');
  const args=process.argv.slice(2),dataIndex=args.indexOf('--data-dir');
  if(dataIndex!==-1){if(!args[dataIndex+1])throw new Error('--data-dir requires an absolute directory.');process.env.FOLIQUO_DATA_DIR=args[dataIndex+1];args.splice(dataIndex,2);}
  const command=args.shift()||'start';
