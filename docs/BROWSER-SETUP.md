@@ -4,11 +4,11 @@ Foliquo runs a local Node.js service and opens your default browser at `http://1
 
 ## Distribution status
 
-Version 0.11.0 introduces curated distributions. Until its verified assets appear on [GitHub Releases](https://github.com/gitmaximilian/Foliquo/releases), use the source setup below. A generated installer, formula or manifest is not a published package. WinGet installation of Foliquo is not publicly available until Microsoft accepts and indexes the submission.
+Version 0.11.1 introduces curated distributions. Until its verified assets appear on [GitHub Releases](https://github.com/gitmaximilian/Foliquo/releases), use the source setup below. A generated installer, formula or manifest is not a published package. WinGet installation of Foliquo is not publicly available until Microsoft accepts and indexes the submission.
 
 ## macOS
 
-The release pipeline builds separate Apple Silicon and Intel artifacts for macOS 15+. Homebrew manages the tested Node.js 24 LTS runtime; production dependencies, including sharp, are supplied in the matching checksummed archive. LibreOffice Writer is a separate prerequisite:
+The release pipeline builds separate Apple Silicon and Intel artifacts for macOS 15+. The tested official Node.js 24 LTS runtime and production dependencies, including sharp, are supplied in the matching checksummed archive. LibreOffice Writer is a separate prerequisite:
 
 ```sh
 brew install --cask libreoffice

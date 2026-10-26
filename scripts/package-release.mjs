@@ -31,11 +31,15 @@ export async function buildPackage({output=join(root,'release'),stage=join(root,
  if(npm.status!==0)throw new Error('Production dependency installation failed.');
  await rm(join(stage,'node_modules','.bin'),{recursive:true,force:true});
  if(process.platform==='linux'){await cp(join(root,'packaging/linux/install.sh'),join(stage,'install.sh'));await chmod(join(stage,'install.sh'),0o755);}
- if(process.platform==='win32'){
-  const pinned=(await readFile(join(root,'.node-version'),'utf8')).trim();if(process.versions.node!==pinned)throw new Error('Build Windows with the exact Node version in .node-version.');
-  await mkdir(join(stage,'runtime'));await cp(process.execPath,join(stage,'runtime','node.exe'));
+ if(process.platform==='win32'||process.platform==='darwin'){
+  const pinned=(await readFile(join(root,'.node-version'),'utf8')).trim();if(process.versions.node!==pinned)throw new Error('Build with the exact Node version in .node-version.');
+  if(process.config.variables.node_shared_openssl)throw new Error('A portable official Node.js distribution is required; do not bundle a Homebrew/shared-library runtime.');
+  await mkdir(join(stage,'runtime'));await cp(process.execPath,join(stage,'runtime',process.platform==='win32'?'node.exe':'node'));
+  if(process.platform!=='win32')await chmod(join(stage,'runtime','node'),0o755);
   // Include the official Node distribution's complete license, including bundled components.
-  await cp(join(process.execPath,'..','LICENSE'),join(stage,'runtime','LICENSE'));
+  await cp(process.platform==='win32'?join(process.execPath,'..','LICENSE'):join(process.execPath,'..','..','LICENSE'),join(stage,'runtime','LICENSE'));
+ }
+ if(process.platform==='win32'){
   await cp(join(root,'packaging/windows/WINDOWS-INSTALL.txt'),join(stage,'WINDOWS-INSTALL.txt'));
   const compiler=join(process.env.WINDIR||'C:\\Windows','Microsoft.NET','Framework64','v4.0.30319','csc.exe');
   const assemblyInfo=join(root,'.packaging','Foliquo.AssemblyInfo.cs');

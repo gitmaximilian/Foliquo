@@ -17,8 +17,6 @@ await writeFile(join(tap,'Formula','foliquo.rb'),`class Foliquo < Formula
   license "PolyForm-Noncommercial-1.0.0"
 
   depends_on macos: :sequoia
-  # The supported and tested release runtime; native dependencies are built on each architecture.
-  depends_on "node@24"
 
   on_macos do
     on_arm do
@@ -35,7 +33,7 @@ await writeFile(join(tap,'Formula','foliquo.rb'),`class Foliquo < Formula
     libexec.install Dir["*"]
     (bin/"foliquo").write <<~SH
       #!/bin/sh
-      exec "#{formula_opt_bin("node@24")}/node" "#{libexec}/bin/foliquo.mjs" "$@"
+      exec "#{libexec}/runtime/node" "#{libexec}/bin/foliquo.mjs" "$@"
     SH
     (bin/"foliquo").chmod 0755
   end
@@ -55,7 +53,7 @@ await writeFile(join(tap,'Formula','foliquo.rb'),`class Foliquo < Formula
   test do
     assert_equal version.to_s, shell_output("#{bin}/foliquo --version").strip
     cd libexec do
-      system formula_opt_bin("node@24")/"node", "--input-type=module", "-e",
+      system libexec/"runtime/node", "--input-type=module", "-e",
              "import s from 'sharp';await s({create:{width:1,height:1,channels:3,background:'red'}}).png().toBuffer()"
     end
     ENV["TRANSLATEOCR_SOFFICE"] = ENV["HOMEBREW_FOLIQUO_TEST_SOFFICE"] if ENV["HOMEBREW_FOLIQUO_TEST_SOFFICE"]

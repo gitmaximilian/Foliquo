@@ -55,7 +55,7 @@ Wheel or trackpad zoom, drag-to-pan, fit-to-view, keyboard controls and a larger
 
 Foliquo opens a local browser-based workspace. It listens only on `127.0.0.1`; keep its console open while working.
 
-**Distribution status:** 0.11.0 packages are undergoing verification. Use [source setup](docs/BROWSER-SETUP.md#source-setup-available-now) until verified assets appear on [GitHub Releases](https://github.com/gitmaximilian/Foliquo/releases). Homebrew and WinGet availability are separate publication steps.
+**Distribution status:** 0.11.1 packages are undergoing verification. Use [source setup](docs/BROWSER-SETUP.md#source-setup-available-now) until verified assets appear on [GitHub Releases](https://github.com/gitmaximilian/Foliquo/releases). Homebrew and WinGet availability are separate publication steps.
 
 | Platform | Installation and use |
 | --- | --- |
@@ -80,7 +80,7 @@ Jobs, preferences and provider credentials are stored in the encrypted local wor
 ## Requirements
 
 - Windows 10 1809+/11 x64, macOS 15+ (packaged builds), or Linux x64 with glibc 2.35+.
-- Node.js 22+ (24 LTS recommended) and LibreOffice Writer. Windows installers bundle Node.js; Homebrew manages Node.js 24. Linux and source users install prerequisites separately.
+- Node.js 22+ (24 LTS recommended) and LibreOffice Writer. macOS and Windows packages bundle the official pinned Node.js 24 runtime. Linux and source users install prerequisites separately.
 - A modern browser. Keep the launcher terminal open while using the site.
 
 ## Developer checks

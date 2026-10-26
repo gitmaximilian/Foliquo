@@ -6,13 +6,13 @@
  <meta name="color-scheme" content="dark light"><title>foliquo · Guided demo</title>
  <link rel="icon" href="assets/foliquo-icon.svg" type="image/svg+xml">
  <link rel="preload" href="assets/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
- <link rel="stylesheet" href="demo.css?v=20261026-workspace">
- <script src="demo.js?v=20261026-workspace" defer></script>
+ <link rel="stylesheet" href="demo.css?v=20261026-navigation">
+ <script src="demo.js?v=20261026-navigation" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#workspace">Skip to workspace</a>
 <aside class="demo-sidebar">
- <a class="brand" href="./" aria-label="foliquo Community demo"><img class="logo-dark" src="assets/foliquo-wordmark-dark.png" width="1150" height="320" alt="foliquo"><img class="logo-light" src="assets/foliquo-wordmark-light.png" width="1150" height="320" alt="foliquo"></a>
+ <a class="brand" id="demo-home" href="/" aria-label="foliquo Community demo"><img class="logo-dark" src="assets/foliquo-wordmark-dark.png" width="1150" height="320" alt="foliquo"><img class="logo-light" src="assets/foliquo-wordmark-light.png" width="1150" height="320" alt="foliquo"></a>
  <span class="badge" id="demo-badge">Interactive demo</span>
  <ol class="steps" id="steps" aria-label="Demo progress">
   <li data-step="0"><span class="step-index" aria-hidden="true">1</span><span class="step-label">Document</span></li>
@@ -24,6 +24,7 @@
  <div class="sidebar-settings"><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button><label class="language-picker"><span class="sr-only">Interface language</span><select id="locale" aria-label="Interface language"><option value="en">English</option><option value="de">Deutsch</option><option value="ar">العربية</option></select></label></div>
 </aside>
 <main id="workspace" tabindex="-1">
+ <nav class="demo-return" aria-label="Return navigation"><a id="demo-exit" href="/">Back to Foliquo</a></nav>
  <section class="intro"><div><div class="eyebrow sr-only" id="eyebrow">FROM DOCUMENT TO REVIEWED DRAFT</div><h1 id="headline">Try it for yourself.</h1><p id="subhead">A fictional document. The complete workflow.</p></div><button id="restart" class="quiet" type="button">Restart demo</button></section>
  <div class="notice" id="notice">Preset sample data · no AI request · no account</div>
  <div class="workspace">

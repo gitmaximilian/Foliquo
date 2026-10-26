@@ -10,7 +10,7 @@ The previous tag archives were full source checkouts. GitHub's automatic source 
 | Locked production node_modules and native sharp binaries | Runtime | Installed during the build for its OS/architecture, included with licenses |
 | package.json, package-lock.json, doctor script, distribution.json | Installation/runtime verification | Included |
 | Linux install.sh and scripts/install-linux.mjs | Installation | Linux only |
-| Windows Node runtime, native console launcher, prerequisite note | Installation/runtime | Windows only |
+| Pinned macOS/Windows Node runtime; Windows console launcher and prerequisite note | Installation/runtime | macOS/Windows as applicable |
 | LICENSE, third-party notices and INSTALL.md | Licensing/documentation | Included |
 | AGENTS, handover, planning/research notes, .github, tests, benchmarks, source brand artwork, screenshots | Developer-only | Excluded |
 | Setup/Start-TranslateOCR wrappers | Legacy compatibility | Source only; retained to forward existing users |
@@ -21,7 +21,7 @@ Production npm package contents are retained as supplied upstream so runtime mod
 
 A full native desktop frontend is unnecessary. Inno Setup provides a per-user EXE installer around the existing Node/browser architecture. Its installer/uninstaller, branding, Start menu, upgrade support and silent modes fit WinGet; raw BAT/PowerShell installers do not. The native C# console launcher invokes only the bundled Node executable and carries the release's version metadata. No background persistence is installed.
 
-Homebrew installs immutable macOS ARM64/Intel application archives into libexec and supplies Node.js 24 LTS. This avoids npm downloads or native compilation during end-user installation. LibreOffice is a separate cask; formula caveats, startup and doctor provide an explicit prerequisite check. Linux uses a versioned tarball and a user-local installer; additional package formats offer insufficient value for the maintenance cost. The current packaged targets are macOS 15+ ARM64/x64, Windows 10/11 x64, and Linux x64/glibc 2.35+. Untested targets are not advertised.
+Homebrew installs immutable macOS ARM64/Intel application archives into libexec, including the pinned official Node.js 24 LTS runtime. This avoids npm downloads or native compilation during end-user installation. LibreOffice is a separate cask; formula caveats, startup and doctor provide an explicit prerequisite check. Linux uses a versioned tarball and a user-local installer; additional package formats offer insufficient value for the maintenance cost. The current packaged targets are macOS 15+ ARM64/x64, Windows 10/11 x64, and Linux x64/glibc 2.35+. Untested targets are not advertised.
 
 ## Lifecycle and data
 

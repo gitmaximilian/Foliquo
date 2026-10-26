@@ -1,5 +1,8 @@
 $ErrorActionPreference = 'Stop'
-if (Get-Command winget.exe -ErrorAction SilentlyContinue) { exit 0 }
+$expectedVersion = 'v1.29.380'
+if (Get-Command winget.exe -ErrorAction SilentlyContinue) {
+  if ((& winget.exe --version).Trim() -eq $expectedVersion) { exit 0 }
+}
 # Official Microsoft release assets, pinned by version and SHA-256. CI only.
 $version = 'v1.29.380'
 $base = "https://github.com/microsoft/winget-cli/releases/download/$version"
@@ -17,3 +20,6 @@ Add-AppxPackage -Path $bundle -DependencyPath $paths
 $package = Get-AppxPackage Microsoft.DesktopAppInstaller
 if (-not $package) { throw 'Official WinGet registration failed' }
 $package.InstallLocation | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+$actual = (& (Join-Path $package.InstallLocation 'winget.exe') --version).Trim()
+if ($actual -ne $expectedVersion) { throw "Expected pinned WinGet $expectedVersion, got $actual" }
