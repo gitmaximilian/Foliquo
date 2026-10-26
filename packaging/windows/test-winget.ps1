@@ -24,8 +24,20 @@ $env:FOLIQUO_DATA_DIR = Join-Path $work 'synthetic-private-data'
 $env:FOLIQUO_NO_BROWSER = '1'
 $env:FOLIQUO_PORT = '18343'
 # LibreOffice is preinstalled by this test job; dependency installation is tested separately by Microsoft's package review.
-& $winget install --manifest $manifest --silent --disable-interactivity --skip-dependencies --accept-package-agreements --accept-source-agreements
-if ($LASTEXITCODE -ne 0) { throw 'WinGet could not install the actual public installer.' }
+$installerLog = Join-Path $work 'installer.log'
+$stdoutLog = Join-Path $work 'winget-install.stdout.log'
+$stderrLog = Join-Path $work 'winget-install.stderr.log'
+$installArgs = 'install --manifest "' + $manifest + '" --silent --disable-interactivity --skip-dependencies --accept-package-agreements --accept-source-agreements --log "' + $installerLog + '"'
+$install = Start-Process $winget -ArgumentList $installArgs -PassThru -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
+if (-not $install.WaitForExit(240000)) {
+  Get-Process | Where-Object { $_.ProcessName -match 'winget|Foliquo|Setup' } | Select-Object Id,ProcessName,Path | Format-Table | Out-String | Write-Host
+  foreach ($log in @($stdoutLog,$stderrLog,$installerLog)) { if (Test-Path $log) { Get-Content $log -Tail 60 | Write-Host } }
+  Stop-Process -Id $install.Id -Force
+  throw 'WinGet installation exceeded four minutes; inspect the attached installer diagnostics.'
+}
+Get-Content $stdoutLog | Write-Host
+Get-Content $stderrLog | Write-Host
+if ($install.ExitCode -ne 0) { throw "WinGet could not install the actual public installer: $($install.ExitCode)" }
 $launcher = Join-Path $env:LOCALAPPDATA 'Programs/Foliquo/Foliquo.exe'
 if (-not (Test-Path $launcher)) { throw 'Installed launcher is missing.' }
 if ((& $launcher --version).Trim() -ne $version) { throw 'Installed version is incorrect.' }
