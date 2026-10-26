@@ -11,7 +11,7 @@ import http from 'node:http';
 import { readFile,writeFile,rm } from 'node:fs/promises';
 import {prepareDataDirectory} from './lib/data-directory.mjs';
 import {acquireServiceLock} from './lib/service-state.mjs';
-import {servicePort} from './lib/launcher.mjs';
+import {servicePort,probeService} from './lib/launcher.mjs';
 import { fileURLToPath } from 'node:url';
 import { resolve, join } from 'node:path';
 import { ChatGPTConnection, createAuthorization, random, readResponseStream, RESOURCE, publicError } from './lib/chatgpt.mjs';
@@ -266,7 +266,8 @@ const job=queue.add({owner:active.id,clientId:input.clientId,requestId:input.req
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  let unlock,app,recordPath;
  try {
-  const port=servicePort(),directory=await prepareDataDirectory(root);
+  const port=servicePort();if(await probeService(port))throw new Error('A Foliquo service is already running on this port.');
+  const directory=await prepareDataDirectory(root);
   unlock=await acquireServiceLock(directory);
   const connection=new ChatGPTConnection(directory);try{await connection.init();}catch{throw new Error('Saved connection data could not be read. Original files were preserved; restore a verified backup.');}
   const workspace=await new Workspace(directory).init();
