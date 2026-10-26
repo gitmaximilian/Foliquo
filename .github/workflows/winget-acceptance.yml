@@ -1,0 +1,31 @@
+name: Test published WinGet manifest
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published semantic version tag
+        required: true
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Prepare pinned official WinGet
+        shell: pwsh
+        run: ./packaging/windows/prepare-winget.ps1
+      - name: Install required document converter
+        run: choco install libreoffice-fresh -y --no-progress
+      - name: Test actual WinGet installation and uninstallation from the public release
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: ./packaging/windows/test-winget.ps1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: winget-acceptance
+          path: winget-acceptance.json
+          if-no-files-found: error
