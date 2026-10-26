@@ -1,50 +1,208 @@
-name: Publish source release
+name: Build and release distributions
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
+  workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
+concurrency:
+  group: distribution-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  verify:
+  build:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: macos-15
+            target: macOS-arm64
+          - os: macos-15-intel
+            target: macOS-x64
+          - os: ubuntu-22.04
+            target: Linux-x64
+          - os: windows-2022
+            target: Windows-x64
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: '24'
+          node-version-file: .node-version
           cache: npm
       - name: Install LibreOffice (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libreoffice
+        run: |
+          if [ -f /etc/apt/sources.list ]; then sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list; fi
+          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update
+          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install -y --no-install-recommends libreoffice-writer
+      - name: Install LibreOffice (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install --cask libreoffice
       - name: Install LibreOffice (Windows)
         if: runner.os == 'Windows'
         run: choco install libreoffice-fresh -y --no-progress
-      - name: Install LibreOffice (macOS)
-        if: runner.os == 'macOS'
-        run: brew install --cask libreoffice
       - run: npm ci --ignore-scripts
-      - run: node scripts/check-release.mjs
+      - name: Verify tag and release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node scripts/check-release.mjs
       - run: npm test
-      - run: npm run acceptance
       - run: npm run benchmark
       - run: npm run demo:build
-  release:
-    needs: verify
-    runs-on: ubuntu-latest
+      - run: npm run acceptance
+      - name: Locked production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - run: npm run package
+      - name: Verify exact staged contents
+        shell: bash
+        run: node scripts/verify-package.mjs ".packaging/$(node -p 'process.platform+`-`+process.arch')"
+      - name: Compile Inno Setup installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) { throw 'The runner must provide Inno Setup 6; do not download an unpinned compiler.' }
+          & $compiler "/DAppVersion=$version" "/DSourceDir=$pwd\.packaging\win32-x64" "/DOutputPath=$pwd\release" packaging/windows/Foliquo.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed' }
+      - name: Optional Authenticode signing
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          SIGNING_PFX: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
+          SIGNING_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}
+        run: |
+          $installer = (Get-ChildItem release/*-Setup.exe).FullName
+          if ($env:SIGNING_PFX) {
+            $certificate = Join-Path $env:RUNNER_TEMP 'foliquo-signing.pfx'
+            try {
+              [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:SIGNING_PFX))
+              $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}/Windows Kits/10/bin/*/x64/signtool.exe" | Sort-Object FullName | Select-Object -Last 1).FullName
+              & $signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f $certificate /p $env:SIGNING_PASSWORD $installer
+              if ($LASTEXITCODE -ne 0) { throw 'Signing failed' }
+              if ((Get-AuthenticodeSignature $installer).Status -ne 'Valid') { throw 'Signature verification failed' }
+            } finally { Remove-Item $certificate -Force -ErrorAction SilentlyContinue }
+          }
+          $status = (Get-AuthenticodeSignature $installer).Status.ToString()
+          @{ authenticode=$status; smartScreen='Reputation warnings remain possible.' } | ConvertTo-Json | Set-Content release/windows-signature.json
+      - name: Exercise actual Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./packaging/windows/test-installer.ps1
+      - name: Exercise Linux installation and persistence
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          node scripts/verify-package.mjs .packaging/linux-x64
+          .packaging/linux-x64/install.sh
+          ~/.local/bin/foliquo --version
+          FOLIQUO_NO_BROWSER=1 ~/.local/bin/foliquo > /tmp/foliquo.log 2>&1 &
+          launcher=$!
+          trap 'kill "$launcher" 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:4318/api/health && break || sleep 1; done
+          curl -fsS http://127.0.0.1:4318/api/health
+          ~/.local/bin/foliquo stop
+          wait "$launcher"
+          test -f ~/.local/share/foliquo/workspace.key
+          rm ~/.local/bin/foliquo
+          test -f ~/.local/share/foliquo/workspace.key
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: distribution-${{ matrix.target }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+  metadata:
+    needs: build
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v7
-      - name: Publish source-only release
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: distribution-*
+          path: release
+          merge-multiple: true
+      - run: node scripts/release-metadata.mjs
+      - name: Package publishing metadata separately from application downloads
+        run: |
+          version=$(node -p 'JSON.parse(require("fs").readFileSync("package.json")).version')
+          cd release
+          zip -r "Foliquo-Packaging-$version.zip" homebrew-tap winget release-report.json windows-signature.json
+          sha256sum "Foliquo-Packaging-$version.zip" windows-signature.json >> SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: verified-release
+          path: release/
+          retention-days: 14
+  homebrew:
+    needs: metadata
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: verified-release
+          path: release
+      - name: Audit and test real formula with local prepublication artifacts
+        run: |
+          brew update
+          brew install --cask libreoffice
+          node scripts/test-homebrew.mjs
+  winget:
+    needs: metadata
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: verified-release
+          path: release
+      - name: Prepare pinned official WinGet validator
+        shell: pwsh
+        run: ./packaging/windows/prepare-winget.ps1
+      - name: Validate generated manifests with the official WinGet validator
+        shell: pwsh
+        run: |
+          $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+          if (-not $winget) { throw 'Official winget validator is required on this runner. Configure a supported Windows runner rather than treating YAML syntax as validation.' }
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          & $winget.Source validate --manifest "release/winget/manifests/m/MaximilianAuer/Foliquo/$version" --disable-interactivity
+          if ($LASTEXITCODE -ne 0) { throw 'WinGet validation failed' }
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [homebrew, winget]
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: verified-release
+          path: release
+      - name: Publish verified assets through a draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          release_notes="docs/RELEASE-${GITHUB_REF_NAME#v}.md"
-          if [ -f "$release_notes" ]; then
-            gh release create "${GITHUB_REF_NAME}" --verify-tag --title "Foliquo ${GITHUB_REF_NAME} - Browser source" --notes-file "$release_notes"
-          else
-            gh release create "${GITHUB_REF_NAME}" --verify-tag --title "Foliquo ${GITHUB_REF_NAME} - Browser source" --notes "Browser edition: source code only. Download Source code (zip), extract it, and open the Setup-Foliquo file for your computer. Follow README.md and keep your hidden .local folder when updating."
-          fi
+          tag="$GITHUB_REF_NAME"
+          if gh release view "$tag" >/dev/null 2>&1; then echo 'Release already exists; refusing to overwrite it.' >&2; exit 1; fi
+          cd release
+          sha256sum -c SHA256SUMS
+          cd ..
+          gh release create "$tag" --verify-tag --draft --title "Foliquo Community $tag" --notes-file "docs/RELEASE-${tag#v}.md" release/*.tar.gz release/*-Setup.exe release/SHA256SUMS release/Foliquo-Packaging-*.zip release/windows-signature.json
+          gh release edit "$tag" --draft=false
+          echo 'Published verified platform assets. Homebrew tap update and WinGet review/indexing are separate steps.' >> "$GITHUB_STEP_SUMMARY"

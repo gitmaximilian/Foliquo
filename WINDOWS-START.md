@@ -1,10 +1,9 @@
-# Windows quick start
+# Foliquo Community on Windows
 
-1. Download and extract the latest Foliquo source ZIP from GitHub.
-2. Double-click `Setup-Foliquo.cmd`. Approve the Windows package-manager prompts to install Node.js and LibreOffice if they are missing. Setup checks PDF and Word export, then opens Foliquo in your browser.
-3. Keep the Foliquo window open while using the site. Close it when you want to stop Foliquo.
-4. Next time, double-click `Start-Foliquo.cmd`.
+Follow the [current Windows installation guide](docs/BROWSER-SETUP.md#windows). Verified releases provide a per-user x64 setup EXE with Node.js, Start-menu shortcuts and an uninstaller. LibreOffice Writer is a separate prerequisite. Foliquo WinGet availability must be confirmed in the README; a generated manifest is not an indexed package.
 
-Foliquo runs locally at `http://127.0.0.1:4318/`. The browser is the user interface; no desktop app is installed. If SmartScreen shows a prompt for the setup script, check that the ZIP came from the official Foliquo GitHub repository before continuing.
+Start **Foliquo Community** from the Start menu and keep its console open. **Stop Foliquo** shuts down the local service. Install the newer verified setup EXE to update; uninstall through Installed apps. Private data in `%LOCALAPPDATA%\Foliquo` is retained.
 
-To update, open **Guide & updates** in Foliquo, choose **Download update**, extract the new source ZIP over the existing folder, and run `Setup-Foliquo.cmd` again. Keep `.local`; it contains the encrypted local workspace and credentials.
+Before migrating an older source installation, stop it and keep its `.local` directory. The setup guide explains verified copying with `Foliquo.exe migrate --from "C:\path\to\old\.local"`.
+
+Source users can install Node.js 22+ and LibreOffice Writer, extract the source ZIP, then run `Setup-Foliquo.cmd`. Later use `Start-Foliquo.cmd`. Both use the same CLI as packaged installations; setup never needs to be run after installing the EXE.

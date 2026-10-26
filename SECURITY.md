@@ -3,7 +3,7 @@
 Foliquo is designed for one person using a local browser interface and a loopback-only service.
 
 - The HTTP service binds to `127.0.0.1`; it is not intended to be exposed to the internet or a local network.
-- The encrypted workspace, sessions, credentials, jobs, and samples live in `.local/`. Never commit this folder or share it in a public issue.
+- The encrypted workspace, sessions, credentials, jobs, and samples live in a per-user directory outside the application (see `foliquo data-dir` and docs/BROWSER-SETUP.md). Legacy `.local/` folders are private recovery material. Never commit or share either directory, service records, encryption keys or migration backups in a public issue.
 - API keys remain in the encrypted local workspace. A selected AI provider receives document content only when the user starts a model-backed task.
 - The GitHub update check sends only an HTTP request for the public latest-release metadata. It does not send documents, provider credentials, or settings.
 - The setup scripts may install Node.js and LibreOffice using the operating system package manager. Review the repository source before running them.

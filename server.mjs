@@ -8,7 +8,10 @@ import {memoryMatches,referenceTrace} from './lib/memory.mjs';
 import {analyzeScan,correctScan} from './lib/scans.mjs';
 import {auditArtifacts,printCheck,applyBrowserAudit} from './lib/preflight.mjs';
 import http from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile,writeFile,rm } from 'node:fs/promises';
+import {prepareDataDirectory} from './lib/data-directory.mjs';
+import {acquireServiceLock} from './lib/service-state.mjs';
+import {servicePort,probeService} from './lib/launcher.mjs';
 import { fileURLToPath } from 'node:url';
 import { resolve, join } from 'node:path';
 import { ChatGPTConnection, createAuthorization, random, readResponseStream, RESOURCE, publicError } from './lib/chatgpt.mjs';
@@ -30,7 +33,7 @@ import {learningList,learningContext,learnFromFile} from './lib/learning.mjs';
 
 const root = fileURLToPath(new URL('.',import.meta.url));
 const assets = {'/':'index.html','/index.html':'index.html','/theme.js':'theme.js','/theme.css':'theme.css','/icons/icon.svg':'brand/community/svg/icon-color.svg','/icons/icon-180.png':'brand/community/png/app-icon-light-180.png','/icons/icon-192.png':'brand/community/png/app-icon-light-192.png','/icons/icon-512.png':'brand/community/png/app-icon-light-512.png','/app.js':'app.js','/workspace-dialogs.js':'workspace-dialogs.js','/question-copy.js':'question-copy.js','/ai-settings.js':'ai-settings.js','/connection.js':'connection.js','/queue-status.js':'queue-status.js','/queue.js':'queue.js','/review.js':'review.js','/style.css':'style.css','/workspace.js':'workspace.js','/source-geometry.js':'source-geometry.js','/source-viewer.js':'source-viewer.js','/inspector.js':'inspector.js','/workflow.js':'workflow.js','/studio.js':'studio.js','/runtime-i18n.js':'runtime-i18n.js','/i18n.js':'i18n.js','/updates.js':'updates.js','/scan-metrics.mjs':'scan-metrics.mjs','/layout-audit.mjs':'layout-audit.mjs'};
-export function createApp({ connection, port = 4318, fetcher = fetch, workspace=null, provider=null, allowExternalOAuthCallback=false }) {
+export function createApp({ connection, port = 4318, fetcher = fetch, workspace=null, provider=null, allowExternalOAuthCallback=false, lifecycle=null }) {
   const origin = `http://127.0.0.1:${port}`, sessions = new Map(workspace?.data.sessions||[]),locationTasks=new Map(); let pending = null, processing = false, reviewing=0;
   const translationContext=meta=>({template:null,profile:null,terms:[],examples:[],...learningContext(workspace?.data.learning,meta)});
   async function executeTranslation(payload,signal,onStage=()=>{}){
@@ -109,6 +112,11 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     if(req.headers.host !== `127.0.0.1:${port}`){res.writeHead(403);res.end('Ungültiger Host.');return;}
     const url=new URL(req.url,origin);
     try {
+      if(req.method==='GET'&&url.pathname==='/api/health'){json(res,{application:'foliquo',protocol:1,version:CURRENT_VERSION,instance:lifecycle?.instance||null,workspaceId:lifecycle?.workspaceId||null});return;}
+      if(req.method==='POST'&&url.pathname==='/api/lifecycle/stop'){
+        if(!lifecycle||req.headers.authorization!==`Bearer ${lifecycle.token}`||req.headers.origin&&req.headers.origin!==origin){json(res,{error:'Not authorized.'},403);return;}
+        await persist();json(res,{stopping:true});setImmediate(lifecycle.stop);return;
+      }
       const vendor=url.pathname.match(/^\/vendor\/pdfjs\/((?:cmaps|standard_fonts|wasm)\/)?([a-zA-Z0-9_-][a-zA-Z0-9_.-]*)$/);
       const brandAsset=url.pathname.match(/^\/brand\/((?:standard|community)\/(?:svg|png|favicons)\/[a-zA-Z0-9-]+\.(?:svg|png|ico|webmanifest)|(?:standard|community)\/brand-tokens\.json|fonts\/[a-z0-9-]+\.woff2|brand\.css|foliquo-logo\.js|preview\.html|manifest\.json)$/);
       const demoAsset=url.pathname.match(/^\/demo\/(index\.html|demo\.js|demo\.css|assets\/(?:(?:original(?:-(?:en|de|ar))?|(?:en|de|ar)-(?:initial|final))\.(?:pdf|docx|zip)|foliquo-icon\.svg|foliquo-wordmark-(?:dark|light)\.png|manrope-latin\.woff2))$/);const asset=(url.pathname==='/demo/'?'demo/index.html':demoAsset?'demo/'+demoAsset[1]:null)||(brandAsset?'brand/'+brandAsset[1]:null)||assets[url.pathname]||(vendor?`vendor/pdfjs/${vendor[1]||''}${vendor[2]}`:null);
@@ -136,7 +144,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
           const release=await response.json(),releaseTag=String(release.tag_name||''),tag=releaseTag.replace(/^v/,'');
           if(!/^\d+\.\d+\.\d+$/.test(tag))throw new Error('The latest release has no valid version tag.');
           const cmp=(a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);for(let i=0;i<3;i++)if(x[i]!==y[i])return x[i]>y[i]?1:-1;return 0;};
-          json(res,{current,latest:tag,updateAvailable:cmp(tag,current)>0,url:`https://github.com/gitmaximilian/Foliquo/archive/refs/tags/${releaseTag}.zip`,publishedAt:release.published_at||null});
+          json(res,{current,latest:tag,updateAvailable:cmp(tag,current)>0,url:`https://github.com/gitmaximilian/Foliquo/releases/tag/${releaseTag}`,publishedAt:release.published_at||null});
         }catch(error){json(res,{current,latest:null,updateAvailable:false,unavailable:true,message:'Could not check GitHub right now. Try again later.'});}
         return;
       }
@@ -253,13 +261,33 @@ const job=queue.add({owner:active.id,clientId:input.clientId,requestId:input.req
       if(!res.headersSent){if(url.pathname==='/auth/callback'){res.writeHead(400,{'Content-Type':'text/html;charset=utf-8'});res.end('<!doctype html><meta charset="utf-8"><title>Anmeldung nicht abgeschlossen</title><h1>Anmeldung nicht abgeschlossen</h1><p>Die Kontoanmeldung oder Planfreigabe konnte nicht bestätigt werden. Bitte zur Anwendung zurückkehren und erneut verbinden. Falls OpenAI den Zugang nicht anbietet, ist diese Funktion für dein Konto derzeit nicht verfügbar.</p><a href="/">Zurück zu Foliquo</a>');}else {const diagnostic=diagnosticFor(error,{stage:'http_request'});console.error('[Foliquo diagnostic]',JSON.stringify(diagnostic));json(res,{error:readableError(error,diagnostic),diagnostic},400);}}else res.end();
     }
   });
-  server.on('close',()=>{if(retentionTimer)clearInterval(retentionTimer);});return server;
+  server.flushWorkspace=persist;server.on('close',()=>{if(retentionTimer)clearInterval(retentionTimer);});return server;
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  const port=Number(process.env.URKUNDENKLAR_PORT||4318);if(!Number.isInteger(port)||port<1024||port>65535)throw new Error('Ungültiger Port.');
-  const connection=new ChatGPTConnection(join(root,'.local'));await connection.init();
-  const workspace=await new Workspace(join(root,'.local')).init();
-  const app=createApp({connection,port,workspace});app.requestTimeout=300000;
-  app.listen(port,'127.0.0.1',()=>console.log(`Foliquo bereit: http://127.0.0.1:${port}`));
-  app.on('error',error=>{console.error(error.code==='EADDRINUSE'?'Foliquo läuft bereits oder der Port ist belegt.':'Lokaler Dienst konnte nicht starten.');process.exitCode=1;});
+ let unlock,app,recordPath;
+ try {
+  const port=servicePort();if(await probeService(port))throw new Error('A Foliquo service is already running on this port.');
+  const directory=await prepareDataDirectory(root);
+  unlock=await acquireServiceLock(directory);
+  const connection=new ChatGPTConnection(directory);try{await connection.init();}catch{throw new Error('Saved connection data could not be read. Original files were preserved; restore a verified backup.');}
+  const workspace=await new Workspace(directory).init();
+  let stopping=false;
+  const stop=async()=>{
+   if(stopping)return;stopping=true;
+   try{await app.flushWorkspace();}catch{console.error('Workspace could not be saved. Existing files are retained.');process.exitCode=1;}
+   app.closeAllConnections();await new Promise(resolve=>app.close(resolve));
+   await rm(recordPath,{force:true});await unlock();
+  };
+  const lifecycle={instance:random(),token:random(),workspaceId:createHash('sha256').update(directory).digest('hex'),stop};
+  app=createApp({connection,port,workspace,lifecycle});app.requestTimeout=300000;
+  await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});
+  recordPath=join(directory,'service.json');
+  await writeFile(recordPath,JSON.stringify({pid:process.pid,port,instance:lifecycle.instance,token:lifecycle.token}),{mode:0o600});
+  process.on('SIGINT',stop);process.on('SIGTERM',stop);
+  console.log(`Foliquo ready: http://127.0.0.1:${port}`);
+ }catch(error){
+  if(app?.listening)app.closeAllConnections(),app.close();
+  if(unlock)await unlock();
+  console.error(error.code==='EADDRINUSE'?'The local port is already in use. Choose FOLIQUO_PORT.':'Foliquo could not start: '+error.message);process.exitCode=1;
+ }
 }

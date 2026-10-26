@@ -1,6 +1,6 @@
 {
   "name": "foliquo",
-  "version": "0.10.0",
+  "version": "0.11.1",
   "private": false,
   "license": "SEE LICENSE IN LICENSE",
   "author": {
@@ -12,13 +12,15 @@
     "node": ">=22"
   },
   "scripts": {
-    "start": "node server.mjs",
+    "start": "node bin/foliquo.mjs",
     "test": "node --test --test-force-exit tests/*.test.mjs",
     "benchmark": "node scripts/benchmark.mjs",
     "demo:build": "node scripts/build-demo.mjs",
     "acceptance": "node scripts/acceptance.mjs",
     "doctor": "node scripts/check-install.mjs",
-    "setup": "node scripts/bootstrap.mjs"
+    "setup": "node scripts/bootstrap.mjs",
+    "package": "node scripts/package-release.mjs",
+    "release:metadata": "node scripts/release-metadata.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/noto-serif": "^0.4.2",
@@ -30,5 +32,8 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.4.299",
     "sharp": "^0.35.5"
+  },
+  "bin": {
+    "foliquo": "bin/foliquo.mjs"
   }
 }
