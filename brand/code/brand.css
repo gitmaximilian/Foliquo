@@ -1,0 +1,9 @@
+:root {
+  --foliquo-ink: #0F1115;
+  --foliquo-blue: #3B82F6;
+  --foliquo-white: #FFFFFF;
+  --foliquo-surface-dark: #0B0E12;
+  --foliquo-font-family: 'Manrope', sans-serif;
+  --foliquo-wordmark-tracking: -0.05em;
+}
+.foliquo-wordmark {font-family: var(--foliquo-font-family);font-weight:700;letter-spacing:var(--foliquo-wordmark-tracking);text-transform:none;}

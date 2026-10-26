@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+
+const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+
+test('Translate keeps the language bar, upload, contextual panel and action in specification order',async()=>{
+ const [html,css,app,connection,queue,i18n]=await Promise.all(['dist/index.html','dist/style.css','dist/app.js','dist/connection.js','dist/queue.js','dist/i18n.js'].map(read));
+ const language=html.indexOf('class="language-workspace"'),composer=html.indexOf('class="card translation-composer"'),upload=html.indexOf('class="upload-card"'),action=html.indexOf('id="translate"'),settings=html.indexOf('class="settings-card"');
+ assert.ok(language<composer&&composer<upload&&upload<settings&&settings<action,'DOM focus order is language, documents, settings, action');
+ assert.match(html,/id="additional-info"[^>]*maxlength="6000"/);
+ assert.match(html,/id="provider-context-open"[^>]*aria-controls="ai-settings-dialog"/);
+ assert.match(css,/#provider-context-open,\.learning-context-link\{[^}]*width:max-content;[^}]*justify-content:flex-start/);
+ assert.match(css,/\.provider-context,\.document-type-context\{[^}]*gap:6px[^}]*padding-bottom:12px/);
+ assert.match(css,/--settings-width:296px/);
+ assert.match(html,/class="action-footer"[\s\S]*id="translate"/);
+ assert.match(html,/class="nav-icon" aria-hidden="true"[\s\S]*data-view="guide"/);
+ assert.match(css,/#studio-view\{display:grid;grid-template-columns:minmax\(0,1fr\) var\(--settings-width\)/);
+ assert.match(css,/\.translation-composer\{display:contents/);
+ assert.match(css,/\.translation-composer \.settings-card\{grid-column:2;grid-row:1\/3/);
+ assert.match(css,/\.translation-composer \.settings-card>h2\{[^}]*overflow-wrap:anywhere/,'long localized settings titles can wrap at narrow widths');
+ assert.match(css,/\.translation-composer \.upload-card\{grid-column:1;grid-row:2/);
+ assert.match(css,/\.translation-composer \.action-footer\{grid-column:1;grid-row:3;display:grid;grid-template-columns:minmax\(0,1fr\) auto/);
+ assert.match(css,/\.translation-composer \.action-row\{display:flex;grid-column:2;grid-row:1;justify-self:end;justify-content:flex-end/);
+ assert.match(css,/\.translation-composer \.composer-note\{grid-column:1;grid-row:1/);
+ assert.match(css,/#studio-view:not\(\.has-files\) \.translation-composer \.action-row\{display:none\}/,'Translate appears only after a file has been selected');
+ assert.match(app,/classList\.toggle\('has-files',files\.length>0\)/,'the composer action visibility follows the existing selected-file state');
+ assert.match(css,/@media\(max-width:1279px\)[\s\S]*?#studio-view\{grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(css,/@media\(max-width:1279px\)[\s\S]*?\.translation-composer \.settings-card\{grid-column:1;grid-row:3/);
+ assert.match(css,/@media\(max-width:1279px\)[\s\S]*?\.translation-composer \.action-footer\{grid-column:1;grid-row:4/);
+ assert.match(css,/@media\(max-width:599px\)[\s\S]*?\.language-pair\{grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(connection,/providerName:info\.label[\s\S]*modelName[\s\S]*status:status\.textContent/);
+ assert.match(app,/value\.dataset\.noTranslate='';value\.textContent=part/);
+ assert.match(queue,/Die ausgewählten Dateien werden an \{provider\} gesendet/);
+ assert.match(queue,/renderFeaturedJob\(\)[\s\S]*?translateocr-featured-job/,'the submitted job is featured without opening another panel');
+ assert.match(i18n,/The selected files are sent to \{provider\}\. The PDF includes the source pages; Word contains the editable translation/);
+ assert.match(i18n,/تُرسل الملفات المحددة إلى \{provider\}\. يتضمن ملف PDF الصفحات الأصلية، ويحتوي Word على الترجمة القابلة للتحرير/);
+ assert.match(html,/20 MiB je Datei und 35 MiB je Auftrag/);
+ assert.match(html,/id="file-list-status" class="visually-hidden" role="status" aria-live="polite"/);
+ assert.match(app,/document\.createElement\('bdi'\);filename\.dir='auto'/);
+ assert.match(app,/lastAnnouncedFileCount!==files\.length/);
+});
