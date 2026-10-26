@@ -25,7 +25,7 @@
 
 ## See the workflow
 
-[![Foliquo translation workspace](docs/images/workspace.jpg)](https://maximilianauer.at/projects/foliquo/demo/?lang=en)
+[![Actual Foliquo guided demo with a fictional document](docs/images/demo-workflow.png)](https://maximilianauer.at/projects/foliquo/demo/?lang=en)
 
 **Upload → clarify → refine → download.** Combine the front and back of a document, confirm an uncertain reading, then export PDF and editable Word. Optional review tools stay out of the way until you need them.
 
