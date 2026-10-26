@@ -1,0 +1,49 @@
+{
+  "name": "foliquo",
+  "edition": "community",
+  "type": {
+    "family": "Manrope",
+    "fontWeight": 700,
+    "letterSpacing": "-0.05em",
+    "wordmark": "foliquo"
+  },
+  "colors": {
+    "ink": "#0F1115",
+    "accent": "#3B82F6",
+    "white": "#FFFFFF",
+    "darkSurface": "#0B0E12"
+  },
+  "clearSpace": {
+    "icon": "25% of icon width",
+    "wordmark": "25% of icon height"
+  },
+  "symbol": {
+    "viewBox": "0 0 400 400",
+    "outerCenterline": "M 75 306 V 168 C 75 117 116 76 167 76 H 323",
+    "standardStroke": 90,
+    "pill": {
+      "x": 143,
+      "y": 149,
+      "width": 185,
+      "height": 87,
+      "radius": 43.5
+    },
+    "communityStyle": "transparent fill, 9-unit stroke around the same standard silhouette and pill"
+  },
+  "allowedVariants": [
+    "color",
+    "black",
+    "white",
+    "inverse",
+    "on-dark-background",
+    "app-icon-light",
+    "app-icon-dark",
+    "wordmark-light",
+    "wordmark-dark"
+  ],
+  "notes": [
+    "The community edition differs in its mark only.",
+    "The mock is a reference; never use a screenshot of the mock as a logo.",
+    "Some standalone SVG wordmarks use live text and need Manrope available; React component loads via application CSS."
+  ]
+}

@@ -24,3 +24,15 @@ function queueHeaderStatus(jobs=[],paused=false){
  const label=failed?'Fehlgeschlagen':questions?'Antwort benötigt':active?'In Bearbeitung':pending?(paused?'Pausiert':'Wartet'):tone==='success'?'Fertig':'Noch keine Aufträge';
  return {tone,label,working:Boolean(active),progress:active?queueStatus(active).progress:null};
 }
+
+function queueContentMode(loaded,jobCount){return !loaded?'loading':jobCount?'jobs':'empty';}
+
+function queueStatusMessage(state={}){
+ const jobs=state.jobs||[],active=jobs.some(job=>['running','cancelling'].includes(job.status)),pending=jobs.some(job=>['queued','running','cancelling'].includes(job.status));
+ if(state.storageError)return state.storageError;
+ if(state.connectionError)return state.connectionError;
+ const legacyPause='Warteschlange pausiert. Der laufende Auftrag wird noch abgeschlossen.';
+ if(state.pauseReason&&state.pauseReason!==legacyPause)return state.pauseReason;
+ if(!state.paused||!pending)return '';
+ return active?'Warteschlange pausiert. Der laufende Auftrag wird abgeschlossen. Neue Aufträge warten bis zum Fortsetzen.':'Warteschlange pausiert. Wartende Aufträge starten nach dem Fortsetzen.';
+}

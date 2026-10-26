@@ -1,69 +1,105 @@
-let jobsPanelOpen=false;
-try{jobsPanelOpen=sessionStorage.getItem('translateocr-jobs-open')==='true';}catch{}
-function setJobsPanel(open,restoreFocus=false){
+let jobsPanelOpen=false,jobsPanelPreferenceSaved=false;let featuredJobId='';try{featuredJobId=sessionStorage.getItem('translateocr-featured-job')||'';}catch{}
+try{const savedJobsPanelState=sessionStorage.getItem('translateocr-jobs-open-v2');if(savedJobsPanelState!==null){jobsPanelPreferenceSaved=true;jobsPanelOpen=savedJobsPanelState==='true';}}catch{}
+function setJobsPanel(open,restoreFocus=false,{persist=true}={}){
  jobsPanelOpen=Boolean(open);
  const rail=$('#queue-rail'),button=$('#jobs-open');
  document.querySelector('.workspace-layout').classList.toggle('jobs-open',jobsPanelOpen);
  rail.inert=!jobsPanelOpen;rail.setAttribute('aria-hidden',String(!jobsPanelOpen));
  button.setAttribute('aria-expanded',String(jobsPanelOpen));
- try{sessionStorage.setItem('translateocr-jobs-open',String(jobsPanelOpen));}catch{}
+ if(persist)try{sessionStorage.setItem('translateocr-jobs-open-v2',String(jobsPanelOpen));jobsPanelPreferenceSaved=true;}catch{}
  if(!jobsPanelOpen&&restoreFocus)button.focus({preventScroll:true});
 }
 $('#jobs-open').onclick=()=>setJobsPanel(!jobsPanelOpen);
 $('#jobs-close').onclick=()=>setJobsPanel(false,true);
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&jobsPanelOpen&&!document.querySelector('dialog[open],#onboarding:not([hidden])')){setJobsPanel(false,true);event.preventDefault();}});
-setJobsPanel(jobsPanelOpen);
+setJobsPanel(jobsPanelOpen,false,{persist:jobsPanelPreferenceSaved});
 function renderJobsHeader(){
  const state=queueHeaderStatus(queueState.jobs,queueState.paused),button=$('#jobs-open'),progress=$('#jobs-header-progress');
  button.dataset.tone=state.tone;button.classList.toggle('is-processing',state.working);
- progress.hidden=!state.working;progress.textContent=state.working?`${state.progress}%`:'';
+ progress.hidden=!state.working;progress.textContent=state.working?'…':'';
  const status=$('#jobs-header-status');if(status.dataset.status!==state.label){status.dataset.status=state.label;status.textContent=state.label;}
 }
 let queueMutationVersion=0;
-let queueState={jobs:[],paused:false},queueSubmitting=false,queuePollTimer=null,queuePolling=false,queueLastAnnouncement='';
-let clarificationJobId=null,clarificationSignature='',clarificationSubmitting=false,questionOriginalReady=Promise.resolve();
+let queueState={jobs:[],paused:false},queueSubmitting=false,queuePollTimer=null,queuePolling=false,queueLoaded=false,queueLastAnnouncement='';
+let clarificationJobId=null,clarificationFocusJobId=null,clarificationSignature='',clarificationSubmitting=false,questionOriginalReady=Promise.resolve();
 const queueSnapshots=new Map(),queueResultCache=new Map(),queueAutoFetching=new Set();
+let queueRowNodes=new Map();
 function savedSession(key,fallback){try{const value=sessionStorage.getItem(key);if(value)return JSON.parse(value);const result=fallback();sessionStorage.setItem(key,JSON.stringify(result));return result;}catch{return fallback();}}
 const queueClientId=savedSession('translateocr-queue-client',()=>crypto.randomUUID());
-const queueDownloaded=new Set(savedSession('translateocr-queue-downloads',()=>[]));
+const queueDownloaded=new Set(savedSession('translateocr-queue-downloads',()=>[])),queueAnnounced=new Set(savedSession('translateocr-queue-announced',()=>[]));
 function markDownloaded(id){queueDownloaded.add(id);try{sessionStorage.setItem('translateocr-queue-downloads',JSON.stringify([...queueDownloaded].slice(-100)));}catch{}}
+function markCompletionAnnounced(id){queueAnnounced.add(id);try{sessionStorage.setItem('translateocr-queue-announced',JSON.stringify([...queueAnnounced].slice(-100)));}catch{}}
 function duration(seconds){const n=Math.max(0,Math.round(seconds));return n<60?`${n} Sek.`:`${Math.floor(n/60)}:${String(n%60).padStart(2,'0')} Min.`;}
 const providerLabels={chatgpt:'ChatGPT',openai:'OpenAI API',anthropic:'Claude API',deepseek:'DeepSeek API'};
 const phaseLabels={preparing:'Dokumente werden vorbereitet',translating:'Modell prüft und übersetzt',pdf:'Deine PDF wird erstellt',word:'Deine Word-Datei wird erstellt',queued:'Wartet',done:'Fertig'};
-function queueButton(text,action,job){const b=document.createElement('button');b.type='button';b.className='text-button';b.dataset.queueAction=action;b.dataset.jobId=job.id;if(action==='cancel'||action==='remove'){b.classList.add('job-management');const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');icon.innerHTML=action==='remove'?'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7"/>':'<circle cx="12" cy="12" r="9"/><path d="m8 8 8 8m0-8-8 8"/>';b.append(icon);}const label=document.createElement('span');label.textContent=text;b.append(label);b.onclick=async()=>{b.disabled=true;b.setAttribute('aria-busy','true');try{await queueAction(action,job);}finally{if(b.isConnected){b.disabled=false;b.removeAttribute('aria-busy');}}};return b;}
+function queueButton(text,action,job){const b=document.createElement('button');b.type='button';b.className='text-button';b.dataset.queueAction=action;b.dataset.jobId=job.id;if(action==='cancel'||action==='remove'){b.classList.add('job-management');const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');icon.innerHTML=action==='remove'?'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7"/>':'<circle cx="12" cy="12" r="9"/><path d="m8 8 8 8m0-8-8 8"/>';b.append(icon);}const label=document.createElement('span');label.textContent=text;b.append(label);b.onclick=async event=>{b.disabled=true;b.setAttribute('aria-busy','true');try{await queueAction(action,job,event.currentTarget);}finally{if(b.isConnected){b.disabled=false;b.removeAttribute('aria-busy');}}};return b;}
 
 function updateQueueButton(){
  const button=$('#translate');if(!button)return;
- button.disabled=queueSubmitting||!files.length||!providerReady||!$('#model').value;
+ button.disabled=Boolean(window.fileIntakePending)||queueSubmitting||!files.length||!providerReady||!$('#model').value||window.isLanguagePairValid?.()===false;
  button.textContent=queueSubmitting?'Wird hinzugefügt …':queueState.jobs.some(j=>['queued','running','cancelling'].includes(j.status))?'Zur Warteschlange +':'Übersetzen';
- const note=$('#composer-note');if(note)note.textContent=!files.length?'Dateien hinzufügen, um zu starten.':!providerReady||!$('#model').value?'KI im Header verbinden, um zu übersetzen.':'PDF und Word werden erstellt.';
+ const note=$('#composer-note');if(note)note.dataset.empty=String(!files.length&&!window.fileIntakePending);const provider=window.translateProviderContextState?.providerName||'';if(note)note.textContent=window.fileIntakePending?(window.TOCRI18n?.t('Dateien werden geprüft …')||'Dateien werden geprüft …'):!files.length?'Dateien hinzufügen, um zu starten.':window.isLanguagePairValid?.()===false?(window.TOCRI18n?.t('Ausgangs- und Zielsprache müssen unterschiedlich sein.')||'Ausgangs- und Zielsprache müssen unterschiedlich sein.'):!providerReady||!$('#model').value?(window.TOCRI18n?.t('KI einrichten, um zu übersetzen.')||'KI einrichten, um zu übersetzen.'):(window.TOCRI18n?.t('Die ausgewählten Dateien werden an {provider} gesendet. Das PDF enthält die Originalseiten; Word die bearbeitbare Übersetzung.')||'Die ausgewählten Dateien werden an {provider} gesendet. Das PDF enthält die Originalseiten; Word die bearbeitbare Übersetzung.').replace('{provider}',provider);
+}
+function updateQueueLiveAnnouncement(force=false){
+ const jobs=queueState.jobs,active=jobs.find(j=>['running','cancelling'].includes(j.status)),pending=jobs.filter(j=>['queued','running','cancelling'].includes(j.status));
+ const announcement=`${active?.id||''}:${active?.stage||''}:${pending.length}:${jobs.filter(j=>j.status==='succeeded').length}:${jobs.filter(j=>j.status==='awaiting_answers').length}`;
+ if(!force&&announcement===queueLastAnnouncement)return;
+ queueLastAnnouncement=announcement;
+ const locale=window.TOCRI18n?.getLocale?.()||'de',needsAnswers=jobs.filter(j=>j.status==='awaiting_answers').length;
+ const labels={en:{open:'open jobs',pending:'in progress or queued',needs:'need answers'},de:{open:'offene Aufträge',pending:'in Bearbeitung oder wartend',needs:'benötigen Antworten'},ar:{open:'مهام مفتوحة',pending:'قيد التنفيذ أو الانتظار',needs:'تحتاج إلى إجابات'}}[locale]||{open:'open jobs',pending:'in progress or queued',needs:'need answers'};
+ const stage=window.TOCRI18n?.t?.(phaseLabels[active?.stage]||'In Bearbeitung')||phaseLabels[active?.stage]||'In Bearbeitung';
+ $('#queue-live').textContent=active?`${stage}. ${pending.length} ${labels.open}.`:`${pending.length} ${labels.pending}. ${needsAnswers} ${labels.needs}.`;
 }
 
+function actualProgress(job){return typeof job.progress==='number'&&Number.isFinite(job.progress)?Math.max(0,Math.min(100,Math.round(job.progress))):null;}
+function renderFeaturedJob(){
+ const card=$('#featured-job'),studio=$('#studio-view');if(!card)return;
+ const job=queueState.jobs.find(item=>item.id===featuredJobId&&item.status!=='expired');
+ if(!job){card.hidden=true;studio.classList.remove('is-featured');return;}
+ card.hidden=false;studio.classList.add('is-featured');
+ const state=queueStatus(job,queueState.paused),status=$('#featured-job-status'),title=$('#featured-job-title'),names=$('#featured-job-files'),detail=$('#featured-job-detail'),actions=$('#featured-job-actions');
+ const signature=JSON.stringify([job.id,job.status,job.stage,job.targetLanguage,job.provider,job.error,job.progress,queueState.paused,job.names]);if(card.dataset.renderSignature===signature)return;card.dataset.renderSignature=signature;
+ const focusedAction=actions.contains(document.activeElement)?document.activeElement.dataset.queueAction:null;
+ status.textContent=window.TOCRI18n?.t(state.label)||state.label;
+ const titles={running:'Deine Übersetzung läuft',queued:'Übersetzung wartet',awaiting_answers:'Deine Antwort wird gebraucht',succeeded:'Deine Übersetzung ist bereit',failed:'Übersetzung fehlgeschlagen',cancelling:'Abbruch läuft',cancelled:'Auftrag abgebrochen'};
+ title.textContent=window.TOCRI18n?.t(titles[job.status]||'Übersetzung wird vorbereitet')||titles[job.status]||'Übersetzung wird vorbereitet';
+ names.textContent=job.names.join(' · ');names.dataset.noTranslate='';
+ const progressTrack=$('#featured-job-progress'),progressFill=progressTrack.querySelector('span'),progress=actualProgress(job);progressTrack.hidden=!['queued','running','cancelling'].includes(job.status);if(progressTrack.hidden){progressTrack.classList.remove('is-indeterminate');progressTrack.removeAttribute('aria-valuenow');progressTrack.removeAttribute('aria-valuetext');progressFill.style.width='';}else if(progress===null){progressTrack.classList.add('is-indeterminate');progressTrack.removeAttribute('aria-valuenow');progressTrack.removeAttribute('aria-valuetext');progressFill.style.width='';}else{progressTrack.classList.remove('is-indeterminate');progressTrack.setAttribute('aria-valuemin','0');progressTrack.setAttribute('aria-valuemax','100');progressTrack.setAttribute('aria-valuenow',String(progress));progressTrack.setAttribute('aria-valuetext',`${progress}%`);progressFill.style.width=`${progress}%`;}
+ const stage=phaseLabels[job.stage]||state.label;detail.textContent=job.status==='succeeded'?`${job.targetLanguage} · ${providerLabels[job.provider]||job.provider||'ChatGPT'}`:job.status==='failed'?(job.error||'Bitte öffne die Aufträge für Details und einen erneuten Versuch.'):`${window.TOCRI18n?.t(stage)||stage} · ${job.targetLanguage}`;
+ actions.replaceChildren();
+ if(job.status==='awaiting_answers')actions.append(queueButton('Rückfragen beantworten','answer',job));
+ if(job.status==='succeeded'){actions.append(queueButton('Übersetzung prüfen','review',job),queueButton('PDF herunterladen','download',job),queueButton('Word herunterladen','word',job));}
+ if(job.status==='failed')actions.append(queueButton('Erneut versuchen','retry',job));
+ if(['queued','running','cancelling'].includes(job.status)){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Aufträge ansehen';button.onclick=()=>setJobsPanel(true);actions.append(button);}
+ const fresh=document.createElement('button');fresh.type='button';fresh.className='text-button featured-job-new';fresh.textContent='Weitere Dokumente übersetzen';fresh.onclick=()=>{try{sessionStorage.removeItem('translateocr-featured-job');}catch{}featuredJobId='';renderFeaturedJob();document.querySelector('#pick')?.focus({preventScroll:true});};actions.append(fresh);if(focusedAction){const restored=[...actions.querySelectorAll('[data-queue-action]')].find(button=>button.dataset.queueAction===focusedAction);restored?.focus({preventScroll:true});}
+}
 function renderQueue(){
- renderJobsHeader();$('#doc-count').textContent=String(queueState.jobs.length);
+ renderJobsHeader();renderFeaturedJob();$('#doc-count').textContent=String(queueState.jobs.length);
  const jobs=queueState.jobs,active=jobs.find(j=>['running','cancelling'].includes(j.status)),pending=jobs.filter(j=>['queued','running','cancelling'].includes(j.status));
- $('#queue-card').classList.toggle('is-processing',Boolean(active));$('#queue-card').hidden=false;$('#queue-empty').hidden=Boolean(jobs.length);$('#queue-toggle').hidden=!pending.length;$('#queue-count').textContent=jobs.length?String(jobs.length):'';$('#queue-toggle').textContent=queueState.paused?'Fortsetzen':'Pausieren';$('#queue-toggle').disabled=!pending.length;
- $('#queue-message').hidden=!queueState.paused&&!queueState.connectionError&&!queueState.storageError;$('#queue-message').textContent=queueState.storageError||queueState.connectionError||(queueState.paused?(queueState.pauseReason||'Warteschlange pausiert. Der laufende Auftrag wird noch abgeschlossen.'):'');
+ const queueList=$('#queue-list'),queueScrollTop=queueList.scrollTop;
+ $('#queue-card').classList.toggle('is-processing',Boolean(active));$('#queue-card').hidden=false;$('#queue-card').setAttribute('aria-busy',String(!queueLoaded));$('#queue-loading').hidden=queueLoaded;$('#queue-empty').hidden=!queueLoaded||Boolean(jobs.length);$('#queue-toggle').hidden=!pending.length;$('#queue-count').textContent=jobs.length?String(jobs.length):'';$('#queue-toggle').textContent=queueState.paused?'Fortsetzen':'Pausieren';$('#queue-toggle').disabled=!pending.length;
+ if(!queueLoaded)$('#queue-loading').textContent=window.TOCRI18n?.t('Aufträge werden geladen …')||'Aufträge werden geladen …';
+ const queueMessage=queueStatusMessage(queueState);$('#queue-message').hidden=!queueMessage;$('#queue-message').textContent=queueMessage?(window.TOCRI18n?.t(queueMessage)||queueMessage):'';
  $('#job-progress').hidden=true;
  if(active){
-  $('#progress-title').textContent=active.status==='cancelling'?'Auftrag wird abgebrochen …':phaseLabels[active.stage]||'In Bearbeitung';$('#progress-files').textContent=active.names.join(' · ');
-  $('#progress-track').setAttribute('aria-valuenow',String(active.progress));$('#progress-fill').style.width=`${active.progress}%`;
+  $('#progress-title').textContent=active.status==='cancelling'?'Auftrag wird abgebrochen …':phaseLabels[active.stage]||'In Bearbeitung';$('#progress-files').textContent=active.names.join(' · ');$('#progress-files').dataset.noTranslate='';
+  const progress=actualProgress(active),track=$('#progress-track'),fill=$('#progress-fill');if(progress===null){track.removeAttribute('aria-valuenow');track.removeAttribute('aria-valuetext');track.classList.add('is-indeterminate');fill.style.width='';}else{track.classList.remove('is-indeterminate');track.setAttribute('aria-valuenow',String(progress));track.setAttribute('aria-valuetext',`${progress}%`);fill.style.width=`${progress}%`;}
   $('#progress-elapsed').textContent=`Vergangen: ${duration(active.elapsedSeconds)}`;
   $('#progress-remaining').textContent=active.status==='cancelling'?'Abbruch läuft':active.remainingSeconds===null?'Dauert länger als geschätzt':`Noch ca. ${duration(active.remainingSeconds)}`;
   document.querySelectorAll('[data-phase]').forEach(el=>el.classList.toggle('current',el.dataset.phase===active.stage));
  }
  const openDebug=new Set([...document.querySelectorAll('.job-debug[open]')].map(el=>el.dataset.jobId));
- const focus=document.activeElement?.dataset,focusedId=focus?.jobId,focusedAction=focus?.queueAction;
+ const focusedNode=document.activeElement,focus=focusedNode?.dataset,focusedRow=focusedNode?.closest?.('.queue-row'),focusedId=focus?.jobId||focusedRow?.dataset.jobId,focusedAction=focus?.queueAction,focusedKey=focus?.queueFocus;
  const rows=jobs.map(job=>{
-  const state=queueStatus(job,queueState.paused),row=document.createElement('article');row.className=`queue-row status-${job.status} tone-${state.tone}`;
+  const state=queueStatus(job,queueState.paused),row=document.createElement('article');row.className=`queue-row status-${job.status} tone-${state.tone}`;row.dataset.jobId=job.id;
   const icon=document.createElement('span');icon.className='queue-status-icon';icon.textContent=state.icon;icon.setAttribute('aria-hidden','true');
-  const copy=document.createElement('div');copy.className='queue-row-copy';const title=document.createElement('strong');title.textContent=job.names.join(' · ');title.title=title.textContent;
-  const badge=document.createElement('span');badge.className='job-status-badge';const statusLabel=document.createElement('span');statusLabel.textContent=state.label;badge.append(statusLabel);if(job.status==='running')badge.append(document.createTextNode(` · ${state.progress}%`));
+  const copy=document.createElement('div');copy.className='queue-row-copy';const title=document.createElement('strong');title.dataset.noTranslate='';title.textContent=job.names.join(' · ');title.title=title.textContent;
+  const badge=document.createElement('span');badge.className='job-status-badge';const statusLabel=document.createElement('span');statusLabel.textContent=state.label;badge.append(statusLabel);
   const sub=document.createElement('small');sub.className='job-model';sub.textContent=`${job.targetLanguage} · ${providerLabels[job.provider]||job.provider||'ChatGPT'}`;
   copy.append(title,badge,sub);
   if(job.status==='running'||job.status==='cancelling'){
-   const track=document.createElement('div');track.className='job-mini-progress';track.setAttribute('role','progressbar');track.setAttribute('aria-label','Geschätzter Fortschritt');track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax','100');track.setAttribute('aria-valuenow',String(state.progress));const fill=document.createElement('span');fill.style.width=state.progress+'%';track.append(fill);
-   const timing=document.createElement('small');timing.className='job-timing';timing.textContent=phaseLabels[job.stage]||'In Bearbeitung';const estimate=document.createElement('small');estimate.className='job-timing';estimate.textContent=job.remainingSeconds===null?'Restzeit wird neu geschätzt':`Noch ca. ${duration(job.remainingSeconds)}`;copy.append(track,timing,estimate);
+   const progress=actualProgress(job),track=document.createElement('div');track.className='job-mini-progress';track.setAttribute('role','progressbar');track.setAttribute('aria-label','In Bearbeitung');const fill=document.createElement('span');if(progress===null)track.classList.add('is-indeterminate');else{track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax','100');track.setAttribute('aria-valuenow',String(progress));track.setAttribute('aria-valuetext',`${progress}%`);fill.style.width=`${progress}%`;}track.append(fill);
+   const timing=document.createElement('small');timing.className='job-timing';timing.textContent=phaseLabels[job.stage]||'In Bearbeitung';copy.append(track,timing);
   }else if(job.status==='queued'&&job.position){const position=document.createElement('small');position.className='job-timing';position.textContent=`Platz ${job.position}`;copy.append(position);}
   if(job.error){const error=document.createElement('p');error.className='queue-row-error';error.textContent=job.error;copy.append(error);}
   const actions=document.createElement('div');actions.className='queue-row-actions';
@@ -73,16 +109,16 @@ function renderQueue(){
   if(job.hasResult){actions.append(queueButton('PDF ↓','download',job),queueButton('Word ↓','word',job),queueButton('Beide ↓','bundle',job),queueButton('Bearbeiten','review',job));}
   if(['failed','cancelled','succeeded','expired'].includes(job.status))actions.append(queueButton('Löschen','remove',job));
   if(actions.lastChild?.dataset.queueAction==='remove')actions.lastChild.setAttribute('aria-label',`${job.names.join(', ')} aus Liste entfernen`);
-  const debug=document.createElement('details');debug.className='job-debug';debug.dataset.jobId=job.id;debug.open=openDebug.has(job.id);const summary=document.createElement('summary');summary.textContent=job.diagnostic?'Fehlerdetails & Diagnose':'Details';const pre=document.createElement('pre');const report=JSON.stringify({jobId:job.id,status:job.status,provider:job.provider,model:job.model,fileCount:job.names.length,diagnostic:job.diagnostic,events:job.events},null,2);pre.textContent=report;const save=document.createElement('button');save.className='text-button';save.textContent='Diagnose herunterladen';save.onclick=()=>downloadBlob(new Blob([report],{type:'application/json'}),`foliquo-diagnostics-${job.id.slice(0,8)}.json`);debug.append(summary,pre,save);copy.append(debug);row.append(icon,copy,actions);return row;
- });$('#queue-list').replaceChildren(...rows);
- if(focusedId&&focusedAction)document.querySelector(`[data-job-id="${focusedId}"][data-queue-action="${focusedAction}"]`)?.focus({preventScroll:true});
- const announcement=`${active?.id||''}:${active?.stage||''}:${pending.length}:${jobs.filter(j=>j.status==='succeeded').length}:${jobs.filter(j=>j.status==='awaiting_answers').length}`;
- if(announcement!==queueLastAnnouncement){queueLastAnnouncement=announcement;$('#queue-live').textContent=active?`${phaseLabels[active.stage]}. ${pending.length} offene Aufträge.`:`${pending.length} in Bearbeitung oder wartend. ${jobs.filter(j=>j.status==='awaiting_answers').length} benötigen Antworten.`;}
- const waiting=jobs.filter(j=>j.status==='awaiting_answers');if(clarificationJobId){const current=waiting.find(j=>j.id===clarificationJobId);if(current)showClarifications(current,false);else if(!clarificationSubmitting)closeClarifications();}else if(waiting.length&&waiting.some(j=>j.clientId===queueClientId)&&!window.dismissedClarifications?.has(waiting.find(j=>j.clientId===queueClientId).id)){showClarifications(waiting.find(j=>j.clientId===queueClientId),false);}
+  const debug=document.createElement('details');debug.className='job-debug';debug.dataset.jobId=job.id;debug.open=openDebug.has(job.id);const summary=document.createElement('summary');summary.dataset.jobId=job.id;summary.dataset.queueFocus='details';summary.textContent=job.diagnostic?'Fehlerdetails & Diagnose':'Details';const pre=document.createElement('pre');const report=JSON.stringify({jobId:job.id,status:job.status,provider:job.provider,model:job.model,fileCount:job.names.length,diagnostic:job.diagnostic,events:job.events},null,2);pre.textContent=report;const save=document.createElement('button');save.type='button';save.className='text-button';save.dataset.jobId=job.id;save.dataset.queueAction='diagnostic-download';save.textContent='Diagnose herunterladen';save.onclick=()=>downloadBlob(new Blob([report],{type:'application/json'}),`foliquo-diagnose-${job.id.slice(0,8)}.json`);debug.append(summary,pre,save);copy.append(debug);row.append(icon,copy,actions);return row;
+ });const nextRows=new Map();for(let i=0;i<rows.length;i++){const fresh=rows[i],job=jobs[i],stable=queueRowNodes.get(job.id);if(stable){stable.className=fresh.className;stable.replaceChildren(...fresh.childNodes);nextRows.set(job.id,stable);rows[i]=stable}else nextRows.set(job.id,fresh)}queueRowNodes=nextRows;queueList.replaceChildren(...rows);queueList.scrollTop=queueScrollTop;
+ if(focusedId){const id=CSS.escape(focusedId),selector=focusedAction?`[data-job-id="${id}"][data-queue-action="${CSS.escape(focusedAction)}"]`:focusedKey?`[data-job-id="${id}"][data-queue-focus="${CSS.escape(focusedKey)}"]`:null,restored=selector?document.querySelector(selector):null;if(restored&&!restored.disabled)restored.focus({preventScroll:true});else{const row=queueList.querySelector(`.queue-row[data-job-id="${id}"]`),fallback=row?.querySelector('button:not(:disabled), summary')||$('#jobs-open');fallback.focus({preventScroll:true});}}
+ updateQueueLiveAnnouncement();
+ const waiting=jobs.filter(j=>j.status==='awaiting_answers');if(clarificationJobId){const current=waiting.find(j=>j.id===clarificationJobId);if(current)showClarifications(current,false);else if(!clarificationSubmitting)closeClarifications();}
  updateQueueButton();if(typeof renderDocuments==='function'&&document.querySelector('#documents-view')&&!document.querySelector('#documents-view').hidden)renderDocuments();
 }
+window.addEventListener('translateocr-locale',()=>updateQueueLiveAnnouncement(true));
 async function jobResult(job){if(queueResultCache.has(job.id))return queueResultCache.get(job.id);const result=await localRequest(`/api/jobs/${job.id}/result`).then(r=>r.json());queueResultCache.set(job.id,result);while(queueResultCache.size>4)queueResultCache.delete(queueResultCache.keys().next().value);return result;}
-async function queueAction(action,job){
+async function queueAction(action,job,launcher=document.activeElement){
  try{
   if(action==='remove'&&!confirm('Diesen Auftrag mit Dokumenten, Chat und Fassungen dauerhaft löschen?'))return;
   if(action==='review'){await openReviewWorkspace(job.id);return;}
@@ -92,36 +128,40 @@ async function queueAction(action,job){
   if(action==='download'){const result=await jobResult(job);downloadPDF(result.pdf,queueFilename(job));markDownloaded(job.id);return;}
   if(action==='open'){
    if((files.length||$('#translation').value.trim())&&!confirm('Die aktuelle Auswahl und der bearbeitbare Entwurf werden durch dieses Ergebnis ersetzt. Fortfahren?'))return;
-   const result=await jobResult(job);example=false;$('#target-language').value=job.targetLanguage;draftTargetLanguage=job.targetLanguage;detectedDocument=result.detected||null;convertedPreviews.clear();
+   const result=await jobResult(job);example=false;$('#target-language').value=job.targetLanguage;window.syncLanguageSelectors?.();draftTargetLanguage=job.targetLanguage;detectedDocument=result.detected||null;window.syncTranslateContext?.();convertedPreviews.clear();
    const snapshot=queueSnapshots.get(job.id);
    files=snapshot?[...snapshot]:result.previews.map(f=>{const raw=atob(f.data),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));return new File([bytes],f.type==='application/pdf'?f.name.replace(/\.[^.]+$/,'')+'.pdf':f.name,{type:f.type});});
-   for(const f of result.previews||[])convertedPreviews.set(f.name,f);renderFiles();view('studio');openEditor();$('#translation').value=result.text;$('#draft-tag').textContent='Übersetzung abgeschlossen';document.querySelectorAll('.review-checks input').forEach(el=>el.checked=false);cachedPDF={fingerprint:pdfFingerprint(),data:result.pdf};cachedWord={fingerprint:pdfFingerprint(),data:result.word};return;
+   for(const f of result.previews||[])convertedPreviews.set(f.name,f);renderFiles();view('studio');openEditor(launcher);$('#translation').value=result.text;$('#draft-tag').textContent='Übersetzung abgeschlossen';document.querySelectorAll('.review-checks input').forEach(el=>el.checked=false);cachedPDF={fingerprint:pdfFingerprint(),data:result.pdf};cachedWord={fingerprint:pdfFingerprint(),data:result.word};return;
   }
   await localRequest(`/api/jobs/${job.id}/${action}`,{});if(action==='remove'){queueSnapshots.delete(job.id);queueResultCache.delete(job.id);}await pollQueue();
  }catch(error){toast(error.message);}
 }
-function queueFilename(job){const base=job.names[0]?.replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,70)||'Foliquo';return `${base}-${job.targetLanguage}-translation.pdf`;}
+function queueFilename(job){const base=job.names[0]?.replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,70)||'foliquo';return `${base}-${job.targetLanguage}-uebersetzung.pdf`;}
 async function downloadBundle(job){const response=await localRequest(`/api/jobs/${job.id}/bundle`);downloadBlob(await response.blob(),queueFilename(job).replace(/\.pdf$/,'-PDF-Word.zip'));}
-async function autoDownload(job){
- if(job.clientId!==queueClientId||queueDownloaded.has(job.id)||!job.hasResult)return;
- markDownloaded(job.id);toast('Übersetzung bereit. PDF und Word kannst du direkt herunterladen.');if(!files.length&&!$('#additional-info').value.trim())await openReviewWorkspace(job.id);
+function announceCompletion(job){
+ if(job.clientId!==queueClientId||queueAnnounced.has(job.id)||!job.hasResult)return;
+ markCompletionAnnounced(job.id);toast('Übersetzung bereit. PDF und Word kannst du direkt herunterladen.');
 }
 async function pollQueue(){
  if(queuePolling)return;if(!localRuntime||!csrf){scheduleQueuePoll();return;}queuePolling=true;
- try{const mutationVersion=queueMutationVersion;const incoming=await localRequest('/api/jobs').then(r=>r.json());if(mutationVersion!==queueMutationVersion||clarificationSubmitting)return;queueState=incoming;const visible=new Set(queueState.jobs.filter(j=>j.status!=='expired').map(j=>j.id));for(const id of queueSnapshots.keys())if(!visible.has(id))queueSnapshots.delete(id);for(const id of queueResultCache.keys())if(!visible.has(id))queueResultCache.delete(id);renderQueue();if(typeof resumeReviewWorkspace==='function')resumeReviewWorkspace(queueState.jobs);for(const job of queueState.jobs)if(job.status==='succeeded')void autoDownload(job);}
+ try{const mutationVersion=queueMutationVersion;const incoming=await localRequest('/api/jobs').then(r=>r.json());if(mutationVersion!==queueMutationVersion||clarificationSubmitting)return;queueState=incoming;queueLoaded=true;const visible=new Set(queueState.jobs.filter(j=>j.status!=='expired').map(j=>j.id));for(const id of queueSnapshots.keys())if(!visible.has(id))queueSnapshots.delete(id);for(const id of queueResultCache.keys())if(!visible.has(id))queueResultCache.delete(id);renderQueue();if(typeof resumeReviewWorkspace==='function')resumeReviewWorkspace(queueState.jobs);for(const job of queueState.jobs)if(job.status==='succeeded')announceCompletion(job);}
  catch(error){queueState.connectionError='Verbindung unterbrochen. Der Status wird erneut abgefragt.';renderQueue();}
  finally{queuePolling=false;scheduleQueuePoll();}
 }
 function scheduleQueuePoll(){clearTimeout(queuePollTimer);if(location.hostname==='127.0.0.1')queuePollTimer=setTimeout(pollQueue,queueState.jobs.some(j=>['queued','running','cancelling'].includes(j.status))?1000:2500);}
+window.addEventListener('translateocr-ready',()=>void pollQueue());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void pollQueue();});
+window.addEventListener('focus',()=>void pollQueue());
 $('#translate').onclick=async()=>{
+ if(window.isLanguagePairValid?.()===false){window.showLanguagePairError?.();return;}
  if(!files.length){$('#error').textContent='Bitte zuerst Dateien für diesen Auftrag hinzufügen.';$('#dropzone').focus();return;}
  if(!localRuntime||!providerReady){connectionError('Bitte zuerst lokal anmelden oder einen API-Anbieter einrichten.');return;}
  if(queueSubmitting)return;const selected=[...files],meta={...documentMetadata(),example:false},model=$('#model').value;queueSubmitting=true;updateQueueButton();$('#error').textContent='';
  try{
-  const upload=await documentsForRequest(selected),result=await localRequest('/api/jobs',{files:upload,metadata:meta,model,provider:$('#provider-choice').value,clientId:queueClientId,requestId:crypto.randomUUID()}).then(r=>r.json());queueSnapshots.set(result.id,selected);
+  const upload=await documentsForRequest(selected),result=await localRequest('/api/jobs',{files:upload,metadata:meta,model,provider:$('#provider-choice').value,clientId:queueClientId,requestId:crypto.randomUUID()}).then(r=>r.json());queueSnapshots.set(result.id,selected);await window.clearStudioDraft?.();
   if($('#additional-info').value.trim()===meta.additionalInfo)$('#additional-info').value='';
-  if(files.length===selected.length&&files.every((f,i)=>f===selected[i])){files=[];invalidateDraft();resetPreview();renderFiles();$('#file').value='';}
-  await pollQueue();setJobsPanel(true);$('#queue-card').scrollIntoView({behavior:'smooth',block:'nearest'});toast('Auftrag hinzugefügt. Du kannst jetzt weitere Dateien auswählen.');
+  if(files.length===selected.length&&files.every((f,i)=>f===selected[i])){files=[];invalidateDraft({discardTranslation:true});resetPreview();renderFiles();$('#file').value='';}
+  featuredJobId=result.id;try{sessionStorage.setItem('translateocr-featured-job',featuredJobId);}catch{}await pollQueue();renderFeaturedJob();document.querySelector('#featured-job')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});toast('Auftrag hinzugefügt.');
  }catch(error){$('#error').textContent=error.message;}finally{queueSubmitting=false;updateQueueButton();}
 };
 $('#queue-toggle').onclick=async()=>{try{await localRequest(`/api/queue/${queueState.paused?'resume':'pause'}`,{});await pollQueue();}catch(error){toast(error.message);}};
@@ -146,6 +186,7 @@ async function dismissClarificationDialog(){try{await saveClarificationDraft();i
 $('#clarification-fields').addEventListener('input',scheduleClarificationDraft);
 $('#clarification-extra').addEventListener('change',()=>{const draft=captureClarificationDraft();if(draft){draft.filesToUpload=[...$('#clarification-extra').files];void saveClarificationDraft().catch(()=>{});}});
 $('#clarification-dialog').addEventListener('cancel',event=>{event.preventDefault();void dismissClarificationDialog();});
+$('#clarification-dialog').addEventListener('close',()=>{const id=clarificationFocusJobId;clarificationFocusJobId=null;if(!id)return;const answer=document.querySelector(`[data-job-id="${CSS.escape(id)}"][data-queue-action="answer"]`);(answer&&!answer.closest('[inert]')?answer:$('#jobs-open')).focus({preventScroll:true});});
 
 function closeClarifications(){clearTimeout(clarificationDraftTimer);clarificationJobId=null;clarificationSignature='';$('#clarification-card').hidden=true;window.hideClarificationDialog();}
 async function animateResolvedQuestion(questionId){
@@ -162,17 +203,18 @@ async function acceptClarification(job,q,answer){
  finally{queueMutationVersion++;clarificationSubmitting=false;document.querySelectorAll('#clarification-fields button,#clarification-submit').forEach(b=>b.disabled=false);}
 }
 function showClarifications(job,scroll){
+ clarificationFocusJobId=job.id;
  if(clarificationJobId&&clarificationJobId!==job.id){void saveClarificationDraft().catch(()=>{});}
  if(!clarificationDrafts.has(job.id))clarificationDrafts.set(job.id,{answers:job.clarificationDraft?.answers||[],savedFiles:job.clarificationDraft?.files||[]});
  const storedDraft=clarificationDrafts.get(job.id);
  const signature=JSON.stringify([job.id,job.questions.map(({box,...question})=>question)]);if(signature!==clarificationSignature){
   const sameJob=clarificationJobId===job.id,drafts=new Map(sameJob?[...document.querySelectorAll('#clarification-fields textarea')].map(el=>[el.dataset.questionId,el.value]):(storedDraft.answers||[]).map(a=>[a.id,a.answer]));
-  clarificationJobId=job.id;clarificationSignature=signature;if(!sameJob)$('#clarification-extra').value='';if(!sameJob)questionOriginalReady=renderQuestionOriginal(job);$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
+  clarificationJobId=job.id;clarificationSignature=signature;if(!sameJob)$('#clarification-extra').value='';if(!sameJob)questionOriginalReady=renderQuestionOriginal(job);$('#clarification-files').dataset.noTranslate='';$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
   const fields=job.questions.map((q,i)=>{
    const field=document.createElement('div');field.className='clarification-field';field.dataset.questionId=q.id;field.addEventListener('focusin',()=>{document.querySelectorAll('.clarification-field').forEach(el=>el.classList.toggle('is-current',el===field));});
-   const label=document.createElement('label');label.htmlFor=`answer-${q.id}`;label.textContent=`${i+1}. ${q.question}`;
+   const label=document.createElement('label');label.htmlFor=`answer-${q.id}`;label.textContent=`${i+1}. ${window.TOCRI18n?.localizeQuestion(q)||q.question}`;
    const context=document.createElement('details');context.className='question-context';const contextTitle=document.createElement('summary');contextTitle.textContent='Kontext';const contextText=document.createElement('p');contextText.textContent=q.context;context.append(contextTitle,contextText);
-   const answer=document.createElement('textarea');answer.id=label.htmlFor;answer.dataset.questionId=q.id;answer.maxLength=4000;answer.required=true;answer.rows=2;answer.placeholder='Deine Antwort …';answer.value=drafts.get(q.id)||'';
+   const answer=document.createElement('textarea');answer.id=label.htmlFor;answer.dataset.questionId=q.id;answer.maxLength=4000;answer.required=true;answer.rows=2;answer.placeholder=window.TOCRI18n?.t('Deine Antwort …')||'Deine Antwort …';answer.value=drafts.get(q.id)||'';
    const suggestion=document.createElement('div');suggestion.className='question-suggestion';suggestion.hidden=!q.suggestion;
    const actions=document.createElement('div');actions.className='clarification-actions';
    if(q.suggestion){
@@ -187,12 +229,13 @@ function showClarifications(job,scroll){
     unreadable.onclick=()=>void acceptClarification(job,q,null);
     actions.insertBefore(unreadable,locate);
    }
-   const hint=document.createElement('small');hint.className='question-action-hint';hint.textContent='Oder eigene Antwort eingeben.';
+   const hint=document.createElement('small');hint.className='question-action-hint';hint.textContent=window.TOCRI18n?.t('Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.')||'Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.';
    field.append(label,context,suggestion,actions,hint,answer);return field;
   });$('#clarification-fields').replaceChildren(...fields);
- }$('#clarification-card').hidden=false;renderSavedClarificationFiles(storedDraft);window.showClarificationDialog();if(scroll){$('#clarification-fields textarea')?.focus({preventScroll:true});}
+ }$('#clarification-card').hidden=false;renderSavedClarificationFiles(storedDraft);const answerLauncher=document.querySelector(`[data-job-id="${CSS.escape(job.id)}"][data-queue-action="answer"]`),focusReturn=answerLauncher&&!answerLauncher.closest('[inert]')?answerLauncher:$('#jobs-open');window.showClarificationDialog(focusReturn);if(scroll){$('#clarification-fields textarea')?.focus({preventScroll:true});}
 }
 $('#clarification-close').onclick=()=>void dismissClarificationDialog();
+window.addEventListener('translateocr-locale',()=>{if(!clarificationJobId)return;const job=queueState.jobs.find(item=>item.id===clarificationJobId);if(!job)return;const focused=document.activeElement?.dataset.questionId,openContexts=new Set([...document.querySelectorAll('#clarification-fields .question-context[open]')].map(item=>item.closest('.clarification-field')?.dataset.questionId).filter(Boolean));captureClarificationDraft();clarificationSignature='';showClarifications(job,false);for(const field of document.querySelectorAll('#clarification-fields .clarification-field'))if(openContexts.has(field.dataset.questionId))field.querySelector('.question-context').open=true;if(focused)document.querySelector(`#clarification-fields textarea[data-question-id="${CSS.escape(focused)}"]`)?.focus({preventScroll:true});});
 $('#clarification-form').onsubmit=async event=>{
  event.preventDefault();if(clarificationSubmitting||!clarificationJobId)return;const id=clarificationJobId,answers=[...document.querySelectorAll('#clarification-fields textarea')].map(el=>({id:el.dataset.questionId,answer:el.value.trim(),unreadable:el.dataset.unreadable==='true'}));
  if(answers.some(a=>!a.answer)){$('#clarification-error').textContent='Bitte jede Rückfrage beantworten.';return;}clarificationSubmitting=true;$('#clarification-submit').disabled=true;$('#clarification-error').textContent='';

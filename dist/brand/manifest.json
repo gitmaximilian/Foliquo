@@ -1,0 +1,157 @@
+{
+  "name": "foliquo",
+  "version": 2,
+  "defaultEdition": "community",
+  "editions": {
+    "standard": {
+      "tokens": {
+        "name": "foliquo",
+        "edition": "standard",
+        "type": {
+          "family": "Manrope",
+          "fontWeight": 700,
+          "letterSpacing": "-0.05em",
+          "wordmark": "foliquo"
+        },
+        "colors": {
+          "ink": "#0F1115",
+          "accent": "#3B82F6",
+          "white": "#FFFFFF",
+          "darkSurface": "#0B0E12"
+        },
+        "clearSpace": {
+          "icon": "25% of icon width",
+          "wordmark": "25% of icon height"
+        },
+        "symbol": {
+          "viewBox": "0 0 400 400",
+          "outerCenterline": "M 75 306 V 168 C 75 117 116 76 167 76 H 323",
+          "standardStroke": 90,
+          "pill": {
+            "x": 143,
+            "y": 149,
+            "width": 185,
+            "height": 87,
+            "radius": 43.5
+          },
+          "communityStyle": "transparent fill, 9-unit stroke around the same standard silhouette and pill"
+        },
+        "allowedVariants": [
+          "color",
+          "black",
+          "white",
+          "inverse",
+          "on-dark-background",
+          "app-icon-light",
+          "app-icon-dark",
+          "wordmark-light",
+          "wordmark-dark"
+        ],
+        "notes": [
+          "The community edition differs in its mark only.",
+          "The mock is a reference; never use a screenshot of the mock as a logo.",
+          "Some standalone SVG wordmarks use live text and need Manrope available; React component loads via application CSS."
+        ]
+      },
+      "assets": {
+        "app-icon-dark.svg": "standard/svg/app-icon-dark.svg",
+        "app-icon-light.svg": "standard/svg/app-icon-light.svg",
+        "icon-black.svg": "standard/svg/icon-black.svg",
+        "icon-color.svg": "standard/svg/icon-color.svg",
+        "icon-inverse.svg": "standard/svg/icon-inverse.svg",
+        "icon-on-dark-background.svg": "standard/svg/icon-on-dark-background.svg",
+        "icon-white.svg": "standard/svg/icon-white.svg",
+        "wordmark-dark-background.svg": "standard/svg/wordmark-dark-background.svg",
+        "wordmark-dark.svg": "standard/svg/wordmark-dark.svg",
+        "wordmark-light.svg": "standard/svg/wordmark-light.svg"
+      },
+      "masterSha256": {
+        "app-icon-dark.svg": "f6bd70a337a910b168794d571225aba040d162f0d480103e0cf097499b6575a1",
+        "app-icon-light.svg": "13ee6831054a491e0422f1c46931458438989af8b5b0c3850cf88ecb04ed9c4f",
+        "icon-black.svg": "2c73602569d086799ac86eb6ad65a51cb3898929154c9d36cd51ebce681a1b27",
+        "icon-color.svg": "b9031f7ccda11cfeb1bfdc193ccf03b265ccf960e8465811144c0027ab7b09d4",
+        "icon-inverse.svg": "a4452c2d48746145fd14e646684c61de24ca6bf2e45cbbc0b02d74e1e8e56322",
+        "icon-on-dark-background.svg": "335157f8dcde009e4cd273e31215be04cb9fbecd0f4c526f20f51fbc901c4bd4",
+        "icon-white.svg": "2fd76aeb94ec3392144709aeb05d14457ddf000916cff02c44da842e4c0be8f1",
+        "wordmark-dark-background.svg": "21f4a9b907c1aa65bf12fbfb021d23a0d67f542a38242ac7fbfb17c358af1dfa",
+        "wordmark-dark.svg": "c0c9fc5f28effde3a2fdf9e8a95b3458e280af933c67b14ae760efc34d7a2b15",
+        "wordmark-light.svg": "3fd516dc3a8078725ee71f99f141a4a2ec8beade828196246c9c1990162564e3"
+      }
+    },
+    "community": {
+      "tokens": {
+        "name": "foliquo",
+        "edition": "community",
+        "type": {
+          "family": "Manrope",
+          "fontWeight": 700,
+          "letterSpacing": "-0.05em",
+          "wordmark": "foliquo"
+        },
+        "colors": {
+          "ink": "#0F1115",
+          "accent": "#3B82F6",
+          "white": "#FFFFFF",
+          "darkSurface": "#0B0E12"
+        },
+        "clearSpace": {
+          "icon": "25% of icon width",
+          "wordmark": "25% of icon height"
+        },
+        "symbol": {
+          "viewBox": "0 0 400 400",
+          "outerCenterline": "M 75 306 V 168 C 75 117 116 76 167 76 H 323",
+          "standardStroke": 90,
+          "pill": {
+            "x": 143,
+            "y": 149,
+            "width": 185,
+            "height": 87,
+            "radius": 43.5
+          },
+          "communityStyle": "transparent fill, 9-unit stroke around the same standard silhouette and pill"
+        },
+        "allowedVariants": [
+          "color",
+          "black",
+          "white",
+          "inverse",
+          "on-dark-background",
+          "app-icon-light",
+          "app-icon-dark",
+          "wordmark-light",
+          "wordmark-dark"
+        ],
+        "notes": [
+          "The community edition differs in its mark only.",
+          "The mock is a reference; never use a screenshot of the mock as a logo.",
+          "Some standalone SVG wordmarks use live text and need Manrope available; React component loads via application CSS."
+        ]
+      },
+      "assets": {
+        "app-icon-dark.svg": "community/svg/app-icon-dark.svg",
+        "app-icon-light.svg": "community/svg/app-icon-light.svg",
+        "icon-black.svg": "community/svg/icon-black.svg",
+        "icon-color.svg": "community/svg/icon-color.svg",
+        "icon-inverse.svg": "community/svg/icon-inverse.svg",
+        "icon-on-dark-background.svg": "community/svg/icon-on-dark-background.svg",
+        "icon-white.svg": "community/svg/icon-white.svg",
+        "wordmark-dark-background.svg": "community/svg/wordmark-dark-background.svg",
+        "wordmark-dark.svg": "community/svg/wordmark-dark.svg",
+        "wordmark-light.svg": "community/svg/wordmark-light.svg"
+      },
+      "masterSha256": {
+        "app-icon-dark.svg": "1c74c85ef584c5f066f4af62884d720ed7727dbd2218da22c6901107c2fd9ee9",
+        "app-icon-light.svg": "56bf113490aecb543162305a46ee09f85b9c3b4eb15533cda0cb09767c9b101e",
+        "icon-black.svg": "98fb3b362362812e6b4810d28abb57e1c4b635ea2cc843fa373aff870308a3f3",
+        "icon-color.svg": "5734d5e670bcad3a85715c9616899050a6bfc71e10d71bf63fb9f42bed6200c4",
+        "icon-inverse.svg": "cf98bf39101598f37d7e7942d8ebc1d562ebd8c0f1f791ef4517936e8d124196",
+        "icon-on-dark-background.svg": "b314ec145f5fd042e95e0a4e639bb00915dff712c001d3fcbf02665a301ccfe7",
+        "icon-white.svg": "10f6e6c8e5ca4fa577133397582a5829973850d2fa5350474aff825a68673486",
+        "wordmark-dark-background.svg": "0d013109c36fe9dccf2acf038aa5741ef0ed64b0e2179207981043cc860797fd",
+        "wordmark-dark.svg": "bc3f0249445f4baef5621eda484c33a1537dd010b32db3935b183135b89a7d2b",
+        "wordmark-light.svg": "88e38c597f743e959a702a75a26536cf8c3f8d868d1e7cc14f47f43c68d5bf80"
+      }
+    }
+  }
+}

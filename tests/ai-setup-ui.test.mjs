@@ -10,7 +10,7 @@ async function setup(){
   append(...items){for(const item of items){if(item.parent)item.parent.children=item.parent.children.filter(e=>e!==item);item.parent=this;this.children.push(item);}}
   showModal(){this.open=true;}close(){this.open=false;}
  }
- const window=new EventTarget();const document={querySelector(id){if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);}};
+ const window=new EventTarget();window.TOCRDialogs={bind(){},open(dialog){dialog.open=true;},close(dialog){dialog.open=false;}};const document={querySelector(id){if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);}};
  vm.runInNewContext(await readFile(new URL('../dist/ai-settings.js',import.meta.url),'utf8'),{window,document});
  const state=ready=>{const event=new Event('translateocr-ai-state');event.detail={ready};window.dispatchEvent(event);};
  return {window,state,node:id=>document.querySelector(id)};
