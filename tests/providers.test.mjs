@@ -34,7 +34,7 @@ test('DeepSeek authenticates the real model catalog and rejects invalid keys',as
  manager.setKey('deepseek','sk-invalid-fixture');await assert.rejects(manager.models('deepseek'),/API-Schlüssel/);assert.equal(calls[0].url,'https://api.deepseek.com/models');assert.equal(calls[0].headers.Authorization,'Bearer sk-invalid-fixture');
 });
 test('Specialized OpenAI models are excluded and refreshing bypasses a cached catalog',async()=>{
- let calls=0;const {manager}=setup(async()=>{calls++;return Response.json({data:[{id:'gpt-4o'},{id:'gpt-4o-audio-preview'},{id:'gpt-5-codex'},{id:'gpt-4o-realtime-preview'}]});});
+ let calls=0;const {manager}=setup(async()=>{calls++;return Response.json({data:[{id:'gpt-4o'},{id:'gpt-4o-audio-preview'},{id:'gpt-5-codex'},{id:'gpt-4o-realtime-preview'},{id:'o3-mini'},{id:'gpt-5.1-chat-latest'}]});});
  manager.setKey('openai','sk-model-fixture');assert.deepEqual((await manager.models('openai')).map(m=>m.id),['gpt-4o']);await manager.models('openai');assert.equal(calls,1);await manager.models('openai',{refresh:true});assert.equal(calls,2);
 });
 test('Claude respects returned model output limits',async()=>{
