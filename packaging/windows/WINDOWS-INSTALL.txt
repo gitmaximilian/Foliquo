@@ -1,0 +1,22 @@
+Foliquo Community opens a local service in your default browser.
+Node.js is included. No setup script is required.
+
+LibreOffice Writer is required for PDF/Word processing and export.
+Install it from https://www.libreoffice.org/download/ if it is not already installed.
+Alternatively, use: winget install --exact --id TheDocumentFoundation.LibreOffice
+Existing LibreOffice installations are reused. Run "Foliquo.exe doctor" to verify exports.
+
+Keep the Foliquo console open while using the browser. Use Start > Stop Foliquo to stop it.
+The server listens only on 127.0.0.1. No background startup or Windows service is installed.
+
+Your private workspace is stored in %LOCALAPPDATA%\Foliquo and is preserved during
+upgrades and uninstall. Close the old application before upgrading.
+To migrate an old installation, stop it and run:
+  Foliquo.exe migrate --from "C:\path\to\old\Foliquo\.local"
+Never delete the old directory until the copied workspace has been checked.
+
+The installer is unsigned unless a release explicitly records verified signing.
+SmartScreen may display reputation warnings, including for newly signed binaries.
+WinGet does not eliminate SmartScreen checks. Keep Windows security protections enabled.
+
+License: PolyForm Noncommercial 1.0.0. Commercial use is restricted by the license.

@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://maximilianauer.at/projects/foliquo/demo/?lang=en"><strong>Try the demo</strong></a> ·
-  <a href="https://github.com/gitmaximilian/Foliquo/archive/refs/heads/main.zip"><strong>Download</strong></a> ·
+  <a href="https://github.com/gitmaximilian/Foliquo/releases"><strong>Downloads</strong></a> ·
   <a href="docs/BROWSER-SETUP.md">Setup guide</a> ·
   <a href="https://maximilianauer.at/projects/foliquo/">Project story</a>
 </p>
@@ -53,20 +53,23 @@ Wheel or trackpad zoom, drag-to-pan, fit-to-view, keyboard controls and a larger
 
 ## Download and start
 
-1. Download and extract the [latest source ZIP](https://github.com/gitmaximilian/Foliquo/archive/refs/heads/main.zip).
-2. Open the extracted folder and double-click the setup file for your computer: `Setup-Foliquo.cmd` on Windows, `Setup-Foliquo.command` on macOS, or `Setup-Foliquo.sh` on Linux.
-3. Follow any system permission prompt. Setup prepares the required tools, checks PDF and Word export, then opens Foliquo in your browser.
-4. Leave the small Foliquo window open while using the site. Close it to stop Foliquo. Next time, double-click the matching `Start-Foliquo` file.
+Foliquo opens a local browser-based workspace. It listens only on `127.0.0.1`; keep its console open while working.
 
-On macOS, the setup file opens in Terminal; it is a setup script, not a Foliquo app. On Linux, use the file manager's **Run** or **Run as a Program** action if a double-click opens the script as text.
+**Distribution status:** 0.11.0 packages are undergoing verification. Use [source setup](docs/BROWSER-SETUP.md#source-setup-available-now) until verified assets appear on [GitHub Releases](https://github.com/gitmaximilian/Foliquo/releases). Homebrew and WinGet availability are separate publication steps.
 
-Setup uses the system package manager when available to prepare Node.js and LibreOffice, then installs the project files and opens the site automatically. If a supported package manager is unavailable, setup opens the official download page and guides you through the missing prerequisite; install it and run setup again. You do not need to enter commands. The first setup may ask for your computer password or permission to install these tools.
+| Platform | Installation and use |
+| --- | --- |
+| **macOS 15+, Apple Silicon / Intel** | Homebrew formula prepared. After tap publication: `brew install gitmaximilian/tap/foliquo`; start with `foliquo`, update with `brew upgrade foliquo`. Install LibreOffice Writer separately with `brew install --cask libreoffice`. |
+| **Windows 10/11 x64** | Use the verified versioned `Windows-x64-Setup.exe` when published. Node.js is bundled; install LibreOffice Writer separately. Start from the Start menu. Run the newer installer to update; uninstall from Installed apps. Foliquo is **not yet available through WinGet**. |
+| **Linux x64, glibc** | Install Node.js 22+ and LibreOffice Writer. Verify and extract the versioned Linux tarball, then run `./install.sh`. Start with `~/.local/bin/foliquo`. Stop it and run the newer archive's installer to update. |
 
-The service is bound to your own computer (`127.0.0.1`); other people cannot access it over your network. Use the browser page while the service is running. The app does not install a browser extension or a standalone web app.
+Run `foliquo doctor` to verify PDF/Word export, `foliquo stop` to stop the service and `foliquo data-dir` to locate your private workspace. On Windows, use the installed `Foliquo.exe` for these commands. Browser startup never downloads application code.
 
-### Updates
+### Data, updates and uninstall
 
-Foliquo checks the public GitHub release list when you open **Guide**. If a newer release exists, choose **Download update**, close the Foliquo launcher window, extract the ZIP over the existing Foliquo folder, and run the setup file again. Keep the hidden `.local` folder in place: it contains your encrypted jobs, preferences, and provider credentials. The updater never sends document data to GitHub. If GitHub is temporarily unavailable, the app keeps working and you can check again later.
+Private data is stored separately: `~/Library/Application Support/Foliquo` on macOS, `%LOCALAPPDATA%\Foliquo` on Windows, and `$XDG_DATA_HOME/foliquo` (normally `~/.local/share/foliquo`) on Linux. Upgrades and uninstallers preserve it. Legacy `.local` folders are retained as recovery copies; follow the [verified migration instructions](docs/BROWSER-SETUP.md#private-data-and-migration) before removing an old installation.
+
+The in-app update check links to the release page and sends no documents, settings or credentials to GitHub. Use your platform's update method. For uninstall, use `brew uninstall foliquo`, Windows Installed apps, or remove Linux's application directory and CLI symlink as described in the [setup guide](docs/BROWSER-SETUP.md).
 
 ## Local workspace, clear boundaries
 
@@ -76,8 +79,8 @@ Jobs, preferences and provider credentials are stored in the encrypted local wor
 
 ## Requirements
 
-- Windows 10/11, a current macOS release, or a mainstream Linux distribution.
-- Node.js 22 or newer and LibreOffice Writer. Setup installs them with `winget` on Windows or Homebrew on macOS where available. On Linux, use the package manager instructions shown by setup if either is missing.
+- Windows 10 1809+/11 x64, macOS 15+ (packaged builds), or Linux x64 with glibc 2.35+.
+- Node.js 22+ (24 LTS recommended) and LibreOffice Writer. Windows installers bundle Node.js; Homebrew manages Node.js 24. Linux and source users install prerequisites separately.
 - A modern browser. Keep the launcher terminal open while using the site.
 
 ## Developer checks

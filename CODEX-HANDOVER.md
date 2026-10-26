@@ -1,6 +1,6 @@
 # Maintainer handover
 
-Foliquo is an open-source local browser application. The Node.js service binds to `127.0.0.1:4318`; browser JavaScript talks to that service using same-origin requests and CSRF tokens. Do not expose the service publicly or add native desktop/PWA packages.
+Foliquo Community is a source-available local browser application under PolyForm Noncommercial 1.0.0. The Node.js service binds to `127.0.0.1:4318`; browser JavaScript talks to that service using same-origin requests and CSRF tokens. Do not expose the service publicly. Native installers may wrap the browser service; do not add Electron or a PWA.
 
 ## Main files
 
@@ -13,9 +13,9 @@ Foliquo is an open-source local browser application. The Node.js service binds t
 
 ## Privacy and releases
 
-The `.local/` directory is private and ignored by Git. It contains encrypted local workspace data and credentials. Never include it in source archives, tests, or screenshots. The update checker makes a request to the public GitHub Releases API and returns only version metadata and the official release URL.
+Legacy `.local/` directories are private and ignored by Git. New installations use the per-user path returned by `foliquo data-dir`; migration copies and verifies the legacy directory without deleting it. It contains encrypted local workspace data and credentials. Never include it in source archives, tests, or screenshots. The update checker makes a request to the public GitHub Releases API and returns only version metadata and the official release URL.
 
-Publish source-only releases. Do not attach EXE, DMG, DEB, RPM, Electron, or PWA packages. The update UI links to GitHub Releases; when publishing a newer release, keep the version in `package.json` and `/api/session` in sync.
+Publish curated, platform-specific release assets through the verified distribution workflow. Preserve PolyForm Noncommercial 1.0.0; do not describe it as OSI open source. The update UI links to GitHub Releases; when publishing a newer release, keep the version in `package.json` and `/api/session` in sync.
 
 ## Checks
 

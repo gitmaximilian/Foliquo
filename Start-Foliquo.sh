@@ -1,5 +1,6 @@
-#!/usr/bin/env bash
-cd "$(dirname "$0")"
-if ! command -v node >/dev/null; then echo 'Please run Setup-Foliquo.sh first.'; exit 1; fi
-if [ ! -d node_modules/pdf-lib ]; then echo 'Preparing Foliquo ...'; npm ci --ignore-scripts || { echo 'Setup failed. Please run Setup-Foliquo.sh again.'; exit 1; }; fi
-node scripts/start-browser.mjs
+#!/usr/bin/env sh
+set -eu
+cd -- "$(dirname -- "$0")"
+if ! command -v node >/dev/null 2>&1; then echo 'Install Node.js 22+ and run Setup-Foliquo.sh first.' >&2; exit 1; fi
+if [ ! -d node_modules/pdf-lib ]; then echo 'Run Setup-Foliquo.sh first.' >&2; exit 1; fi
+exec node bin/foliquo.mjs

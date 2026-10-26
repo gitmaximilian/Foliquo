@@ -5,4 +5,4 @@ const root=fileURLToPath(new URL('..',import.meta.url));
 const npm=spawnSync(process.platform==='win32'?'cmd.exe':'npm',process.platform==='win32'?['/d','/s','/c','npm.cmd ci --ignore-scripts']:['ci','--ignore-scripts'],{cwd:root,stdio:'inherit'});
 if(npm.status!==0)process.exit(npm.status||1);
 const doctor=spawnSync(process.execPath,['scripts/check-install.mjs'],{cwd:root,stdio:'inherit'});if(doctor.status!==0)process.exit(doctor.status||1);
-console.log('Einrichtung geprüft. Mit npm start öffnen; Demo ohne Konto verfügbar.');
+console.log('Setup verified. Run npm start to open Foliquo; the demo needs no account.');
