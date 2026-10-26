@@ -11,7 +11,7 @@ test('Library rows retain named table semantics and add mobile field labels',asy
  assert.match(app,/cell\.setAttribute\('role','columnheader'\)/);
  assert.match(app,/cellLabel\(name,'Dokument'\)/);
  for(const label of ['Dokumenttyp','Datum','Status','Aktionen'])assert.ok(app.includes(`cellLabel(${label==='Dokumenttyp'?'type':label==='Datum'?'date':label==='Status'?'status':'actions'},'${label}')`),`mobile label ${label} is present`);
- assert.ok(css.includes('@media(max-width:600px){\n#document-cards{padding:var(--space-4)}'),'mobile library breakpoint uses the shared spacing scale');
+ assert.match(css,/@media\(max-width:600px\)\{\r?\n#document-cards\{padding:var\(--space-4\)\}/,'mobile library breakpoint uses the shared spacing scale');
  assert.ok(css.includes('.document-table tbody{display:grid;gap:10px}'),'mobile results are stacked');
  assert.ok(css.includes('.document-table tr{display:grid;grid-template-columns:minmax(0,1fr)'),'each document is a labeled card');
  assert.ok(css.includes('.document-cell-label{display:block'),'mobile cell labels are visible');
