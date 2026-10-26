@@ -55,7 +55,7 @@ Wheel or trackpad zoom, drag-to-pan, fit-to-view, keyboard controls and a larger
 
 Foliquo opens a local browser-based workspace. It listens only on `127.0.0.1`; keep its console open while working.
 
-**Distribution status:** [Version 0.11.1](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.11.1) is published with verified platform downloads and checksums. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. Foliquo is not yet available through WinGet.
+**Distribution status:** [Version 0.11.1](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.11.1) is published with verified platform downloads and checksums. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. Foliquo is not yet available through WinGet; [the Microsoft submission](https://github.com/microsoft/winget-pkgs/pull/462448) is under review.
 
 | Platform | Installation and use |
 | --- | --- |

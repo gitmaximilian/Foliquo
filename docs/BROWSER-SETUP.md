@@ -4,7 +4,7 @@ Foliquo runs a local Node.js service and opens your default browser at `http://1
 
 ## Distribution status
 
-Version 0.11.1 is published with verified [platform downloads and SHA256SUMS](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.11.1). The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. WinGet installation of Foliquo is not publicly available until Microsoft accepts and indexes the submission.
+Version 0.11.1 is published with verified [platform downloads and SHA256SUMS](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.11.1). The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. [WinGet submission #462448](https://github.com/microsoft/winget-pkgs/pull/462448) is under review; installation is not publicly available until Microsoft accepts and indexes it.
 
 ## macOS
 
