@@ -1,7 +1,8 @@
 import {readFile,writeFile,mkdir,cp,rm} from 'node:fs/promises';
-import {spawnSync} from 'node:child_process';
+import {spawnSync,spawn} from 'node:child_process';
 import {join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {setTimeout as delay} from 'node:timers/promises';
 const run=(cmd,args,options={})=>{const result=spawnSync(cmd,args,{stdio:'inherit',...options});if(result.status!==0)throw new Error(cmd+' '+args.join(' ')+' failed');};
 const version=JSON.parse(await readFile('package.json','utf8')).version;
 const repository=spawnSync('brew',['--repository'],{encoding:'utf8'}).stdout.trim();
@@ -21,9 +22,20 @@ try{
  run('brew',['install','--build-from-source','gitmaximilian/tap/foliquo']);
  run('brew',['test','gitmaximilian/tap/foliquo']);
  const environment={...process.env,FOLIQUO_DATA_DIR:resolve('.packaging/brew-persistence'),FOLIQUO_NO_BROWSER:'1',FOLIQUO_PORT:'18321'};
- // Formula test exercises startup/stop; reinstall models replacement of the application keg.
+ const cli=join(repository,'bin','foliquo');
+ const child=spawn(cli,[],{env:environment,stdio:'inherit'});
+ try{
+  let ready=false;
+  for(let i=0;i<100;i++){try{const response=await fetch('http://127.0.0.1:18321/api/health');ready=response.ok;}catch{}if(ready)break;await delay(100);}
+  if(!ready)throw new Error('Installed formula did not start.');
+  run(cli,['stop'],{env:environment});
+  await new Promise(resolve=>child.exitCode!==null?resolve():child.once('exit',resolve));
+ }finally{if(child.exitCode===null)child.kill();}
+ const keyPath=resolve('.packaging/brew-persistence/workspace.key'),key=await readFile(keyPath);
+ // Reinstall models replacement of the application keg; the synthetic workspace survives.
  run('brew',['reinstall','gitmaximilian/tap/foliquo'],{env:environment});
  run('brew',['test','gitmaximilian/tap/foliquo']);
  run('brew',['uninstall','gitmaximilian/tap/foliquo']);
+ if(!(await readFile(keyPath)).equals(key))throw new Error('Homebrew replacement or uninstall changed private data.');
 }finally{await writeFile(join(tap,'Formula/foliquo.rb'),production);}
 console.log('Formula style, audit, native install, functional startup/stop, reinstall and uninstall passed.');

@@ -29,7 +29,9 @@ jobs:
         run: choco install libreoffice-fresh -y --no-progress
       - name: Install LibreOffice (macOS)
         if: runner.os == 'macOS'
-        run: brew install --cask libreoffice
+        run: |
+          brew update
+          brew install --cask libreoffice
       - run: node --check server.mjs && node --check scripts/start-browser.mjs && node --check dist/updates.js && node --check dist/workflow.js
       - name: Run the Windows first-use setup check
         if: runner.os == 'Windows'

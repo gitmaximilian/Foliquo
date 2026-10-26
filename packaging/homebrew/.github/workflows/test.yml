@@ -11,7 +11,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - run: brew install --cask libreoffice
+      - run: |
+          brew update
+          brew install --cask libreoffice
       - name: Test checked-out tap
         run: |
           brew tap --custom-remote gitmaximilian/tap "$GITHUB_WORKSPACE"
