@@ -18,7 +18,7 @@ test('Claude model catalog and PDF request use Anthropic Messages format',async(
 });
 
 test('DeepSeek vision adapter locally renders PDF pages and sends them as image input',async()=>{
- let submitted;const {manager}=setup(async(url,options={})=>{if(String(url).endsWith('/responses')){submitted=JSON.parse(options.body);return responseStream('{"status":"ready"}');}throw new Error('Unexpected network request');});manager.setKey('deepseek','sk-deepseek-test-key');await manager.select('deepseek');const pdf=await PDFDocument.create();pdf.addPage([250,160]);const bytes=Buffer.from(await pdf.save());await manager.respond({model:'deepseek-flash',instructions:'read page',input:[{role:'user',content:[{type:'input_text',text:'translate'},{type:'input_file',filename:'fiction.pdf',file_data:`data:application/pdf;base64,${bytes.toString('base64')}`}]}]});assert.equal(submitted.model,'deepseek-flash');const image=submitted.input[0].content.find(c=>c.type==='input_image');assert.ok(image?.image_url.startsWith('data:image/jpeg;base64,'));
+ let submitted;const {manager}=setup(async(url,options={})=>{if(String(url).endsWith('/models'))return Response.json({data:[{id:'deepseek-flash'}]});if(String(url).endsWith('/responses')){submitted=JSON.parse(options.body);return responseStream('{"status":"ready"}');}throw new Error('Unexpected network request');});manager.setKey('deepseek','sk-deepseek-test-key');await manager.select('deepseek');const pdf=await PDFDocument.create();pdf.addPage([250,160]);const bytes=Buffer.from(await pdf.save());await manager.respond({model:'deepseek-flash',instructions:'read page',input:[{role:'user',content:[{type:'input_text',text:'translate'},{type:'input_file',filename:'fiction.pdf',file_data:`data:application/pdf;base64,${bytes.toString('base64')}`}]}]});assert.equal(submitted.model,'deepseek-flash');const image=submitted.input[0].content.find(c=>c.type==='input_image');assert.ok(image?.image_url.startsWith('data:image/jpeg;base64,'));
 });
 
 test('HTTP provider management keeps keys private and allows explicit local API selection',async t=>{
@@ -26,4 +26,18 @@ test('HTTP provider management keeps keys private and allows explicit local API 
  const dir=await mkdtemp(join(tmpdir(),'translateocr-provider-'));t.after(()=>rm(dir,{recursive:true,force:true}));const workspace=await new Workspace(dir).init();const connection={status:()=>({connected:false,planEnabled:false})};const fetcher=async(url)=>String(url).endsWith('/models')?Response.json({data:[{id:'gpt-4o'}]}):responseStream('{"status":"ready"}');const provider=new ProviderManager(connection,workspace,fetcher),port=47000+Math.floor(Math.random()*1000),origin=`http://127.0.0.1:${port}`,server=createApp({connection,workspace,provider,port});await new Promise((resolve,reject)=>server.once('error',reject).listen(port,'127.0.0.1',resolve));t.after(()=>new Promise(resolve=>server.close(resolve)));
  const page=await fetch(origin),cookie=page.headers.get('set-cookie').split(';')[0],session=await fetch(origin+'/api/session',{headers:{cookie}}).then(r=>r.json()),headers={cookie,origin,'content-type':'application/json','x-translateocr-csrf':session.csrf};const post=(path,data)=>fetch(origin+path,{method:'POST',headers,body:JSON.stringify(data)});
  assert.equal((await post('/api/providers/key',{provider:'openai',apiKey:'sk-private-route-test-key'})).status,200);assert.equal((await post('/api/providers/select',{provider:'openai'})).status,200);const [status,catalog,library]=await Promise.all([fetch(origin+'/api/session',{headers:{cookie}}).then(r=>r.json()),fetch(origin+'/api/providers',{headers:{cookie}}).then(r=>r.json()),fetch(origin+'/api/library',{headers:{cookie}}).then(r=>r.json())]);assert.equal(status.provider,'openai');assert.ok(catalog.providers.find(p=>p.id==='openai').configured);assert.equal(JSON.stringify({status,catalog,library}).includes('sk-private-route-test-key'),false);
+});
+
+
+test('DeepSeek authenticates the real model catalog and rejects invalid keys',async()=>{
+ const calls=[];const {manager}=setup(async(url,options)=>{calls.push({url:String(url),headers:options.headers});return Response.json({error:{code:'invalid_api_key'}},{status:401});});
+ manager.setKey('deepseek','sk-invalid-fixture');await assert.rejects(manager.models('deepseek'),/API-Schlüssel/);assert.equal(calls[0].url,'https://api.deepseek.com/models');assert.equal(calls[0].headers.Authorization,'Bearer sk-invalid-fixture');
+});
+test('Specialized OpenAI models are excluded and refreshing bypasses a cached catalog',async()=>{
+ let calls=0;const {manager}=setup(async()=>{calls++;return Response.json({data:[{id:'gpt-4o'},{id:'gpt-4o-audio-preview'},{id:'gpt-5-codex'},{id:'gpt-4o-realtime-preview'}]});});
+ manager.setKey('openai','sk-model-fixture');assert.deepEqual((await manager.models('openai')).map(m=>m.id),['gpt-4o']);await manager.models('openai');assert.equal(calls,1);await manager.models('openai',{refresh:true});assert.equal(calls,2);
+});
+test('Claude respects returned model output limits',async()=>{
+ let submitted;const {manager}=setup(async(url,options={})=>String(url).includes('/models?')?Response.json({data:[{id:'claude-fixture',max_tokens:8192}],has_more:false}):(submitted=JSON.parse(options.body),anthropicStream('complete')));
+ manager.setKey('anthropic','sk-ant-fixture');await manager.select('anthropic');await manager.respond({model:'claude-fixture',input:[{role:'user',content:[{type:'input_text',text:'fictional'}]}]});assert.equal(submitted.max_tokens,8192);
 });

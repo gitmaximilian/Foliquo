@@ -1552,7 +1552,7 @@ html[lang=ar] .workspace-mastheads h1{letter-spacing:0}
 @media(max-width:1279px){.workspace-layout[data-view=studio]>.queue-rail{width:100%;max-width:none;justify-self:stretch}}
 #studio-view{display:grid;grid-template-columns:minmax(0,1fr) var(--settings-width);column-gap:var(--workspace-gap);row-gap:0;min-width:0}
 .language-workspace{grid-column:1;grid-row:1;min-height:80px;margin:0 0 12px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-panel);background:var(--color-surface)}
-.language-pair{grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);align-items:center;gap:8px}
+.language-pair{grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);align-items:center;gap:16px}
 .language-control{gap:4px}
 .language-field-label{display:flex;align-items:center;gap:6px;font-size:13px;line-height:20px;color:var(--color-text-secondary);font-weight:500}
 .language-field-label svg,.provider-context-label svg,.learning-context-link svg{display:block;flex:0 0 16px;width:16px;height:16px;stroke:currentColor;stroke-width:1.75}
@@ -1827,3 +1827,13 @@ html[dir=rtl] .job-mini-progress.is-indeterminate>span,html[dir=rtl] .progress-t
 .featured-job-progress.is-indeterminate>span{width:32%;animation:progress-travel 1.4s ease-in-out infinite alternate}
 html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progress-travel-rtl}
 @media(prefers-reduced-motion:reduce){.featured-job-progress.is-indeterminate>span{animation:none;transform:none}}
+
+/* Equal connection actions keep both panels independently accessible. */
+.connection-panel-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+.connection-panel-actions>.secondary{flex:1 1 200px;min-height:44px;justify-content:center;text-align:center}
+.connection-panel-actions>.secondary[aria-expanded=true]{background:var(--color-surface-hover);border-color:var(--color-focus)}
+#provider-more{border:0;padding-top:0}
+#provider-more .provider-help{margin:12px 0}
+#connection-diagnostics{margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+#connection-diagnostics[hidden],#provider-more[hidden]{display:none}
+@media(max-width:599px){#connection-diagnostics{grid-template-columns:minmax(0,1fr)}.connection-panel-actions{gap:8px}}
