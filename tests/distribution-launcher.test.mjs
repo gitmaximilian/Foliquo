@@ -24,6 +24,7 @@ test('installed CLI starts from another working directory, reuses the service an
  assert.equal((await fetch(`http://127.0.0.1:${port}/api/lifecycle/stop`,{method:'POST'})).status,403);
  const run=args=>new Promise((resolve,reject)=>{const p=spawn(process.execPath,[cli,...args],{cwd:tmpdir(),env});let out='';p.stdout.on('data',b=>out+=b);p.stderr.on('data',b=>out+=b);p.on('error',reject);p.on('close',code=>resolve({code,out}));});
  const repeated=await run([]);assert.equal(repeated.code,0,repeated.out);assert.match(repeated.out,/already running/);
+ const other=await run(['--data-dir',join(directory,'other')]);assert.equal(other.code,1);assert.match(other.out,/another workspace/);
  const stopped=await run(['stop']);assert.equal(stopped.code,0,stopped.out);
  await new Promise(resolve=>child.exitCode!==null?resolve():child.once('close',resolve));
  assert.equal(await probeService(port),null);assert.ok((await readFile(join(directory,'workspace.enc'))).length>32);

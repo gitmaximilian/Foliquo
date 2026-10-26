@@ -22,7 +22,8 @@ try{
  run('brew',['install','--build-from-source','gitmaximilian/tap/foliquo']);
  run('brew',['test','gitmaximilian/tap/foliquo']);
  const environment={...process.env,FOLIQUO_DATA_DIR:resolve('.packaging/brew-persistence'),FOLIQUO_NO_BROWSER:'1',FOLIQUO_PORT:'18321'};
- const cli=join(repository,'bin','foliquo');
+ const prefix=spawnSync('brew',['--prefix'],{encoding:'utf8'}).stdout.trim();
+ const cli=join(prefix,'bin','foliquo');
  const child=spawn(cli,[],{env:environment,stdio:'inherit'});
  try{
   let ready=false;

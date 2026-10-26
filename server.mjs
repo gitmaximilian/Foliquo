@@ -112,7 +112,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     if(req.headers.host !== `127.0.0.1:${port}`){res.writeHead(403);res.end('Ungültiger Host.');return;}
     const url=new URL(req.url,origin);
     try {
-      if(req.method==='GET'&&url.pathname==='/api/health'){json(res,{application:'foliquo',protocol:1,version:CURRENT_VERSION,instance:lifecycle?.instance||null});return;}
+      if(req.method==='GET'&&url.pathname==='/api/health'){json(res,{application:'foliquo',protocol:1,version:CURRENT_VERSION,instance:lifecycle?.instance||null,workspaceId:lifecycle?.workspaceId||null});return;}
       if(req.method==='POST'&&url.pathname==='/api/lifecycle/stop'){
         if(!lifecycle||req.headers.authorization!==`Bearer ${lifecycle.token}`||req.headers.origin&&req.headers.origin!==origin){json(res,{error:'Not authorized.'},403);return;}
         await persist();json(res,{stopping:true});setImmediate(lifecycle.stop);return;
@@ -268,7 +268,7 @@ if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))
  try {
   const port=servicePort(),directory=await prepareDataDirectory(root);
   unlock=await acquireServiceLock(directory);
-  const connection=new ChatGPTConnection(directory);await connection.init();
+  const connection=new ChatGPTConnection(directory);try{await connection.init();}catch{throw new Error('Saved connection data could not be read. Original files were preserved; restore a verified backup.');}
   const workspace=await new Workspace(directory).init();
   let stopping=false;
   const stop=async()=>{
@@ -277,7 +277,7 @@ if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))
    app.closeAllConnections();await new Promise(resolve=>app.close(resolve));
    await rm(recordPath,{force:true});await unlock();
   };
-  const lifecycle={instance:random(),token:random(),stop};
+  const lifecycle={instance:random(),token:random(),workspaceId:createHash('sha256').update(directory).digest('hex'),stop};
   app=createApp({connection,port,workspace,lifecycle});app.requestTimeout=300000;
   await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});
   recordPath=join(directory,'service.json');
