@@ -17,7 +17,7 @@ jobs:
         shell: pwsh
         run: ./packaging/windows/prepare-winget.ps1
       - name: Install required document converter
-        run: choco install libreoffice-fresh -y --no-progress
+        run: ./packaging/windows/prepare-libreoffice.ps1
       - name: Test actual WinGet installation and uninstallation from the public release
         shell: pwsh
         env:

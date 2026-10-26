@@ -43,7 +43,7 @@ jobs:
           brew install --cask libreoffice
       - name: Install LibreOffice (Windows)
         if: runner.os == 'Windows'
-        run: choco install libreoffice-fresh -y --no-progress
+        run: ./packaging/windows/prepare-libreoffice.ps1
       - run: npm ci --ignore-scripts
       - name: Verify tag and release notes
         if: startsWith(github.ref, 'refs/tags/')
