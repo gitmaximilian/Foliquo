@@ -2,7 +2,7 @@
 
 Foliquo Community is a local browser workspace for document translation under PolyForm Noncommercial 1.0.0. It is source-available with restrictions on commercial use.
 
-When this repository contains the published, tested formula:
+Install the published, tested formula:
 
 ```sh
 brew install --cask libreoffice

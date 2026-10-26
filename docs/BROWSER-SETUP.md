@@ -4,7 +4,7 @@ Foliquo runs a local Node.js service and opens your default browser at `http://1
 
 ## Distribution status
 
-Version 0.11.1 introduces curated distributions. Until its verified assets appear on [GitHub Releases](https://github.com/gitmaximilian/Foliquo/releases), use the source setup below. A generated installer, formula or manifest is not a published package. WinGet installation of Foliquo is not publicly available until Microsoft accepts and indexes the submission.
+Version 0.11.1 is published with verified [platform downloads and SHA256SUMS](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.11.1). The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. WinGet installation of Foliquo is not publicly available until Microsoft accepts and indexes the submission.
 
 ## macOS
 
@@ -14,11 +14,11 @@ The release pipeline builds separate Apple Silicon and Intel artifacts for macOS
 brew install --cask libreoffice
 ```
 
-After the tap is published and verified, the intended installation is `brew install gitmaximilian/tap/foliquo`. Start with `foliquo`; check exports with `foliquo doctor`; update with `brew upgrade foliquo`; uninstall with `brew uninstall foliquo`. These operations preserve your private workspace.
+Install with `brew install gitmaximilian/tap/foliquo`. Start with `foliquo`; check exports with `foliquo doctor`; update with `brew upgrade foliquo`; uninstall with `brew uninstall foliquo`. These operations preserve your private workspace.
 
 ## Windows
 
-Use the verified `Foliquo-Community-<version>-Windows-x64-Setup.exe` from its versioned GitHub release when available. It installs per user, bundles Node.js and adds **Foliquo Community**, **Stop Foliquo** and an uninstaller to the Start menu. No setup script or administrator access is required for Foliquo itself. An optional desktop shortcut is available. Windows 10 1809+ and Windows 11 x64 are targeted; native Windows ARM64 is not currently built.
+Download the [0.11.1 Windows x64 installer](https://github.com/gitmaximilian/Foliquo/releases/download/v0.11.1/Foliquo-Community-0.11.1-Windows-x64-Setup.exe) and its checksum from the same release. It installs per user, bundles Node.js and adds **Foliquo Community**, **Stop Foliquo** and an uninstaller to the Start menu. No setup script or administrator access is required for Foliquo itself. An optional desktop shortcut is available. Windows 10 1809+ and Windows 11 x64 are targeted; native Windows ARM64 is not currently built.
 
 Install LibreOffice Writer separately from [LibreOffice](https://www.libreoffice.org/download/), or use `winget install --exact --id TheDocumentFoundation.LibreOffice`. Existing installations are reused. The prepared Foliquo WinGet manifest declares this prerequisite. The Foliquo package ID is intended to be `MaximilianAuer.Foliquo`; do not use an installation command until it is accepted and indexed.
 

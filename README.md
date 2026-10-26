@@ -55,13 +55,13 @@ Wheel or trackpad zoom, drag-to-pan, fit-to-view, keyboard controls and a larger
 
 Foliquo opens a local browser-based workspace. It listens only on `127.0.0.1`; keep its console open while working.
 
-**Distribution status:** 0.11.1 packages are undergoing verification. Use [source setup](docs/BROWSER-SETUP.md#source-setup-available-now) until verified assets appear on [GitHub Releases](https://github.com/gitmaximilian/Foliquo/releases). Homebrew and WinGet availability are separate publication steps.
+**Distribution status:** [Version 0.11.1](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.11.1) is published with verified platform downloads and checksums. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. Foliquo is not yet available through WinGet.
 
 | Platform | Installation and use |
 | --- | --- |
-| **macOS 15+, Apple Silicon / Intel** | Homebrew formula prepared. After tap publication: `brew install gitmaximilian/tap/foliquo`; start with `foliquo`, update with `brew upgrade foliquo`. Install LibreOffice Writer separately with `brew install --cask libreoffice`. |
-| **Windows 10/11 x64** | Use the verified versioned `Windows-x64-Setup.exe` when published. Node.js is bundled; install LibreOffice Writer separately. Start from the Start menu. Run the newer installer to update; uninstall from Installed apps. Foliquo is **not yet available through WinGet**. |
-| **Linux x64, glibc** | Install Node.js 22+ and LibreOffice Writer. Verify and extract the versioned Linux tarball, then run `./install.sh`. Start with `~/.local/bin/foliquo`. Stop it and run the newer archive's installer to update. |
+| **macOS 15+, Apple Silicon / Intel** | Install with `brew install gitmaximilian/tap/foliquo`; start with `foliquo`, update with `brew upgrade foliquo`. Install LibreOffice Writer separately with `brew install --cask libreoffice`. |
+| **Windows 10/11 x64** | Download the [Windows installer](https://github.com/gitmaximilian/Foliquo/releases/download/v0.11.1/Foliquo-Community-0.11.1-Windows-x64-Setup.exe). Node.js is bundled; install LibreOffice Writer separately. Start from the Start menu. Run the newer installer to update; uninstall from Installed apps. Foliquo is **not yet available through WinGet**. |
+| **Linux x64, glibc** | Install Node.js 22+ and LibreOffice Writer. Verify and extract the [Linux archive](https://github.com/gitmaximilian/Foliquo/releases/download/v0.11.1/Foliquo-Community-0.11.1-Linux-x64.tar.gz), then run `./install.sh`. Start with `~/.local/bin/foliquo`. Stop it and run the newer archive's installer to update. |
 
 Run `foliquo doctor` to verify PDF/Word export, `foliquo stop` to stop the service and `foliquo data-dir` to locate your private workspace. On Windows, use the installed `Foliquo.exe` for these commands. Browser startup never downloads application code.
 
