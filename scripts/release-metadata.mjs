@@ -5,15 +5,20 @@ import {fileURLToPath} from 'node:url';
 import {CURRENT_VERSION as version} from '../lib/version.mjs';
 const root=fileURLToPath(new URL('..',import.meta.url)),directory=resolve(process.argv[2]||join(root,'release'));
 const base=`https://github.com/gitmaximilian/Foliquo/releases/download/v${version}`,prefix=`Foliquo-Community-${version}`;
+const homebrewOnly=process.argv.includes('--homebrew-only');
 const names=[`${prefix}-macOS-arm64.tar.gz`,`${prefix}-macOS-x64.tar.gz`,`${prefix}-Linux-x64.tar.gz`,`${prefix}-Windows-x64-Setup.exe`];
-const checksums={};for(const name of names)checksums[name]=createHash('sha256').update(await readFile(join(directory,name))).digest('hex');
+const requiredNames=homebrewOnly?names.filter(name=>name.includes('-macOS-')):names;
+const checksums={};for(const name of requiredNames)checksums[name]=createHash('sha256').update(await readFile(join(directory,name))).digest('hex');
 await writeFile(join(directory,'SHA256SUMS'),Object.entries(checksums).map(([name,hash])=>`${hash}  ${name}`).join('\n')+'\n');
 const tap=join(directory,'homebrew-tap');await cp(join(root,'packaging/homebrew'),tap,{recursive:true});await mkdir(join(tap,'Formula'),{recursive:true});
 await writeFile(join(tap,'Formula','foliquo.rb'),`class Foliquo < Formula
   desc "Local browser workspace for noncommercial document translation"
   homepage "https://maximilianauer.at/projects/foliquo/"
-  version "${version}"
   license "PolyForm-Noncommercial-1.0.0"
+
+  depends_on macos: :sequoia
+  # The supported and tested release runtime; native dependencies are built on each architecture.
+  depends_on "node@24"
 
   on_macos do
     on_arm do
@@ -26,18 +31,13 @@ await writeFile(join(tap,'Formula','foliquo.rb'),`class Foliquo < Formula
     end
   end
 
-  depends_on :macos
-  depends_on macos: :sequoia
-  # The supported and tested release runtime; native dependencies are built on each architecture.
-  depends_on "node@24"
-
   def install
     libexec.install Dir["*"]
     (bin/"foliquo").write <<~SH
       #!/bin/sh
-      exec "#{Formula["node@24"].opt_bin}/node" "#{libexec}/bin/foliquo.mjs" "$@"
+      exec "#{formula_opt_bin("node@24")}/node" "#{libexec}/bin/foliquo.mjs" "$@"
     SH
-    (bin/"foliquo").chmod 0o755
+    (bin/"foliquo").chmod 0755
   end
 
   def caveats
@@ -55,9 +55,10 @@ await writeFile(join(tap,'Formula','foliquo.rb'),`class Foliquo < Formula
   test do
     assert_equal version.to_s, shell_output("#{bin}/foliquo --version").strip
     cd libexec do
-      system Formula["node@24"].opt_bin/"node", "--input-type=module", "-e",
-             "import sharp from 'sharp'; await sharp({create:{width:1,height:1,channels:3,background:'white'}}).png().toBuffer()"
+      system formula_opt_bin("node@24")/"node", "--input-type=module", "-e",
+             "import s from 'sharp';await s({create:{width:1,height:1,channels:3,background:'red'}}).png().toBuffer()"
     end
+    ENV["TRANSLATEOCR_SOFFICE"] = ENV["HOMEBREW_FOLIQUO_TEST_SOFFICE"] if ENV["HOMEBREW_FOLIQUO_TEST_SOFFICE"]
     ENV["FOLIQUO_DATA_DIR"] = (testpath/"private-data").to_s
     ENV["FOLIQUO_NO_BROWSER"] = "1"
     ENV["FOLIQUO_PORT"] = free_port.to_s
@@ -70,15 +71,20 @@ await writeFile(join(tap,'Formula','foliquo.rb'),`class Foliquo < Formula
       Process.wait pid
       assert_path_exists testpath/"private-data/workspace.key"
     ensure
-      Process.kill("TERM", pid) rescue nil
+      begin
+        Process.kill("TERM", pid)
+      rescue Errno::ESRCH
+        # The child has already exited.
+      end
     end
   end
 end
 `);
+if(homebrewOnly){console.log('Homebrew metadata generated from both actual macOS artifacts.');process.exit(0);}
 const manifests=join(directory,'winget','manifests','m','MaximilianAuer','Foliquo',version);await mkdir(manifests,{recursive:true});
-const schema='1.12.0',id='MaximilianAuer.Foliquo',common=`PackageIdentifier: ${id}\nPackageVersion: ${version}\n`;
-await writeFile(join(manifests,`${id}.yaml`),common+`DefaultLocale: en-US\nManifestType: version\nManifestVersion: ${schema}\n`);
-await writeFile(join(manifests,`${id}.locale.en-US.yaml`),common+`PackageLocale: en-US
+const schema='1.12.0',header=type=>`# yaml-language-server: $schema=https://aka.ms/winget-manifest.${type}.${schema}.schema.json\n\n`,id='MaximilianAuer.Foliquo',common=`PackageIdentifier: ${id}\nPackageVersion: ${version}\n`;
+await writeFile(join(manifests,`${id}.yaml`),header('version')+common+`DefaultLocale: en-US\nManifestType: version\nManifestVersion: ${schema}\n`);
+await writeFile(join(manifests,`${id}.locale.en-US.yaml`),header('defaultLocale')+common+`PackageLocale: en-US
 Publisher: Maximilian Auer
 PublisherUrl: https://maximilianauer.at/
 PackageName: Foliquo Community
@@ -91,7 +97,7 @@ ReleaseNotesUrl: https://github.com/gitmaximilian/Foliquo/releases/tag/v${versio
 ManifestType: defaultLocale
 ManifestVersion: ${schema}
 `);
-await writeFile(join(manifests,`${id}.installer.yaml`),common+`InstallerType: inno
+await writeFile(join(manifests,`${id}.installer.yaml`),header('installer')+common+`InstallerType: inno
 Scope: user
 MinimumOSVersion: 10.0.17763.0
 InstallModes:

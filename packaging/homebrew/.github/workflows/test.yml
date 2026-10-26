@@ -17,6 +17,7 @@ jobs:
       - name: Test checked-out tap
         run: |
           brew tap --custom-remote gitmaximilian/tap "$GITHUB_WORKSPACE"
+          brew trust --formula gitmaximilian/tap/foliquo
           brew style gitmaximilian/tap/foliquo
           brew audit --strict gitmaximilian/tap/foliquo
           brew install --build-from-source gitmaximilian/tap/foliquo
