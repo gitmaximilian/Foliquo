@@ -132,6 +132,7 @@ jobs:
           version=$(node -p 'JSON.parse(require("fs").readFileSync("package.json")).version')
           cd release
           zip -r "Foliquo-Packaging-$version.zip" homebrew-tap winget release-report.json windows-signature.json
+          sha256sum "Foliquo-Packaging-$version.zip" windows-signature.json >> SHA256SUMS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: verified-release

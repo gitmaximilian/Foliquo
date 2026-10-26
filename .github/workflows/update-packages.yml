@@ -21,6 +21,8 @@ jobs:
         run: |
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
           gh release download "$RELEASE_TAG" --pattern "Foliquo-Packaging-${RELEASE_TAG#v}.zip" --dir metadata
+          gh release download "$RELEASE_TAG" --pattern SHA256SUMS --dir metadata
+          (cd metadata && sha256sum --ignore-missing -c SHA256SUMS)
           unzip "metadata/Foliquo-Packaging-${RELEASE_TAG#v}.zip" -d metadata/content
           cp packaging/homebrew/README.md metadata/content/homebrew-tap/README.md
           mkdir -p metadata/content/homebrew-tap/.github/workflows
