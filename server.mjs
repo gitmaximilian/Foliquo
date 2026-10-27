@@ -38,7 +38,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
   const translationContext=meta=>({template:null,profile:null,terms:[],examples:[],...learningContext(workspace?.data.learning,meta)});
   async function executeTranslation(payload,signal,onStage=()=>{}){
     const timed=AbortSignal.any([signal,AbortSignal.timeout(300000)]);timed.throwIfAborted();
-    onStage('preparing');let documents=await inStep('prepare_documents',()=>prepareDocuments(payload.files),{fileCount:payload.files.length});timed.throwIfAborted();const originals=payload.revision?.originals||documents.map(f=>({name:f.originalName||f.name,type:f.type,data:f.bytes.toString('base64')}));if(!payload.revision)for(const correction of payload.metadata.scanCorrections||[]){const index=correction.fileIndex;if(!documents[index])throw new Error('Scan-Arbeitskopie passt nicht zur Dateiauswahl.');documents[index]=await correctScan(documents[index],correction);}
+    onStage('preparing');let documents=await inStep('prepare_documents',()=>prepareDocuments(payload.files),{fileCount:payload.files.length});timed.throwIfAborted();const originals=payload.revision?.originals?.length?payload.revision.originals:documents.map(f=>({name:f.originalName||f.name,type:f.type,data:f.bytes.toString('base64')}));if(!payload.revision)for(const correction of payload.metadata.scanCorrections||[]){const index=correction.fileIndex;if(!documents[index])throw new Error('Scan-Arbeitskopie passt nicht zur Dateiauswahl.');documents[index]=await correctScan(documents[index],correction);}
     let units=0;for(const f of documents)units+=f.type==='application/pdf'?(await PDFDocument.load(f.bytes)).getPageCount():1;
     onStage('translating',{units});
     const engine=payload.metadata.demo?demo:providerFor(payload.provider);
@@ -87,7 +87,20 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     const base={text,detected,fields,regions,references,inventory,originalPreviews:originals,context:renderMeta,previews:documents.map(f=>({name:f.originalName||f.name,type:f.type,data:f.bytes.toString('base64')})),filename:'foliquo-translation.pdf'};
     return rebuild(text,base,false,onStage);
   }
-  async function rebuild(text,base,keepChecks=false,onStage=()=>{}){const documents=(base.originalPreviews||base.previews).map(f=>({name:f.name,type:f.type,bytes:Buffer.from(f.data,'base64')})),meta={...base.context,certificationConfirmed:keepChecks&&base.context.certificationConfirmed===true,language:base.detected.sourceLanguage,documentType:base.detected.documentType};onStage('pdf');const pdf=await createTranslationPDF(text,documents,meta);onStage('word');const word=createTranslationWord(text,meta);const checks=keepChecks?base.checks:workspace?[...verificationFor(text,base.fields||[],documents),...regionChecks(base.regions||[],text),printCheck()]:undefined;const result={...base,text,context:{...base.context,certificationConfirmed:meta.certificationConfirmed},pdf:pdf.toString('base64'),word:word.toString('base64'),checks};result.preflight=await auditArtifacts(result);if(keepChecks)result.preflight.visualConfirmed=base.preflight?.visualConfirmed||false;return result;}
+  async function rebuild(text,base,keepChecks=false,onStage=()=>{}){const sourceFiles=base.originalPreviews?.length?base.originalPreviews:base.previews||[],documents=sourceFiles.map(f=>({name:f.name,type:f.type,bytes:Buffer.from(f.data,'base64')})),meta={...base.context,certificationConfirmed:keepChecks&&base.context.certificationConfirmed===true,language:base.detected.sourceLanguage,documentType:base.detected.documentType};onStage('pdf');const pdf=await createTranslationPDF(text,documents,meta);onStage('word');const word=createTranslationWord(text,meta);const checks=keepChecks?base.checks:workspace?[...verificationFor(text,base.fields||[],documents),...regionChecks(base.regions||[],text),printCheck()]:undefined;const result={...base,text,context:{...base.context,certificationConfirmed:meta.certificationConfirmed},pdf:pdf.toString('base64'),word:word.toString('base64'),checks};result.preflight=await auditArtifacts(result);if(keepChecks)result.preflight.visualConfirmed=base.preflight?.visualConfirmed||false;return result;}
+  async function ensureOriginalPages(job){
+    const result=job.result;if(!result)return result;
+    const sources=result.originalPreviews?.length?result.originalPreviews:result.previews||[];
+    let originalPages=0;for(const file of sources)originalPages+=file.type==='application/pdf'?(await PDFDocument.load(Buffer.from(file.data,'base64'))).getPageCount():1;
+    if(!originalPages)return result;
+    const pdf=await PDFDocument.load(Buffer.from(result.pdf,'base64'));
+    const expectedTranslationPages=result.preflight?.translationPages;
+    const complete=Number.isInteger(expectedTranslationPages)?pdf.getPageCount()>=expectedTranslationPages+originalPages:pdf.getPageCount()>originalPages;
+    if(complete)return result;
+    const repaired=await rebuild(result.text,{...result,context:{...result.context,certificationConfirmed:result.context?.certificationConfirmed===true}},true);
+    job.result=repaired;job.resultBytes=Buffer.byteLength(JSON.stringify(repaired));
+    await persist();return repaired;
+  }
 
   const engineProvider=provider||new ProviderManager(connection,workspace,fetcher),demo=new DemoProvider();
   function providerFor(id){return typeof engineProvider.providerFor==='function'?engineProvider.providerFor(id||workspace?.data.settings.provider||'chatgpt'):engineProvider;}
@@ -159,9 +172,9 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
       const sourceRoute=url.pathname.match(/^\/api\/jobs\/([a-f0-9-]+)\/source$/);
       if(req.method==='GET'&&sourceRoute){const job=queue.find(sourceRoute[1],active.id);const files=(await jobSourceDocuments(job)).map(f=>({name:f.name,type:f.type,data:f.bytes.toString('base64')}));json(res,{files});return;}
       const resultRoute=url.pathname.match(/^\/api\/jobs\/([a-f0-9-]+)\/(result|bundle)$/);
-      if(req.method==='GET' && resultRoute){const job=queue.find(resultRoute[1],active.id);if(!job.result){json(res,{error:'Das Ergebnis ist noch nicht verfügbar.'},409);return;}if(resultRoute[2]==='bundle'){const bytes=outputBundle(Buffer.from(job.result.pdf,'base64'),Buffer.from(job.result.word,'base64'));res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':'attachment; filename="foliquo-pdf-word.zip"'});res.end(bytes);}else json(res,job.result);return;}
+      if(req.method==='GET' && resultRoute){const job=queue.find(resultRoute[1],active.id);if(!job.result){json(res,{error:'Das Ergebnis ist noch nicht verfügbar.'},409);return;}const result=await ensureOriginalPages(job);if(resultRoute[2]==='bundle'){const bytes=outputBundle(Buffer.from(result.pdf,'base64'),Buffer.from(result.word,'base64'));res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':'attachment; filename="foliquo-pdf-word.zip"'});res.end(bytes);}else json(res,result);return;}
       const reviewRoute=url.pathname.match(/^\/api\/jobs\/([a-f0-9-]+)\/review(?:\/(edit|finalize))?$/);
-      if(req.method==='GET'&&reviewRoute&&!reviewRoute[2]){const job=queue.find(reviewRoute[1],active.id);json(res,{...reviewSnapshot(job),...(url.searchParams.get('preview')==='1'?{result:job.result,names:job.names}:{})});return;}
+      if(req.method==='GET'&&reviewRoute&&!reviewRoute[2]){const job=queue.find(reviewRoute[1],active.id);const result=url.searchParams.get('preview')==='1'?await ensureOriginalPages(job):job.result;json(res,{...reviewSnapshot(job),...(url.searchParams.get('preview')==='1'?{result,names:job.names}:{})});return;}
       if(req.method==='GET'&&url.pathname==='/api/providers'){if(typeof engineProvider.summaries!=='function')throw new Error('Die Anbieterverwaltung ist nicht verfügbar.');json(res,{selected:engineProvider.selected,providers:engineProvider.summaries()});return;}
       if(req.method==='GET'&&url.pathname==='/api/studio-draft'){json(res,{draft:workspace?.data.studioDrafts?.[active.id]||null});return;}
       if(req.method==='GET'&&url.pathname==='/api/models'){const id=url.searchParams.get('provider')||undefined;json(res,{provider:id||engineProvider.selected||'chatgpt',models:await engineProvider.models(id,{refresh:url.searchParams.get('refresh')==='1'})});return;}
@@ -226,7 +239,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
         const job=queue.find(reviewRoute[1],active.id),input=await body(req,15000);
         if(reviewRoute[2]==='finalize'){
           if(!['pdf','word','bundle'].includes(input.format))throw new Error('Ungültiges Ausgabeformat.');
-          const result=finalReview(job,input.version);const enabled=input.certification===true;let downloadable=result;if(Boolean(result.context?.certificationConfirmed)!==enabled)downloadable=await rebuild(result.text,{...result,context:{...result.context,certificationConfirmed:enabled}},true);
+          finalReview(job,input.version);const result=await ensureOriginalPages(job);const enabled=input.certification===true;let downloadable=result;if(Boolean(result.context?.certificationConfirmed)!==enabled)downloadable=await rebuild(result.text,{...result,context:{...result.context,certificationConfirmed:enabled}},true);
           await persist();const bytes=input.format==='bundle'?outputBundle(Buffer.from(downloadable.pdf,'base64'),Buffer.from(downloadable.word,'base64')):Buffer.from(input.format==='pdf'?downloadable.pdf:downloadable.word,'base64');
           const ext=input.format==='bundle'?'zip':input.format==='pdf'?'pdf':'docx',type=input.format==='bundle'?'application/zip':input.format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document';res.writeHead(200,{'Content-Type':type,'Content-Disposition':`attachment; filename="foliquo-final-v${input.version}.${ext}"`});res.end(bytes);return;
         }
