@@ -10,9 +10,9 @@ import {zipSync,strToU8} from 'fflate';
 const root=fileURLToPath(new URL('..',import.meta.url)),out=join(root,'dist/demo/assets');
 await mkdir(out,{recursive:true});
 const locales={
- de:{target:'Deutsch',source:'Englisch',name:'Name',birth:'Geburtsdatum',number:'Dokumentnummer',features:'Merkmale',none:'keine besonderen Merkmale',front:'(Vorderseite)',back:'(Rückseite)',stamp:'[Stempel: Fiktive Demo-Behörde]',signature:'[Unterschrift vorhanden]',sample:'FIKTIVES MUSTERDOKUMENT',original:'FICTIONAL SAMPLE DRIVING LICENCE'},
- en:{target:'English',source:'Arabisch',name:'Name',birth:'Date of birth',number:'Document number',features:'Features',none:'No distinguishing features',front:'(Front)',back:'(Back)',stamp:'[Stamp: fictional demo authority]',signature:'[Signature present]',sample:'FICTIONAL SAMPLE TRANSLATION',original:'نموذج خيالي لرخصة قيادة'},
- ar:{target:'Arabisch',source:'Englisch',name:'الاسم',birth:'تاريخ الميلاد',number:'رقم الوثيقة',features:'السمات',none:'لا توجد سمات مميزة',front:'(الوجه الأمامي)',back:'(الوجه الخلفي)',stamp:'[الختم: جهة تجريبية خيالية]',signature:'[يوجد توقيع]',sample:'مستند نموذجي خيالي',original:'FICTIONAL SAMPLE DRIVING LICENCE'}
+ de:{target:'Deutsch',source:'Englisch',name:'Name',birth:'Geburtsdatum',number:'Dokumentnummer',features:'Merkmale',none:'keine besonderen Merkmale',front:'(Vorderseite)',back:'(Rückseite)',stamp:'Stempel:\nFiktive Demo-Behörde',signature:'[Unterschrift vorhanden]',sample:'FIKTIVES MUSTERDOKUMENT',original:'FICTIONAL SAMPLE DRIVING LICENCE'},
+ en:{target:'English',source:'Arabisch',name:'Name',birth:'Date of birth',number:'Document number',features:'Features',none:'No distinguishing features',front:'(Front)',back:'(Back)',stamp:'Stamp:\nFictional demo authority',signature:'[Signature present]',sample:'FICTIONAL SAMPLE TRANSLATION',original:'نموذج خيالي لرخصة قيادة'},
+ ar:{target:'Arabisch',source:'Englisch',name:'الاسم',birth:'تاريخ الميلاد',number:'رقم الوثيقة',features:'السمات',none:'لا توجد سمات مميزة',front:'(الوجه الأمامي)',back:'(الوجه الخلفي)',stamp:'ختم:\nجهة تجريبية خيالية',signature:'[يوجد توقيع]',sample:'مستند نموذجي خيالي',original:'FICTIONAL SAMPLE DRIVING LICENCE'}
 };
 
 async function makeOriginal(locale){

@@ -9,7 +9,7 @@ This patch fixes local AI setup stopping at “Not found” while leaving only a
 - The theme switch sits immediately above interface language. The language-swap control has 16px clearance on both sides on desktop.
 - Connection management and diagnostics use matching adjacent buttons with independently expandable panels.
 - Unavailable controls use a compact custom cursor across the app and demo. Jobs and options use a consistent compact layout, separate connection status, and quieter metadata.
-- Additional details use a plus/minus disclosure. Planned Pro/B2B marketing references are removed from current project documentation.
+- Additional details use a plus/minus disclosure. Project documentation reflects the current Community edition.
 
 API-provider success with a real OpenAI API, Anthropic or DeepSeek account was not tested because no API keys were supplied. Automated protocol/error-path tests are not represented as live provider acceptance. No personal documents were sent during validation.
 

@@ -227,7 +227,7 @@ function showClarifications(job,scroll){
    {
     const unreadable=document.createElement('button');unreadable.type='button';unreadable.className='text-button question-action question-unreadable';unreadable.textContent='Unleserlich';
     unreadable.onclick=()=>void acceptClarification(job,q,null);
-    actions.insertBefore(unreadable,locate);
+    actions.append(unreadable);
    }
    const hint=document.createElement('small');hint.className='question-action-hint';hint.textContent=window.TOCRI18n?.t('Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.')||'Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.';
    field.append(label,context,suggestion,actions,hint,answer);return field;

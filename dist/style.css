@@ -1183,7 +1183,7 @@ body>*{display:none!important}
 #review-extras .review-chat{margin-top:18px;padding:var(--space-5)}
 .review-chat #review-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:end}
 .review-chat #review-form>label{grid-column:1/-1;font-size:12px}
-.review-chat #review-form textarea{min-height:76px;margin:0;font-size:13px}
+.review-chat #review-form textarea{min-height:76px;margin:0;font-size:13px;overflow-y:hidden;resize:none}
 .review-chat #review-send{margin:0;min-height:40px;font-size:12px}
 .review-chat .review-messages{max-height:240px;height:auto;background:none;border:0;padding:0}
 /* A short question, candidate and actions are the primary reading order. */
@@ -1884,3 +1884,42 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .extra-info-toggle::before,.extra-info-toggle::after{content:"";position:absolute;inset-inline-start:4px;top:9px;width:12px;height:1.5px;border-radius:1px;background:currentColor}
 .extra-info-toggle::after{transform:rotate(90deg)}
 .extra-info[open] .extra-info-toggle::after{transform:rotate(0)}
+
+/* Keep the expanding options panel independent of the translation column. */
+@media(min-width:1280px){
+ #studio-view{position:relative}
+ .translation-composer .settings-card{position:absolute;inset-block-start:0;inset-inline-end:0;width:var(--settings-width);grid-column:auto;grid-row:auto}
+}
+.workspace-layout[data-view=studio]>.queue-rail{margin-top:var(--workspace-gap)}
+.workspace-layout[data-view=studio].jobs-open>.queue-rail{margin-top:var(--workspace-gap)}
+
+/* Options actions use one inset, one hover treatment and a quiet disclosure. */
+.translation-composer .settings-card .extra-info summary,
+.translation-composer .settings-card .learning-context-link{
+ box-sizing:border-box;display:flex;align-items:center;gap:10px;width:100%;min-height:48px;
+ margin:4px 0 0;padding:12px 14px;border:1px solid var(--color-border);
+ border-radius:var(--radius-control);background:var(--color-surface-muted);
+ color:var(--color-text);font-size:13px;line-height:20px;font-weight:500;
+ text-align:start;cursor:pointer;
+ transition:transform var(--motion-fast) var(--ease-standard),background-color var(--motion-fast) var(--ease-standard),border-color var(--motion-fast) var(--ease-standard),box-shadow var(--motion-fast) var(--ease-standard)
+}
+.translation-composer .settings-card .extra-info summary:hover,
+.translation-composer .settings-card .learning-context-link:hover{
+ transform:translateY(-2px);background:var(--color-surface-hover);border-color:var(--color-border-control);box-shadow:0 5px 14px rgba(0,0,0,.08)
+}
+.translation-composer .settings-card .extra-info summary:focus-visible,
+.translation-composer .settings-card .learning-context-link:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
+.translation-composer .settings-card .extra-info summary::after{
+ content:"";flex:0 0 8px;width:8px;height:8px;margin-inline-start:auto;
+ border-inline-end:1.75px solid currentColor;border-block-end:1.75px solid currentColor;
+ transform:rotate(45deg) translateY(-2px);transition:transform var(--motion-fast) var(--ease-standard)
+}
+.translation-composer .settings-card .extra-info[open] summary::after{transform:rotate(225deg) translateY(-2px)}
+.translation-composer .settings-card .learning-context-link::after{content:"→";margin-inline-start:auto;transition:transform var(--motion-fast) var(--ease-standard)}
+.translation-composer .settings-card .learning-context-link:hover::after{transform:translateX(3px)}
+.extra-info-toggle{display:none}
+@media(prefers-reduced-motion:reduce){
+ .translation-composer .settings-card .extra-info summary,
+ .translation-composer .settings-card .learning-context-link,
+ .translation-composer .settings-card .learning-context-link::after{transition:none;transform:none}
+}

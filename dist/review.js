@@ -17,7 +17,7 @@ window.addEventListener('translateocr-locale',()=>{if(!reviewData)return;renderR
 function rememberReview(id){try{if(id)sessionStorage.setItem('translateocr-review-job',id);else sessionStorage.removeItem('translateocr-review-job');}catch{}}
 function resumeReviewWorkspace(jobs){if(reviewResumeAttempted||reviewJobId)return;reviewResumeAttempted=true;let id;try{id=sessionStorage.getItem('translateocr-review-job');}catch{}if(id&&jobs.some(j=>j.id===id&&j.hasResult)){if(!$('#studio-view').hidden)void openReviewWorkspace(id);}else if(id)rememberReview(null);}
 async function openReviewWorkspace(id,{historyMode='push'}={}){
- clearTimeout(reviewTimer);reviewHadProposal=false;reviewUnavailable=false;reviewJobId=id;reviewData=null;reviewPreviewVersion=null;reviewMessageSignature='';rememberReview(id);view('review',{historyMode});$('#review-error').textContent='';$('#review-names').textContent='Deine Übersetzung wird geladen …';$('#review-messages').replaceChildren();$('#review-prompt').value='';
+ clearTimeout(reviewTimer);reviewHadProposal=false;reviewUnavailable=false;reviewJobId=id;reviewData=null;reviewPreviewVersion=null;reviewMessageSignature='';rememberReview(id);view('review',{historyMode});$('#review-error').textContent='';$('#review-names').textContent='Deine Übersetzung wird geladen …';$('#review-messages').replaceChildren();$('#review-prompt').value='';resizeReviewPrompt();
  $('#review-pdf').removeAttribute('src');$('#review-text').textContent='';if(reviewUrl){URL.revokeObjectURL(reviewUrl);reviewUrl=null;}renderReviewControls();await loadReview(true);
 }
 function renderReviewControls(){
@@ -44,10 +44,12 @@ async function loadReview(preview=false){
  finally{reviewLoading=false;if(id===reviewJobId&&!reviewUnavailable){clearTimeout(reviewTimer);reviewTimer=setTimeout(()=>loadReview(),reviewData?.busy?1500:3500);}}
 }
 $('#review-back').onclick=()=>{rememberReview(null);clearReviewPDF();reviewJobId=null;clearTimeout(reviewTimer);if(reviewUrl){URL.revokeObjectURL(reviewUrl);reviewUrl=null;}$('#review-pdf').removeAttribute('src');view('studio');};
+function resizeReviewPrompt(){const field=$('#review-prompt');if(!field)return;field.style.height='auto';field.style.height=`${field.scrollHeight}px`;}
+$('#review-prompt').addEventListener('input',resizeReviewPrompt);
 $('#review-form').onsubmit=async event=>{
  event.preventDefault();if(reviewUnavailable||!reviewJobId||!reviewData||reviewData.busy||reviewSubmitting)return;const prompt=$('#review-prompt').value.trim();if(!prompt)return;
  const id=reviewJobId,version=reviewData.version;reviewSubmitting=true;$('#review-error').textContent='';renderReviewControls();
- try{const snapshot=await localRequest(`/api/jobs/${id}/review/edit`,{prompt,version,requestId:crypto.randomUUID()}).then(r=>r.json());if(id!==reviewJobId)return;$('#review-prompt').value='';renderReview(snapshot);await loadReview(true);}
+ try{const snapshot=await localRequest(`/api/jobs/${id}/review/edit`,{prompt,version,requestId:crypto.randomUUID()}).then(r=>r.json());if(id!==reviewJobId)return;$('#review-prompt').value='';resizeReviewPrompt();renderReview(snapshot);await loadReview(true);}
  catch(error){if(id===reviewJobId){$('#review-error').textContent=error.message;await loadReview();}}
  finally{reviewSubmitting=false;if(id===reviewJobId)renderReviewControls();}
 };

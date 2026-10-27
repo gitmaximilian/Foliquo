@@ -17,3 +17,5 @@ main{margin-inline-start:216px;padding:36px clamp(24px,4vw,64px) 0;max-width:160
 /* Compact unavailable cursor, shared by all disabled controls and their icons. */
 :root{--cursor-unavailable:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%227%22%20fill%3D%22%23172B3A%22%20fill-opacity%3D%22.94%22%20stroke%3D%22%23F1F5F9%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M9%2012h6%22%20fill%3D%22none%22%20stroke%3D%22%23F1F5F9%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E") 12 12, default}
 :disabled,[aria-disabled="true"],:disabled *,[aria-disabled="true"] *{cursor:var(--cursor-unavailable,default)}
+
+.stamp{white-space:pre-line}

@@ -12,15 +12,17 @@ Foliquo is a local browser application for preparing translation drafts from ima
 
 Each completed job is grouped in the library by detected document type. The optional Learn Style tab stores examples locally and derives reusable formatting and phrasing conventions. It is not model training and personal facts are not reused.
 
+Stamps and seals are laid out as bordered blocks with their line breaks preserved. Translate their readable words without square brackets; use brackets for non-text emblems, logos, and signatures. An illegible signature mark is written as `[Unterschrift: unleserlich]`.
+
 ## Providers and data
 
 ChatGPT sign-in uses the account authorization flow. OpenAI, Claude, and DeepSeek API keys are stored in the encrypted local workspace. Provider API use may be billed separately. Source documents are sent to the selected model provider only when a translation or model-assisted action is requested. The local server binds to loopback and is not a hosted multi-user service.
 
-## Browser-only delivery
+## Free delivery
 
-The repository provides one setup and one browser launcher for Windows, macOS, and Linux. No native desktop installer or installable PWA is published. The setup may install Node.js and LibreOffice through the system package manager; both are needed by the local service for its full document workflow.
+Browser and CLI releases remain available for Windows, macOS, and Linux. Free native desktop previews are built by the GitHub Actions workflow for macOS Apple Silicon/Intel, Windows x64, and Linux x64. They bundle Node.js and LibreOffice. The macOS apps are unsigned, Windows installers may show SmartScreen, and Linux is distributed as a Flatpak bundle. Preview downloads are retained for 30 days; see the [desktop setup guide](docs/DESKTOP-PREVIEW.md).
 
-The app checks GitHub Releases for updates and links to the new source ZIP. The user reruns setup after replacing source files; `.local` must be preserved. Update checks send no workspace content to GitHub.
+The app's update check is read-only and sends no workspace content to GitHub.
 
 ## Review limits
 

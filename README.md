@@ -6,14 +6,15 @@
 
 <p align="center">
   <strong>From document to editable translation.</strong><br>
-  Foliquo Community is the free local browser-based workspace for noncommercial use covered by its license.<br>
-  Runs on your computer. Opens in your browser.
+  Foliquo Community is the free local workspace for noncommercial use covered by its license.<br>
+  Choose the browser workspace or a native desktop preview for macOS, Windows, or Linux.
 </p>
 
 <p align="center">
   <a href="https://maximilianauer.at/projects/foliquo/demo/?lang=en"><strong>Try the demo</strong></a> ·
-  <a href="https://github.com/gitmaximilian/Foliquo/releases"><strong>Downloads</strong></a> ·
-  <a href="docs/BROWSER-SETUP.md">Setup guide</a> ·
+  <a href="https://github.com/gitmaximilian/Foliquo/actions/workflows/desktop-preview.yml"><strong>Desktop preview downloads</strong></a> ·
+  <a href="docs/DESKTOP-PREVIEW.md">Desktop setup guide</a> ·
+  <a href="https://github.com/gitmaximilian/Foliquo/releases"><strong>Stable browser/CLI downloads</strong></a> ·
   <a href="https://maximilianauer.at/projects/foliquo/">Project story</a>
 </p>
 
@@ -25,7 +26,7 @@
 
 ## See the workflow
 
-[![Actual Foliquo guided demo with a fictional document](docs/images/demo-workflow.png)](https://maximilianauer.at/projects/foliquo/demo/?lang=en)
+[![Actual Foliquo guided demo with a fictional document](docs/images/demo-workflow.jpg)](https://maximilianauer.at/projects/foliquo/demo/?lang=en)
 
 **Upload → clarify → refine → download.** Combine the front and back of a document, confirm an uncertain reading, then export PDF and editable Word. Optional review tools stay out of the way until you need them.
 
@@ -45,7 +46,7 @@ The [interactive demo](https://maximilianauer.at/projects/foliquo/demo/?lang=en)
 <details>
 <summary><strong>A closer look at source review</strong></summary>
 
-![Foliquo workspace showing the original document and translation controls](docs/images/source-zoom.png)
+![Current Foliquo demo with clarification controls and a fictional translated document](docs/images/source-review.jpg)
 
 Wheel or trackpad zoom, drag-to-pan, fit-to-view, keyboard controls and a larger view keep small print accessible. The highlight scales with the image, and the view survives unchanged job polling.
 
@@ -55,15 +56,17 @@ Wheel or trackpad zoom, drag-to-pan, fit-to-view, keyboard controls and a larger
 
 Foliquo opens a local browser-based workspace. It listens only on `127.0.0.1`; keep its console open while working.
 
-**Distribution status:** [The latest published version](https://github.com/gitmaximilian/Foliquo/releases/latest) is published with verified platform downloads and checksums. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. Foliquo is not yet available through WinGet; [the Microsoft submission](https://github.com/microsoft/winget-pkgs/pull/462448) is under review.
+**Desktop preview:** Free native packages for macOS, Windows, and Linux are built by GitHub Actions. Open the [Desktop preview packages workflow](https://github.com/gitmaximilian/Foliquo/actions/workflows/desktop-preview.yml), select the latest successful run on `codex/native-desktop`, then download the artifact for your platform. Artifacts are retained for 30 days and are not signed or published as a versioned release. Read the [desktop installation guide](docs/DESKTOP-PREVIEW.md) before opening a package.
+
+**Stable browser/CLI distribution:** [The latest published version](https://github.com/gitmaximilian/Foliquo/releases/latest) has verified platform downloads and checksums. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. Foliquo is not yet available through WinGet; [the Microsoft submission](https://github.com/microsoft/winget-pkgs/pull/462448) is under review.
 
 | Platform | Installation and use |
 | --- | --- |
-| **macOS 15+, Apple Silicon / Intel** | Install with `brew install gitmaximilian/tap/foliquo`; start with `foliquo`, update with `brew upgrade foliquo`. Install LibreOffice Writer separately with `brew install --cask libreoffice`. |
-| **Windows 10/11 x64** | Download the [Windows installer](https://github.com/gitmaximilian/Foliquo/releases/latest). Node.js is bundled; install LibreOffice Writer separately. Start from the Start menu. Run the newer installer to update; uninstall from Installed apps. Foliquo is **not yet available through WinGet**. |
-| **Linux x64, glibc** | Install Node.js 22+ and LibreOffice Writer. Verify and extract the [Linux archive](https://github.com/gitmaximilian/Foliquo/releases/latest), then run `./install.sh`. Start with `~/.local/bin/foliquo`. Stop it and run the newer archive's installer to update. |
+| **macOS 15+, Apple Silicon / Intel** | Desktop preview `.app`/`.dmg` bundles the runtime and LibreOffice. It is unsigned; macOS may require a first-launch approval. The stable browser/CLI install uses `brew install gitmaximilian/tap/foliquo` and separately installed LibreOffice. |
+| **Windows 10/11 x64** | Desktop preview includes a native installer and unsigned MSIX. Windows may show SmartScreen. Stable browser/CLI users can download the [Windows installer](https://github.com/gitmaximilian/Foliquo/releases/latest); Node.js is bundled, LibreOffice is separate. |
+| **Linux x64** | Desktop preview is a Flatpak bundle that includes Node and LibreOffice; install its declared GNOME runtime as described in the guide. Stable browser/CLI users install Node.js 22+ and LibreOffice, then run `./install.sh` from the verified [Linux archive](https://github.com/gitmaximilian/Foliquo/releases/latest). |
 
-Run `foliquo doctor` to verify PDF/Word export, `foliquo stop` to stop the service and `foliquo data-dir` to locate your private workspace. On Windows, use the installed `Foliquo.exe` for these commands. Browser startup never downloads application code.
+Read [the desktop preview guide](docs/DESKTOP-PREVIEW.md) for package install and platform-specific first-launch notes. For browser/CLI packages, run `foliquo doctor` to verify PDF/Word export, `foliquo stop` to stop the service and `foliquo data-dir` to locate your private workspace. Browser startup never downloads application code.
 
 ### Data, updates and uninstall
 
@@ -80,7 +83,7 @@ Jobs, preferences and provider credentials are stored in the encrypted local wor
 ## Requirements
 
 - Windows 10 1809+/11 x64, macOS 15+ (packaged builds), or Linux x64 with glibc 2.35+.
-- Node.js 22+ (24 LTS recommended) and LibreOffice Writer. macOS and Windows packages bundle the official pinned Node.js 24 runtime. Linux and source users install prerequisites separately.
+- Desktop preview packages bundle the official pinned Node.js 24 runtime and LibreOffice Writer. Browser/CLI packages need Node.js 22+ and LibreOffice Writer installed separately.
 - A modern browser. Keep the launcher terminal open while using the site.
 
 ## Developer checks

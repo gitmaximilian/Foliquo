@@ -13,5 +13,5 @@ ar x "$deb"
 tar -xf data.tar.* -C "$source_dir"
 cp "$root/desktop/linux/flatpak-manifest.json" "$root/release-desktop/flatpak-manifest.json"
 flatpak-builder --force-clean --repo="$root/release-desktop/flatpak-repo" "$root/release-desktop/flatpak-build" "$root/release-desktop/flatpak-manifest.json"
-flatpak build-bundle "$root/release-desktop/flatpak-repo" "$bundle" at.maximilianauer.foliquo
+flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo "$root/release-desktop/flatpak-repo" "$bundle" at.maximilianauer.foliquo
 echo "Built $bundle"

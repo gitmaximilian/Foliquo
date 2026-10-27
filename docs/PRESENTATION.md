@@ -21,7 +21,7 @@ The exporter copies only the explicit fictional demo files and changes its retur
 
 1. Keep all repository copy in English.
 2. Capture only fictional fixture documents; never capture a user's real job or account details.
-3. Refresh `docs/images/workspace.png` and `docs/images/source-zoom.png` when the interface changes.
+3. Refresh `docs/images/workspace-current.jpg` and `docs/images/source-review.jpg` when the interface changes.
 4. Rebuild and export the demo, then check English, German and Arabic through all four steps and downloads.
 5. Publish the static portfolio output to the existing Cloudflare Pages project. Check the project entry, case study, demo return link, mobile layout, light/dark theme and language switch.
 6. Push repository changes after checking the published links.
