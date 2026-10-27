@@ -58,8 +58,9 @@ jobs:
       - name: Install Linux build and export tools
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get -o Acquire::Retries=2 update
-          sudo apt-get -o Acquire::Retries=2 install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf libreoffice-writer flatpak flatpak-builder
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update
+          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf libreoffice-writer flatpak flatpak-builder
           sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           sudo flatpak install -y --noninteractive flathub org.gnome.Platform//48 org.gnome.Sdk//48
       - run: npm ci --ignore-scripts
