@@ -1,0 +1,104 @@
+name: Desktop preview packages
+on:
+  push:
+    branches: [codex/native-desktop]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install export prerequisite for focused acceptance
+        run: |
+          sudo apt-get -o Acquire::Retries=2 update
+          sudo apt-get -o Acquire::Retries=2 install -y --no-install-recommends libreoffice-writer
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run benchmark
+      - run: npm run acceptance
+      - run: npm run demo:build
+  build:
+    needs: checks
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macOS-arm64
+          - os: macos-15-intel
+            platform: macOS-x64
+          - os: windows-2022
+            platform: Windows-x64
+          - os: ubuntu-22.04
+            platform: Linux-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install macOS export tool
+        if: runner.os == 'macOS'
+        run: brew install --cask libreoffice
+      - name: Install Windows export tool
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./packaging/windows/prepare-libreoffice.ps1
+      - name: Install Linux build and export tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get -o Acquire::Retries=2 update
+          sudo apt-get -o Acquire::Retries=2 install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf libreoffice-writer flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y --noninteractive flathub org.gnome.Platform//48 org.gnome.Sdk//48
+      - run: npm ci --ignore-scripts
+      - name: Build native window and bundled resources
+        run: npm run desktop:build
+      - name: Check bundled service and one fictional export
+        run: node scripts/smoke-desktop.mjs
+      - name: Collect macOS app and DMG
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p release-desktop/final
+          app=$(find desktop/src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app' -print -quit)
+          test -d "$app"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.zip"
+          mkdir -p release-desktop/dmg-root
+          ditto "$app" release-desktop/dmg-root/Foliquo.app
+          ln -s /Applications release-desktop/dmg-root/Applications
+          hdiutil create -quiet -srcfolder release-desktop/dmg-root -volname Foliquo -format UDZO "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.dmg"
+      - name: Build unsigned Windows MSIX preview and collect installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./desktop/windows/build-msix.ps1
+          New-Item release-desktop/final -ItemType Directory -Force | Out-Null
+          Copy-Item release-desktop/*.msix release-desktop/final/
+          Copy-Item desktop/src-tauri/target/release/bundle/nsis/*-setup.exe release-desktop/final/
+      - name: Build local Flatpak bundle
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          bash desktop/linux/build-flatpak.sh
+          mkdir -p release-desktop/final
+          cp release-desktop/*.flatpak release-desktop/final/
+      - name: Checksums and package evidence
+        env:
+          DESKTOP_PLATFORM: ${{ matrix.platform }}
+        run: node scripts/finalize-desktop.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: release-desktop/final/*
+          if-no-files-found: error
+          retention-days: 30

@@ -20,7 +20,9 @@
     "doctor": "node scripts/check-install.mjs",
     "setup": "node scripts/bootstrap.mjs",
     "package": "node scripts/package-release.mjs",
-    "release:metadata": "node scripts/release-metadata.mjs"
+    "release:metadata": "node scripts/release-metadata.mjs",
+    "desktop:prepare": "node scripts/prepare-desktop.mjs",
+    "desktop:build": "node scripts/prepare-desktop.mjs && cd desktop && tauri build"
   },
   "dependencies": {
     "@expo-google-fonts/noto-serif": "^0.4.2",
@@ -35,5 +37,8 @@
   },
   "bin": {
     "foliquo": "bin/foliquo.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4"
   }
 }

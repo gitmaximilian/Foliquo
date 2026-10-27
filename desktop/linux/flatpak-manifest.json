@@ -1,0 +1,24 @@
+{
+  "id": "at.maximilianauer.foliquo",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "48",
+  "sdk": "org.gnome.Sdk",
+  "command": "foliquo-desktop",
+  "finish-args": [
+    "--share=network",
+    "--share=ipc",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--device=dri",
+    "--filesystem=xdg-download",
+    "--filesystem=xdg-data/foliquo:create"
+  ],
+  "modules": [
+    {
+      "name": "foliquo-desktop",
+      "buildsystem": "simple",
+      "build-commands": ["cp -a usr/. /app/"],
+      "sources": [{"type": "dir", "path": "flatpak-source"}]
+    }
+  ]
+}

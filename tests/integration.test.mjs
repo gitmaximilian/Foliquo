@@ -15,12 +15,15 @@ test('OAuth uses stable host, fresh PKCE and exact loopback callback',()=>{const
 test('Desktop OAuth callback completes from the system browser without sharing its cookie session',async t=>{
  const port=15593,origin=`http://127.0.0.1:${port}`,finished=[];
  const connection={data:{hostId:'urn:uuid:desktop'},status:()=>({connected:false}),finish:async(attempt,url,session)=>{finished.push({attempt,url,session});}};
- const app=createApp({connection,port,allowExternalOAuthCallback:true});
+ const app=createApp({connection,port});
  await new Promise((resolve,reject)=>app.once('error',reject).listen(port,'127.0.0.1',resolve));
  t.after(()=>new Promise(resolve=>app.close(resolve)));
  const home=await fetch(origin),cookie=home.headers.get('set-cookie').split(';')[0];
  const status=await fetch(origin+'/api/session',{headers:{cookie}}).then(r=>r.json());
- const start=await fetch(origin+'/api/auth/start',{method:'POST',headers:{cookie,origin,'content-type':'application/json','x-translateocr-csrf':status.csrf},body:'{}'}).then(r=>r.json());
+ const browserStart=await fetch(origin+'/api/auth/start',{method:'POST',headers:{cookie,origin,'content-type':'application/json','x-translateocr-csrf':status.csrf},body:'{}'}).then(r=>r.json());
+ const browserState=new URL(browserStart.url).searchParams.get('state');
+ assert.equal((await fetch(`${origin}/auth/callback?state=${encodeURIComponent(browserState)}&code=code&client_id=registered-client`)).status,400);
+ const start=await fetch(origin+'/api/auth/start',{method:'POST',headers:{cookie,origin,'content-type':'application/json','x-translateocr-csrf':status.csrf},body:'{"desktop":true}'}).then(r=>r.json());
  const state=new URL(start.url).searchParams.get('state');
  const callback=await fetch(`${origin}/auth/callback?state=${encodeURIComponent(state)}&code=one-time-code&client_id=registered-client`);
  assert.equal(callback.status,200);assert.match(await callback.text(),/ChatGPT ist verbunden/);assert.equal(finished.length,1);assert.equal(finished[0].session,finished[0].attempt.session);

@@ -112,7 +112,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     if(req.headers.host !== `127.0.0.1:${port}`){res.writeHead(403);res.end('Ungültiger Host.');return;}
     const url=new URL(req.url,origin);
     try {
-      if(req.method==='GET'&&url.pathname==='/api/health'){json(res,{application:'foliquo',protocol:1,version:CURRENT_VERSION,instance:lifecycle?.instance||null,workspaceId:lifecycle?.workspaceId||null});return;}
+      if(req.method==='GET'&&url.pathname==='/api/health'){json(res,{application:'foliquo',protocol:1,desktopBridge:1,version:CURRENT_VERSION,instance:lifecycle?.instance||null,workspaceId:lifecycle?.workspaceId||null});return;}
       if(req.method==='POST'&&url.pathname==='/api/lifecycle/stop'){
         if(!lifecycle||req.headers.authorization!==`Bearer ${lifecycle.token}`||req.headers.origin&&req.headers.origin!==origin){json(res,{error:'Not authorized.'},403);return;}
         await persist();json(res,{stopping:true});setImmediate(lifecycle.stop);return;
@@ -127,10 +127,10 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
       if(req.method==='GET'&&url.pathname==='/auth/callback'){
         const attempt=pending;
         const sessionMatches=attempt&&attempt.session===session(req,res)?.id;
-        if(!attempt||attempt.expiresAt<Date.now()||attempt.state!==url.searchParams.get('state')||(!allowExternalOAuthCallback&&!sessionMatches))throw new Error('Die Anmeldung ist abgelaufen oder passt nicht zu dieser Sitzung. Bitte erneut verbinden.');
+        if(!attempt||attempt.expiresAt<Date.now()||attempt.state!==url.searchParams.get('state')||(!(allowExternalOAuthCallback||attempt.desktop)&&!sessionMatches))throw new Error('Die Anmeldung ist abgelaufen oder passt nicht zu dieser Sitzung. Bitte erneut verbinden.');
         pending=null;
         await connection.finish(attempt,url,attempt.session);
-        if(allowExternalOAuthCallback){res.writeHead(200,{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'",'X-Frame-Options':'DENY'});res.end('<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Foliquo verbunden</title><body style="font:16px system-ui;max-width:36rem;margin:12vh auto;padding:24px;color:#17241e"><h1>ChatGPT ist verbunden</h1><p>Du kannst dieses Browserfenster schließen und zu Foliquo zurückkehren.</p></body></html>');return;}
+        if(allowExternalOAuthCallback||attempt.desktop){res.writeHead(200,{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'",'X-Frame-Options':'DENY'});res.end('<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Foliquo verbunden</title><body style="font:16px system-ui;max-width:36rem;margin:12vh auto;padding:24px;color:#17241e"><h1>ChatGPT ist verbunden</h1><p>Du kannst dieses Browserfenster schließen und zu Foliquo zurückkehren.</p></body></html>');return;}
         res.writeHead(303,{Location:'/?connection=ready'});res.end();return;
       }
       queue.cleanup();const active=session(req,res);
@@ -249,7 +249,8 @@ const job=queue.add({owner:active.id,clientId:input.clientId,requestId:input.req
       if(url.pathname==='/api/auth/start'){
         if(engineProvider.selected&&engineProvider.selected!=='chatgpt')throw new Error('Bitte zuerst ChatGPT-Konto als Anbieter auswählen.');
         if(processing||queue.active||reviewing)throw new Error('Bitte den laufenden Vorgang zuerst abschließen.');
-        pending={...createAuthorization(connection.data.hostId,connection.data.clientId,`${origin}/auth/callback`),session:active.id};json(res,{url:pending.url});return;
+        const input=await body(req,1000);
+        pending={...createAuthorization(connection.data.hostId,connection.data.clientId,`${origin}/auth/callback`),session:active.id,desktop:input.desktop===true};json(res,{url:pending.url});return;
       }
       if(url.pathname==='/api/auth/logout'){
         if(processing||queue.active||reviewing)throw new Error('Bitte den laufenden Vorgang zuerst abschließen.');
