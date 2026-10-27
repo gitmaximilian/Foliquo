@@ -7,7 +7,7 @@
 <p align="center">
   <strong>From document to editable translation.</strong><br>
   Foliquo Community is the free local browser-based workspace for noncommercial use covered by its license.<br>
-  Runs on your computer. Opens in your browser. Foliquo Pro is a future commercial SaaS edition and is not available yet.
+  Runs on your computer. Opens in your browser.
 </p>
 
 <p align="center">

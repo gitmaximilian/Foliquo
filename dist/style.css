@@ -178,7 +178,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 button,a,select,summary{touch-action:manipulation}
 button{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);min-height:var(--control-height);padding:9px 14px;border:1px solid transparent;border-radius:var(--radius-control);background:var(--soft);color:var(--ink);font-size:var(--text-control-size);font-weight:550;text-align:center;line-height:20px;cursor:pointer;transition:background-color var(--motion-fast),border-color var(--motion-fast),color var(--motion-fast)}
 button:hover:not(:disabled){background:var(--soft-hover)}
-button:disabled{opacity:.52;cursor:not-allowed}
+button:disabled{opacity:.52;cursor:var(--cursor-unavailable,default)}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible,summary:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
 a{color:inherit;text-decoration:none}
 input,select,textarea{min-width:0;max-width:100%}
@@ -1486,7 +1486,7 @@ body{background:var(--color-surface)!important;color:#111!important}
 .language-swap{display:grid;place-items:center;width:40px;height:40px;margin-bottom:4px;padding:0;border:1px solid var(--color-border);border-radius:50%;background:var(--color-surface);color:var(--color-text-secondary);cursor:pointer;transition:background-color var(--motion-control) var(--ease-standard),color var(--motion-control) var(--ease-standard),transform var(--motion-control) var(--ease-standard)}
 .language-swap svg{width:18px;height:18px}
 .language-swap:hover:not(:disabled){background:var(--color-surface-hover);color:var(--color-text)}
-.language-swap:disabled{color:var(--color-text-muted);opacity:.48;cursor:not-allowed}
+.language-swap:disabled{color:var(--color-text-muted);opacity:.48;cursor:var(--cursor-unavailable,default)}
 .language-error{grid-column:1/-1;margin:0;color:var(--color-danger);font-size:var(--text-secondary-size);line-height:18px}
 html[dir=rtl] .language-swap svg{transform:scaleX(-1)}
 @keyframes language-popover-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
@@ -1552,7 +1552,7 @@ html[lang=ar] .workspace-mastheads h1{letter-spacing:0}
 @media(max-width:1279px){.workspace-layout[data-view=studio]>.queue-rail{width:100%;max-width:none;justify-self:stretch}}
 #studio-view{display:grid;grid-template-columns:minmax(0,1fr) var(--settings-width);column-gap:var(--workspace-gap);row-gap:0;min-width:0}
 .language-workspace{grid-column:1;grid-row:1;min-height:80px;margin:0 0 12px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-panel);background:var(--color-surface)}
-.language-pair{grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);align-items:center;gap:8px}
+.language-pair{grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);align-items:center;gap:16px}
 .language-control{gap:4px}
 .language-field-label{display:flex;align-items:center;gap:6px;font-size:13px;line-height:20px;color:var(--color-text-secondary);font-weight:500}
 .language-field-label svg,.provider-context-label svg,.learning-context-link svg{display:block;flex:0 0 16px;width:16px;height:16px;stroke:currentColor;stroke-width:1.75}
@@ -1827,3 +1827,60 @@ html[dir=rtl] .job-mini-progress.is-indeterminate>span,html[dir=rtl] .progress-t
 .featured-job-progress.is-indeterminate>span{width:32%;animation:progress-travel 1.4s ease-in-out infinite alternate}
 html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progress-travel-rtl}
 @media(prefers-reduced-motion:reduce){.featured-job-progress.is-indeterminate>span{animation:none;transform:none}}
+
+/* Equal connection actions keep both panels independently accessible. */
+.connection-panel-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+.connection-panel-actions>.secondary{flex:1 1 200px;min-height:44px;justify-content:center;text-align:center}
+.connection-panel-actions>.secondary[aria-expanded=true]{background:var(--color-surface-hover);border-color:var(--color-focus)}
+#provider-more{border:0;padding-top:0}
+#provider-more .provider-help{margin:12px 0}
+#connection-diagnostics{margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+#connection-diagnostics[hidden],#provider-more[hidden]{display:none}
+@media(max-width:599px){#connection-diagnostics{grid-template-columns:minmax(0,1fr)}.connection-panel-actions{gap:8px}}
+
+/* Jobs: compact information hierarchy without a large empty placeholder. */
+#queue-card{padding:20px}
+.queue-sidebar>.card-heading{position:static;gap:12px;margin:0 0 12px;padding:0}
+.queue-sidebar #queue-title{display:flex;align-items:center;gap:8px;font-size:17px;line-height:24px;letter-spacing:-.02em}
+#queue-count:empty{display:none}
+.queue-sidebar #queue-count{margin:0;padding:2px 7px;font-size:12px;line-height:18px;font-weight:600}
+.queue-sidebar .queue-close{display:grid;place-items:center;width:36px;min-height:36px;padding:0;border-radius:10px;font-size:24px;line-height:1;color:var(--color-text-secondary)}
+.queue-sidebar .queue-close:hover{background:var(--color-surface-hover);color:var(--color-text)}
+.workspace-layout[data-view=studio] #queue-empty:not([hidden]),.queue-sidebar #queue-empty:not([hidden]){display:flex;align-items:center;gap:14px;padding:12px 0 20px;text-align:start}
+.queue-empty-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:12px;background:var(--color-surface-muted);color:var(--color-text-secondary)}
+.queue-empty-icon svg{width:24px;height:24px}
+.queue-empty-copy{min-width:0}
+#queue-empty .queue-empty-copy strong{display:block;font-size:14px;line-height:21px;font-weight:600;color:var(--color-text)}
+#queue-empty .queue-empty-copy p{margin:3px 0 0;font-size:13px;line-height:20px;color:var(--color-text-secondary)}
+.queue-sidebar .queue-footnote{display:flex;align-items:center;gap:7px;margin:0;padding-top:12px;text-align:start;font-size:12px;line-height:18px;color:var(--color-text-secondary)}
+.queue-footnote svg{flex:0 0 14px;width:14px;height:14px}
+.queue-sidebar .queue-row{border-radius:12px;padding:14px}
+.queue-sidebar .queue-row-copy>strong{font-size:14px;line-height:21px;font-weight:600}
+@media(max-width:599px){#queue-card{padding:16px}.queue-sidebar #queue-title{font-size:16px}}
+
+/* Options shares the compact jobs-panel rhythm. */
+.translation-composer .settings-card{gap:0;padding:20px}
+.translation-composer .settings-card>h2{margin:0 0 16px;font-size:17px;line-height:24px;letter-spacing:-.02em}
+.settings-card .provider-context{gap:8px;padding:0 0 16px;margin:0 0 4px}
+.settings-card .provider-context-label{font-size:12px;line-height:18px}
+#provider-context-status{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0}
+.provider-context-provider{font-size:14px;line-height:21px;font-weight:600}
+.provider-context-model{font-size:13px;line-height:20px;color:var(--color-text-secondary);overflow-wrap:anywhere}
+.provider-context-state{display:inline-flex;align-items:center;gap:6px;margin-top:5px;padding:3px 8px;border-radius:999px;background:var(--color-surface-muted);color:var(--color-text-secondary);font-size:12px;line-height:18px}
+.provider-context-state::before{content:"";flex:0 0 5px;width:5px;height:5px;border-radius:50%;background:currentColor}
+#provider-context-status[data-ready=true] .provider-context-state{color:var(--color-success);background:var(--color-success-bg)}
+.settings-card #provider-context-open{width:100%;justify-content:center;min-height:40px;margin-top:5px;padding:8px 12px;border:1px solid var(--color-border);border-radius:var(--radius-control);background:var(--color-surface);font-size:13px;line-height:20px;text-align:center}
+.settings-card #provider-context-open:hover{background:var(--color-surface-hover)}
+.translation-composer .settings-card .extra-info summary{min-height:48px;padding:12px 0;font-size:13px;line-height:20px;gap:8px}
+.settings-card .extra-info summary>svg{flex:0 0 16px;width:16px;height:16px;color:var(--color-text-secondary)}
+.settings-card .extra-info summary>span{font-size:11px;color:var(--color-text-secondary)}
+.settings-card .learning-context-link{width:100%;min-height:48px;justify-content:flex-start;margin-top:4px;padding:12px 0;border-top:1px solid var(--color-border);font-size:13px;line-height:20px;font-weight:500}
+@media(max-width:599px){.translation-composer .settings-card{padding:16px}.translation-composer .settings-card>h2{font-size:16px}}
+
+/* Additional context is an add/remove disclosure, matching the options actions. */
+.translation-composer .settings-card .extra-info summary::after{content:none}
+.settings-card .extra-info summary>.extra-info-label{font-size:13px;line-height:20px;font-weight:500;color:var(--color-text)}
+.extra-info-toggle{position:relative;flex:0 0 20px;width:20px;height:20px;margin-inline-start:auto;color:var(--color-text-secondary)}
+.extra-info-toggle::before,.extra-info-toggle::after{content:"";position:absolute;inset-inline-start:4px;top:9px;width:12px;height:1.5px;border-radius:1px;background:currentColor}
+.extra-info-toggle::after{transform:rotate(90deg)}
+.extra-info[open] .extra-info-toggle::after{transform:rotate(0)}

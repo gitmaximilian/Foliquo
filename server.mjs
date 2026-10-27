@@ -163,7 +163,8 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
       const reviewRoute=url.pathname.match(/^\/api\/jobs\/([a-f0-9-]+)\/review(?:\/(edit|finalize))?$/);
       if(req.method==='GET'&&reviewRoute&&!reviewRoute[2]){const job=queue.find(reviewRoute[1],active.id);json(res,{...reviewSnapshot(job),...(url.searchParams.get('preview')==='1'?{result:job.result,names:job.names}:{})});return;}
       if(req.method==='GET'&&url.pathname==='/api/providers'){if(typeof engineProvider.summaries!=='function')throw new Error('Die Anbieterverwaltung ist nicht verfügbar.');json(res,{selected:engineProvider.selected,providers:engineProvider.summaries()});return;}
-      if(req.method==='GET'&&url.pathname==='/api/models'){const id=url.searchParams.get('provider')||undefined;json(res,{provider:id||engineProvider.selected||'chatgpt',models:await engineProvider.models(id)});return;}
+      if(req.method==='GET'&&url.pathname==='/api/studio-draft'){json(res,{draft:workspace?.data.studioDrafts?.[active.id]||null});return;}
+      if(req.method==='GET'&&url.pathname==='/api/models'){const id=url.searchParams.get('provider')||undefined;json(res,{provider:id||engineProvider.selected||'chatgpt',models:await engineProvider.models(id,{refresh:url.searchParams.get('refresh')==='1'})});return;}
       if(req.method!=='POST'){json(res,{error:'Nicht gefunden.'},404);return;}
       if(req.headers.origin!==origin||(req.headers['x-foliquo-csrf']||req.headers['x-translateocr-csrf'])!==active.csrf){json(res,{error:'Ungültiger Ursprung oder Sitzungsschutz.'},403);return;}
       if(!String(req.headers['content-type']).startsWith('application/json')){json(res,{error:'JSON erforderlich.'},415);return;}
@@ -188,6 +189,19 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
         if(url.pathname==='/api/providers/select'){const selected=await engineProvider.select(input.provider);await persist();json(res,selected);return;}
         if(url.pathname==='/api/providers/key'){const saved=engineProvider.setKey(input.provider,input.apiKey);await persist();json(res,{provider:saved.provider,providerLabel:saved.providerLabel,configured:saved.connected});return;}
         if(url.pathname==='/api/providers/key/clear'){const selected=engineProvider.clearKey(input.provider);await persist();json(res,{provider:selected.provider,providerLabel:selected.providerLabel,configured:selected.connected,selected:engineProvider.selected});return;}
+      }
+      if(url.pathname==='/api/studio-draft'){
+        if(!workspace)throw new Error('Local drafts require a persistent workspace.');
+        const input=await body(req);workspace.data.studioDrafts||={};
+        if(input.clear===true)delete workspace.data.studioDrafts[active.id];
+        else {
+          const meta=metadata({...input,targetLanguage:input.targetLanguage||'Deutsch',sourceLanguage:input.sourceLanguagePreference||'Automatisch'});
+          const previous=workspace.data.studioDrafts[active.id];
+          const files=input.files===undefined?(previous?.files||[]):input.files.length?validateDocuments(input.files).map(f=>({name:f.name,type:f.type,data:f.bytes.toString('base64')})):[];
+          const draft={...meta,translation:string(input.translation||'',1000000),sourceLanguage:string(input.sourceLanguage||'',100),sourceLanguagePreference:input.sourceLanguagePreference||'Automatisch',documentType:string(input.documentType||'',500),example:input.example===true,sourceChanged:input.sourceChanged===true,files,updatedAt:Date.now()};
+          workspace.data.studioDrafts[active.id]=draft;
+        }
+        await persist();json(res,{saved:true});return;
       }
       if(url.pathname==='/api/preferences'){if(!workspace)throw new Error('Local preferences require a persistent workspace.');const input=await body(req,2000);const preferences=workspace.setPreferences(input);await persist();json(res,{preferences});return;}
       if(url.pathname==='/api/rules/approve'){if(!workspace)throw new Error('Workspace erforderlich.');const input=await body(req,2000);if(input.confirm!==true)throw new Error('Regel ausdrücklich bestätigen.');const candidate=correctionCandidates(queue.jobs,active.id,input.targetLanguage).find(c=>c.source===input.source&&c.target===input.target);if(!candidate)throw new Error('Dieser Regelvorschlag ist nicht mehr verfügbar.');workspace.put('glossary',{name:candidate.source,source:candidate.source,target:candidate.target,targetLanguage:input.targetLanguage,scope:'global',note:'Aus wiederholten Korrekturen ausdrücklich bestätigt'});await persist();json(res,{saved:true});return;}
