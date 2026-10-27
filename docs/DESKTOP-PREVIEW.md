@@ -1,6 +1,6 @@
 # Desktop preview packages
 
-Version **0.11.4** adds free desktop preview packages. Open the [Desktop preview packages workflow](https://github.com/gitmaximilian/Foliquo/actions/workflows/desktop-preview.yml), choose the latest successful run on `codex/native-desktop`, then download the matching artifact. GitHub keeps these workflow artifacts for 30 days. They are not versioned releases; the workflow does not publish a Microsoft Store or Flathub listing.
+Version **0.11.5** adds free desktop preview packages. Open the [Desktop preview packages workflow](https://github.com/gitmaximilian/Foliquo/actions/workflows/desktop-preview.yml), choose the latest successful run on `codex/native-desktop`, then download the matching artifact. GitHub keeps these workflow artifacts for 30 days. They are not versioned releases; the workflow does not publish a Microsoft Store or Flathub listing.
 
 | Artifact | Contents | Status |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ The desktop package contains the pinned Node runtime, application, and LibreOffi
 
 - **macOS:** Open the `.dmg`, drag Foliquo to Applications, then open it. These builds are free and unsigned, so Gatekeeper may require you to use **Open Anyway** under Privacy & Security after you have downloaded the package from the official workflow. Do not disable Gatekeeper globally. Both Apple Silicon and Intel packages are provided.
 - **Windows:** Run the Windows `*-setup.exe` installer for the direct preview. Windows may show SmartScreen because this community build is unsigned. The `.msix` is a packaging preview and may not install because it has no Microsoft Store publisher identity; it is not a Store-certified installer.
-- **Linux:** Install Flatpak, download the `desktop-Linux-x64` artifact, and install the included bundle with `flatpak install --user ./Foliquo-Desktop-0.11.4-Linux-x64.flatpak`. Flatpak can install the GNOME 50 runtime if it is missing. Start Foliquo from the application menu or with `flatpak run at.maximilianauer.foliquo`.
+- **Linux:** Install Flatpak, download the `desktop-Linux-x64` artifact, and install the included bundle with `flatpak install --user ./Foliquo-Desktop-0.11.5-Linux-x64.flatpak`. Flatpak can install the GNOME 50 runtime if it is missing. Start Foliquo from the application menu or with `flatpak run at.maximilianauer.foliquo`.
 
 To update a preview, download and install the newest artifact for your platform. Private workspace data is kept in the platform data directory and is preserved. Preview artifacts expire after 30 days; download a copy locally if you need to retain one.
 
