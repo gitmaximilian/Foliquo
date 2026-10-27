@@ -1,4 +1,4 @@
-# AI connection verification — 0.11.2
+# AI connection verification — 0.11.3
 
 ## Root cause and repair
 
@@ -8,7 +8,7 @@ The released UI awaited GET /api/studio-draft before showing its provider contro
 
 | Path | Verification | Limit |
 | --- | --- | --- |
-| Local UI | Actual installed 0.11.1 backend, with the corrected UI, initializes successfully despite its missing draft route. AI controls and model selector remain visible. | Full persistent-draft implementation is in 0.11.2. |
+| Local UI | Actual installed 0.11.1 backend, with the corrected UI, initializes successfully despite its missing draft route. AI controls and model selector remain visible. | Full persistent-draft implementation ships in 0.11.3. |
 | ChatGPT sign-in | User completed account choice and authorization in OpenAI's actual browser flow. Local session reports connected and planEnabled; eight real models loaded. | Account/plan eligibility remains controlled by OpenAI. |
 | ChatGPT inference and exports | A real gpt-6.1-sol request translated a fictional English TXT document into German. A real 836273-byte PDF and 2704-byte Word document were generated. | This validates connectivity, not translation quality or certification. |
 | OpenAI API | Automated authenticated model/request contract, model filtering, invalid credentials and cache-refresh tests. | No real API key supplied; live success and billing not tested. |
@@ -21,7 +21,7 @@ The released UI awaited GET /api/studio-draft before showing its provider contro
 
 Tasks 5–7 add a compact circle-minus disabled cursor (including disabled descendants), a compact jobs empty state with a document icon and local-storage footer, and a matching options panel with separate provider/model/status lines. Browser inspection confirmed the cursor declaration, no horizontal overflow and the real connected ChatGPT state. These visual changes received a short manual check, without another full test run.
 
-The installed Homebrew application has a reversible local patch, with original application files backed up outside its installation. Backend restart preserved ChatGPT credentials and made the draft endpoint available. The new official version/release has not been published.
+The temporary local patch used during diagnosis has now been replaced by the official 0.11.3 Homebrew package. The actual 0.11.1-to-0.11.3 upgrade preserved the private workspace key, preferences and ChatGPT authorization. Eight live models remained accessible after restart. Public macOS ARM64/Intel, Windows and Linux downloads are available in [release 0.11.3](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.11.3).
 
 ## Official contracts consulted
 

@@ -1,5 +1,18 @@
 # Foliquo Community distribution verification
 
+## Current release — 0.11.3
+
+[Release 0.11.3](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.11.3) is public for Windows x64, Linux x64, and macOS ARM64/Intel, with actual checksums and signature status. [All release gates passed](https://github.com/gitmaximilian/Foliquo/actions/runs/40465445154), including 140 tests on the native builds, both Homebrew architectures and official WinGet validation.
+
+The official Homebrew tap points to 0.11.3. An actual public Homebrew upgrade from 0.11.1 to 0.11.3 passed locally; private workspace key, preferences and ChatGPT authorization were preserved and all eight live models remained available.
+
+[WinGet submission #462448](https://github.com/microsoft/winget-pkgs/pull/462448) now contains the generated 0.11.3 manifests. Microsoft moderation/indexing is still pending; no public WinGet command for Foliquo is advertised. The previously documented hosted WinGet installation limitation remains separate from the successful native installer lifecycle checks.
+
+The unpublished 0.11.2 candidate was cancelled before publication to include version-neutral installation links. Its tag was preserved, without a binary release. Website downloads and the real-app screenshot were updated to 0.11.3.
+
+## Original 0.11.1 verification
+
+
 Version: 0.11.1. Published on October 26, 2026 after all release gates passed.
 
 | Deliverable | Implemented and verified behavior |

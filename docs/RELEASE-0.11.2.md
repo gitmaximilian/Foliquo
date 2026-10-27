@@ -1,5 +1,7 @@
 # Foliquo Community 0.11.2
 
+Unpublished build candidate. Superseded by [0.11.3](RELEASE-0.11.3.md) before binary publication; its tag is retained.
+
 This patch fixes local AI setup stopping at “Not found” while leaving only a self-link visible. The missing private studio-draft routes are implemented, and restoring a draft no longer prevents access to AI settings.
 
 - ChatGPT sign-in, granted plan scope, live model catalog, and a fictional English-to-German translation with real PDF and Word exports were verified on macOS.
