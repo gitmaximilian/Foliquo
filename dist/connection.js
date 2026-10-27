@@ -14,7 +14,7 @@ async function localRequest(path,payload,signal){
 }
 function setConnectionPanel(id,open){const panel=document.getElementById(id),button=document.getElementById(id+'-toggle');if(!panel)return;panel.hidden=!open;button?.setAttribute('aria-expanded',String(open));}
 for(const id of ['provider-more','connection-diagnostics'])document.getElementById(id+'-toggle')?.addEventListener('click',()=>setConnectionPanel(id,document.getElementById(id).hidden));
-function providerInfo(id){return providerList.find(p=>p.id===id)||{id,label:id,help:''};}
+function providerInfo(id){const info=providerList.find(p=>p.id===id)||{id,label:id,help:''};return {...info,label:window.TOCRI18n?.t(info.label)||info.label};}
 function updateProviderPanel(){
  const choice=$('#provider-choice').value,info=providerInfo(choice),configured=choice==='chatgpt'?Boolean(window.chatgptConnected):Boolean(info.configured),chatgpt=choice==='chatgpt';
  const status=$('#provider-status'),statusKey=providerReady?'Verbunden':providerModelLoading===choice?'Modelle werden geladen …':configured&&!chatgpt?'Schlüssel gespeichert · Modell nicht bereit':'Nicht verbunden';status.textContent=window.TOCRI18n?.t(statusKey)||statusKey;status.dataset.ready=String(providerReady);

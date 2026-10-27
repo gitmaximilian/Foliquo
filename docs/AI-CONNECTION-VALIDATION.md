@@ -17,6 +17,12 @@ The released UI awaited GET /api/studio-draft before showing its provider contro
 | Regression suite | 140 tests passed; offline benchmark: three cases, zero regressions; acceptance checks and demo build passed. | Synthetic tests are separate from live calls. |
 | Layout | Theme action placed directly above language; desktop swap clearance 16px; matching adjacent connection buttons with aria-expanded and independent panels. | Mobile wrapping is intentional. |
 
+## Local follow-up layout changes
+
+Tasks 5–7 add a compact circle-minus disabled cursor (including disabled descendants), a compact jobs empty state with a document icon and local-storage footer, and a matching options panel with separate provider/model/status lines. Browser inspection confirmed the cursor declaration, no horizontal overflow and the real connected ChatGPT state. These visual changes received a short manual check, without another full test run.
+
+The installed Homebrew application has a reversible local patch, with original application files backed up outside its installation. Backend restart preserved ChatGPT credentials and made the draft endpoint available. The new official version/release has not been published.
+
 ## Official contracts consulted
 
 - [OpenAI registration and sign-in](https://developers.openai.com/siwc/token-sharing-open-source/sign-in)
