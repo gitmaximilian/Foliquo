@@ -2,6 +2,7 @@ name: Desktop preview packages
 on:
   push:
     branches: [codex/native-desktop]
+    tags: [desktop-preview-v*]
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,6 +27,7 @@ jobs:
       - run: npm run acceptance
       - run: npm run demo:build
   build:
+    if: github.event_name != 'push' || github.ref_type == 'tag'
     needs: checks
     strategy:
       fail-fast: false
@@ -73,6 +75,9 @@ jobs:
         run: npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri build --bundles app
       - name: Check bundled service and one fictional export
         run: node scripts/smoke-desktop.mjs
+      - name: Verify the native Windows window renders the workspace
+        if: runner.os == 'Windows'
+        run: node scripts/smoke-desktop-window.mjs
       - name: Collect macOS app and DMG
         if: runner.os == 'macOS'
         shell: bash
@@ -107,3 +112,56 @@ jobs:
           path: release-desktop/final/*
           if-no-files-found: error
           retention-days: 30
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/desktop-preview-v')
+    needs: build
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: desktop-*
+          path: release-assets
+          merge-multiple: false
+      - name: Verify platform packages and prepare public assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#desktop-preview-v}"
+          test "$(node -p 'JSON.parse(require("fs").readFileSync("package.json")).version')" = "$version"
+          test -f "docs/RELEASE-$version.md"
+          for artifact in release-assets/desktop-*; do
+            test -d "$artifact"
+            platform="${artifact##*/desktop-}"
+            (cd "$artifact" && sha256sum -c SHA256SUMS)
+            cp "$artifact/BUILD-REPORT.txt" "release-assets/BUILD-REPORT-$platform.txt"
+            for file in "$artifact"/*; do
+              name="${file##*/}"
+              case "$name" in
+                SHA256SUMS|BUILD-REPORT.txt|*.msix) continue ;;
+                *) mv "$file" release-assets/"$name" ;;
+              esac
+            done
+          done
+          test -f "release-assets/Foliquo_0.11.6_x64-setup.exe"
+          test -f "release-assets/Foliquo-Desktop-macOS-arm64.dmg"
+          test -f "release-assets/Foliquo-Desktop-macOS-x64.dmg"
+          test -f "release-assets/Foliquo-Desktop-0.11.6-Linux-x64.flatpak"
+          cd release-assets
+          find . -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - name: Publish the verified desktop preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#desktop-preview-v}"
+          mapfile -t assets < <(find release-assets -maxdepth 1 -type f -print | sort)
+          gh release create "$GITHUB_REF_NAME" --verify-tag --prerelease \
+            --title "Foliquo Community v$version — Desktop Preview" \
+            --notes-file "docs/RELEASE-$version.md" "${assets[@]}"
+          echo "Published Windows, macOS (Apple Silicon and Intel), and Linux desktop packages." >> "$GITHUB_STEP_SUMMARY"

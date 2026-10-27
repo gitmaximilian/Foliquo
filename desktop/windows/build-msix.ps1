@@ -4,7 +4,7 @@ $version = (Get-Content (Join-Path $root 'package.json') -Raw | ConvertFrom-Json
 $target = Join-Path $root 'desktop/src-tauri/target/release'
 $binary = Join-Path $target 'foliquo-desktop.exe'
 $resources = Join-Path $root 'desktop/generated'
-$package = Join-Path $root 'release-desktop/Foliquo-Desktop-$version-Windows-x64-preview.msix'
+$package = Join-Path $root "release-desktop/Foliquo-Desktop-$version-Windows-x64-preview.msix"
 $stage = Join-Path $root 'release-desktop/msix-stage'
 if (-not (Test-Path $binary) -or -not (Test-Path (Join-Path $resources 'service/runtime/node.exe')) -or -not (Test-Path (Join-Path $resources 'office/LibreOffice/program/soffice.exe'))) {
   throw 'The Windows desktop binary and complete resources must be built before MSIX packaging.'

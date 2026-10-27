@@ -1,0 +1,109 @@
+import {spawn, spawnSync} from 'node:child_process';
+import {createServer} from 'node:net';
+import {randomUUID} from 'node:crypto';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {rm} from 'node:fs/promises';
+import {setTimeout as delay} from 'node:timers/promises';
+
+if (process.platform !== 'win32') throw new Error('This native window smoke check runs on Windows only.');
+const executable = join(process.cwd(), 'desktop/src-tauri/target/release/foliquo-desktop.exe');
+const portServer = createServer();
+const debugPort = await new Promise((resolve, reject) => {
+  portServer.once('error', reject);
+  portServer.listen(0, '127.0.0.1', () => {
+    const address = portServer.address();
+    portServer.close(() => resolve(address.port));
+  });
+});
+const dataDir = join(tmpdir(), 'foliquo-window-smoke-' + randomUUID());
+const child = spawn(executable, [], {
+  cwd: process.cwd(),
+  env: {
+    ...process.env,
+    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=' + debugPort,
+    FOLIQUO_DATA_DIR: dataDir,
+    FOLIQUO_NO_BROWSER: '1'
+  },
+  stdio: 'ignore',
+  windowsHide: false
+});
+let exited = false;
+let exitCode = null;
+child.once('exit', code => { exited = true; exitCode = code; });
+let socket;
+const pending = new Map();
+const browserErrors = [];
+let commandId = 0;
+function cdp(method, params = {}) {
+  const id = ++commandId;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error('Timed out waiting for WebView2 command ' + method));
+    }, 5000);
+    pending.set(id, {resolve, reject, timer});
+    socket.send(JSON.stringify({id, method, params}));
+  });
+}
+try {
+  let target;
+  const deadline = Date.now() + 60000;
+  while (Date.now() < deadline && !target) {
+    if (exited) throw new Error('Foliquo desktop exited before its WebView rendered (exit ' + exitCode + ').');
+    try {
+      const response = await fetch('http://localhost:' + debugPort + '/json/list', {signal: AbortSignal.timeout(1000)});
+      const targets = await response.json();
+      target = targets.find(item => item.type === 'page' && item.webSocketDebuggerUrl);
+    } catch {}
+    if (!target) await delay(300);
+  }
+  if (!target) throw new Error('Windows WebView2 did not expose a page target within 60 seconds.');
+  socket = new WebSocket(target.webSocketDebuggerUrl);
+  socket.addEventListener('message', event => {
+    let message;
+    try { message = JSON.parse(event.data); } catch { return; }
+    if (message.method === 'Runtime.exceptionThrown') {
+      browserErrors.push(message.params?.exceptionDetails?.exception?.description || message.params?.exceptionDetails?.text || 'JavaScript exception');
+      return;
+    }
+    if (message.method === 'Log.entryAdded' && message.params?.entry?.level === 'error') {
+      browserErrors.push(message.params.entry.text || 'WebView error');
+      return;
+    }
+    if (!message.id) return;
+    const waiting = pending.get(message.id);
+    if (!waiting) return;
+    clearTimeout(waiting.timer);
+    pending.delete(message.id);
+    if (message.error) waiting.reject(new Error(message.error.message || 'WebView2 command failed.'));
+    else waiting.resolve(message);
+  });
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Timed out connecting to the Windows WebView2 page.')), 10000);
+    socket.addEventListener('open', () => { clearTimeout(timer); resolve(); }, {once: true});
+    socket.addEventListener('error', () => { clearTimeout(timer); reject(new Error('Could not connect to the Windows WebView2 page.')); }, {once: true});
+  });
+  await cdp('Runtime.enable');
+  await cdp('Log.enable');
+  const expression = "(()=>{const s=document.querySelector('.app-shell');const main=document.querySelector('#main-content');const body=(s?.innerText||document.body?.innerText||'').trim();return {url:location.href,title:document.title,ready:document.readyState,desktop:window.__FOLIQUO_DESKTOP__===true,shell:!!s,main:!!main,body:body.slice(0,1200),bodyLength:body.length,styles:document.styleSheets.length,background:getComputedStyle(document.body).backgroundColor}})()";
+  let state;
+  const renderDeadline = Date.now() + 30000;
+  while (Date.now() < renderDeadline) {
+    const response = await cdp('Runtime.evaluate', {expression, returnByValue: true});
+    state = response.result?.result?.value;
+    if (state?.url?.startsWith('http://127.0.0.1:') && state.ready === 'complete' && state.shell && state.main && state.desktop && state.styles > 0 && state.bodyLength >= 40) break;
+    await delay(400);
+  }
+  if (!state?.url?.startsWith('http://127.0.0.1:') || state.ready !== 'complete' || !state.shell || !state.main || !state.desktop || state.styles < 1 || state.bodyLength < 40) {
+    throw new Error('The native window did not render the Foliquo workspace: ' + JSON.stringify({state, browserErrors: browserErrors.slice(-20)}));
+  }
+  console.log('Windows WebView2 rendered the Foliquo workspace: ' + JSON.stringify(state));
+} finally {
+  try { socket?.close(); } catch {}
+  if (!exited) {
+    if (child.pid) spawnSync('taskkill.exe', ['/pid', String(child.pid), '/t', '/f'], {stdio: 'ignore'});
+    await Promise.race([new Promise(resolve => child.once('exit', resolve)), delay(5000)]);
+  }
+  await rm(dataDir, {recursive: true, force: true});
+}

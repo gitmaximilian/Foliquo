@@ -1,27 +1,48 @@
-# Desktop preview packages
+# Foliquo desktop apps
 
-Version **0.11.5** adds free desktop preview packages. Open the [Desktop preview packages workflow](https://github.com/gitmaximilian/Foliquo/actions/workflows/desktop-preview.yml), choose the latest successful run on `codex/native-desktop`, then download the matching artifact. GitHub keeps these workflow artifacts for 30 days. They are not versioned releases; the workflow does not publish a Microsoft Store or Flathub listing.
+Free desktop packages for Windows 10/11 x64, macOS 15+ (Apple Silicon and Intel), and Linux x64 are attached to the [desktop preview release](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-preview-v0.11.6). The release includes checksums and per-platform build reports. These are direct downloads; the GitHub Actions artifact browser is not needed.
 
-| Artifact | Contents | Status |
-| --- | --- | --- |
-| `desktop-macOS-arm64`, `desktop-macOS-x64` | `.app` ZIP and `.dmg` | Unsigned and unnotarized. macOS may require a manual first-launch approval in Privacy & Security. Managed Macs may disallow it. |
-| `desktop-Windows-x64` | Native NSIS installer and unsigned MSIX preview | The installer can trigger SmartScreen. The MSIX has a preview identity and cannot be treated as Store-signed or directly installable without the required publisher identity/signing process. |
-| `desktop-Linux-x64` | Locally built Flatpak bundle | Install a suitable Flatpak runtime and review the declared permissions before installing. This build is not on Flathub. |
+## Downloads
 
-The desktop package contains the pinned Node runtime, application, and LibreOffice Writer for PDF/Word conversion. It does not require a separate Node or LibreOffice installation. The original browser and CLI packages remain available. The window opens the same loopback service (`127.0.0.1`), and it stops only a service it started itself. An existing service can be reused only if it supports the desktop bridge. Close an older service before opening the preview. The app uses the current platform data directory; it never adds private workspace data to package artifacts.
+- Windows x64: `Foliquo_0.11.6_x64-setup.exe`
+- macOS Apple Silicon: `Foliquo-Desktop-macOS-arm64.dmg`
+- macOS Intel: `Foliquo-Desktop-macOS-x64.dmg`
+- Linux x64: `Foliquo-Desktop-0.11.6-Linux-x64.flatpak`
 
-## Install the preview
+The Windows installer is an unsigned per-user installer. Windows SmartScreen may show a warning because the community app has no paid code-signing certificate. The macOS apps are unsigned and not notarized; after verifying the download, macOS may require a one-time Open Anyway approval in System Settings → Privacy & Security. Do not turn off either operating system’s protection globally. The Linux package is a local Flatpak bundle, not a Flathub listing. No store certification or trusted publisher signature is claimed.
 
-- **macOS:** Open the `.dmg`, drag Foliquo to Applications, then open it. These builds are free and unsigned, so Gatekeeper may require you to use **Open Anyway** under Privacy & Security after you have downloaded the package from the official workflow. Do not disable Gatekeeper globally. Both Apple Silicon and Intel packages are provided.
-- **Windows:** Run the Windows `*-setup.exe` installer for the direct preview. Windows may show SmartScreen because this community build is unsigned. The `.msix` is a packaging preview and may not install because it has no Microsoft Store publisher identity; it is not a Store-certified installer.
-- **Linux:** Install Flatpak, download the `desktop-Linux-x64` artifact, and install the included bundle with `flatpak install --user ./Foliquo-Desktop-0.11.5-Linux-x64.flatpak`. Flatpak can install the GNOME 50 runtime if it is missing. Start Foliquo from the application menu or with `flatpak run at.maximilianauer.foliquo`.
+## Install
 
-To update a preview, download and install the newest artifact for your platform. Private workspace data is kept in the platform data directory and is preserved. Preview artifacts expire after 30 days; download a copy locally if you need to retain one.
+### Windows
 
-ChatGPT sign-in opens the system browser and returns to Foliquo through a one-time loopback callback. The user must complete any account selection and plan consent. Returning focus to the desktop window refreshes its connection status. The normal browser interface keeps its same-browser callback.
+Download the Windows installer and run it for the current Windows account. The package includes the Node runtime, LibreOffice Writer for PDF and Word exports, and the WebView2 offline installer. If SmartScreen appears, verify that the file came from the Foliquo GitHub release before choosing the operating system’s per-app option to continue. Start Foliquo from the Start menu.
 
-The Windows MSIX manifest's preview publisher is intentionally not a Microsoft Store publisher identity. Before any Store submission, reserve the app in Partner Center and replace the package Name and Publisher with the exact assigned values, then certify the final package. No identity or signing credentials belong in the repository. The existing GitHub release workflow is not used for desktop previews.
+### macOS
 
-## Build locally
+Choose the DMG matching the Mac’s processor, open it, and drag Foliquo into Applications. On first launch, use the one-time approval in Privacy & Security if Gatekeeper blocks this unsigned preview. Apple Silicon and Intel packages are separate.
 
-Use official Node matching `.node-version`, a Rust stable toolchain, and the platform's Tauri prerequisites. Install LibreOffice Writer on the build host, then run `npm ci --ignore-scripts`. On Windows and Linux, run `npm run desktop:build`. On macOS, run `npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri build --bundles app`; the CI workflow creates the DMG from that app with `hdiutil`. Preparation stages an isolated copy of the app, Node, and LibreOffice under ignored `desktop/generated/`; it does not copy any `.local` workspace or account credentials. Linux additionally runs `bash desktop/linux/build-flatpak.sh` after the Tauri `.deb` build; Windows runs `desktop/windows/build-msix.ps1` after the NSIS build. The CI workflow performs these steps on the corresponding operating systems and retains downloads for 30 days.
+### Linux
+
+Install Flatpak if needed, then install the downloaded bundle:
+
+```sh
+flatpak install --user ./Foliquo-Desktop-0.11.6-Linux-x64.flatpak
+```
+
+Flatpak can fetch the GNOME 50 runtime when it is not already installed. Start Foliquo from the application menu or with:
+
+```sh
+flatpak run at.maximilianauer.foliquo
+```
+
+## Data and connections
+
+The app window uses the same local Foliquo service as the browser version. The service listens only on `127.0.0.1`; the app starts and stops its own service, or reuses a compatible service for the same data directory. Existing settings, provider connections, and jobs remain in the platform data directory. The package does not include workspace or account data. ChatGPT sign-in opens the system browser and returns through a one-time local callback; the user completes account selection and plan consent.
+
+The original browser and CLI use remain available. Desktop packages include the pinned Node runtime and LibreOffice Writer, so a separate Node or LibreOffice installation is not needed. PDF and Word export uses the bundled Writer installation.
+
+## Updates and verification
+
+Use the release’s `SHA256SUMS` file to verify downloads. Install a newer desktop preview from its release to update; Foliquo keeps local data in the same platform data directory. The unsigned preview is distributed for direct testing and does not imply Microsoft Store, Mac App Store, or Flathub approval.
+
+The latest source and build workflow are on the `codex/native-desktop` branch. Each build report records the source commit, target platform, and unsigned status. The packages include the required upstream license and notice files; see [third-party notices](THIRD-PARTY.md).
