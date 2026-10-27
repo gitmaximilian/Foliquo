@@ -73,10 +73,7 @@ jobs:
           app=$(find desktop/src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app' -print -quit)
           test -d "$app"
           ditto -c -k --sequesterRsrc --keepParent "$app" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.zip"
-          mkdir -p release-desktop/dmg-root
-          ditto "$app" release-desktop/dmg-root/Foliquo.app
-          ln -s /Applications release-desktop/dmg-root/Applications
-          hdiutil create -quiet -srcfolder release-desktop/dmg-root -volname Foliquo -format UDZO "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.dmg"
+          hdiutil create -quiet -srcfolder "$app" -volname Foliquo -format UDZO "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.dmg"
       - name: Build unsigned Windows MSIX preview and collect installer
         if: runner.os == 'Windows'
         shell: pwsh

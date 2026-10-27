@@ -5,13 +5,14 @@ import {readFile,stat} from 'node:fs/promises';
 import {createApp} from '../server.mjs';
 
 const source=path=>readFile(new URL(path,import.meta.url),'utf8');
-test('the user interface is browser-only and provides a clean localized work path',async()=>{
+test('the browser interface remains available alongside the optional desktop window',async()=>{
  const html=await source('../dist/index.html'),pkg=JSON.parse(await source('../package.json'));
  for(const view of ['studio','documents','review','workspace','guide'])assert.ok(html.includes(`<section id="${view}-view"`),`missing ${view} view`);
  assert.doesNotMatch(html,/dossiers-view|data-view="dossiers"|manifest\.webmanifest|service-worker|install-app|Private workspace|Dein privater Workflow|DEINE FASSUNG · DEIN FEINSCHLIFF/);
  assert.match(html,/Bildausschnitt auswählen/);assert.match(html,/id="scan-crop-stage"/);assert.match(html,/id="update-check"/);assert.match(html,/id="update-download"/);
- assert.equal(pkg.main,undefined);assert.equal(pkg.build,undefined);assert.equal(pkg.devDependencies,undefined);
- assert.ok(!Object.keys(pkg.scripts).some(k=>k.startsWith('desktop:')));
+ assert.equal(pkg.main,undefined);assert.equal(pkg.build,undefined);
+ assert.equal(pkg.devDependencies?.['@tauri-apps/cli'],'2.12.4');
+ assert.equal(pkg.scripts['desktop:build']!==undefined,true);
 });
 
 test('one-click setup and browser launchers exist for the three desktop operating systems',async()=>{
