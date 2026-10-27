@@ -17,7 +17,7 @@ test('Only resolved, structured translations pass; open items become questions w
 });
 test('Dates normalize and PDF heading contains both languages and the requested wording',async()=>{
  assert.equal(normalizeDates('Geboren: 7.3.1998; gültig bis 2030-01-09'),'Geboren: 07.03.1998; gültig bis 09.01.2030');
- assert.equal(translationTitle({language:'Arabisch',targetLanguage:'Deutsch'}),'Beglaubigte Übersetzung aus dem Arabischen ins Deutsche');
+ assert.equal(translationTitle({language:'Arabisch',targetLanguage:'Deutsch'}),'Beglaubigte Übersetzung aus der arabischen Sprache ins Deutsche');
  const parsed=parseFinalTranslation(result('Name: Omar Hassan\nGeboren: 7.3.1998\nKennzeichen: [Arabischer Buchstabe, Lautschrift: „bāʾ“]'));
  assert.match(parsed.text,/07\.03\.1998/);
  const bytes=await createTranslationPDF(parsed.text,[],{language:'Arabisch',targetLanguage:'Deutsch'});assert.equal((await PDFDocument.load(bytes)).getPageCount(),1);
