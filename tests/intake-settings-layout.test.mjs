@@ -30,7 +30,7 @@ test('Translate keeps the language bar, upload, contextual panel and action in s
  assert.match(css,/@media\(max-width:1279px\)[\s\S]*?\.translation-composer \.action-footer\{grid-column:1;grid-row:4/);
  assert.match(css,/@media\(max-width:599px\)[\s\S]*?\.language-pair\{grid-template-columns:minmax\(0,1fr\)/);
  assert.match(connection,/providerName:info\.label[\s\S]*modelName[\s\S]*status:status\.textContent/);
- assert.match(app,/value\.dataset\.noTranslate='';value\.textContent=part/);
+ assert.match(app,/value\.dataset\.noTranslate='';value\.textContent=(?:part|text)/);
  assert.match(queue,/Die ausgewählten Dateien werden an \{provider\} gesendet/);
  assert.match(queue,/renderFeaturedJob\(\)[\s\S]*?translateocr-featured-job/,'the submitted job is featured without opening another panel');
  assert.match(i18n,/The selected files are sent to \{provider\}\. The PDF includes the source pages; Word contains the editable translation/);

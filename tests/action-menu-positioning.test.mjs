@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
 const css=await readFile(new URL('../dist/style.css',import.meta.url),'utf8');
+const themeCss=await readFile(new URL('../dist/theme.css',import.meta.url),'utf8');
 
 test('mobile library action menu clamps to the visible area in both writing directions',async()=>{
  const rule='.document-actions-list>.action-menu .action-menu-items{max-width:calc(100vw - 32px);box-sizing:border-box;transform:translateX(var(--action-menu-shift-x))}';
@@ -92,7 +93,7 @@ test('shared spacing tokens set the primary card, rail, and field padding',()=>{
 });
 
 test('every CSS custom property reference has a stylesheet definition',()=>{
- const definitions=new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map(match=>match[1]));
+ const definitions=new Set([...(css+themeCss).matchAll(/(--[\w-]+)\s*:/g)].map(match=>match[1]));
  const references=new Set([...css.matchAll(/var\((--[\w-]+)/g)].map(match=>match[1]));
  assert.deepEqual([...references].filter(name=>!definitions.has(name)),[],'component tokens must resolve instead of silently invalidating declarations');
  assert.match(css,/\.learning-upload-icon\{[^}]*color:var\(--color-accent\)/);

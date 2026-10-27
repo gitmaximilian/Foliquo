@@ -1844,17 +1844,17 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .queue-sidebar #queue-title{display:flex;align-items:center;gap:8px;font-size:17px;line-height:24px;letter-spacing:-.02em}
 #queue-count:empty{display:none}
 .queue-sidebar #queue-count{margin:0;padding:2px 7px;font-size:12px;line-height:18px;font-weight:600}
-.queue-sidebar .queue-close{display:grid;place-items:center;width:36px;min-height:36px;padding:0;border-radius:10px;font-size:24px;line-height:1;color:var(--color-text-secondary)}
+.queue-sidebar .queue-close{display:grid;place-items:center;width:36px;min-height:36px;padding:0;border-radius:var(--radius-control);font-size:24px;line-height:1;color:var(--color-text-secondary)}
 .queue-sidebar .queue-close:hover{background:var(--color-surface-hover);color:var(--color-text)}
 .workspace-layout[data-view=studio] #queue-empty:not([hidden]),.queue-sidebar #queue-empty:not([hidden]){display:flex;align-items:center;gap:14px;padding:12px 0 20px;text-align:start}
-.queue-empty-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:12px;background:var(--color-surface-muted);color:var(--color-text-secondary)}
+.queue-empty-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:var(--radius-panel);background:var(--color-surface-muted);color:var(--color-text-secondary)}
 .queue-empty-icon svg{width:24px;height:24px}
 .queue-empty-copy{min-width:0}
 #queue-empty .queue-empty-copy strong{display:block;font-size:14px;line-height:21px;font-weight:600;color:var(--color-text)}
 #queue-empty .queue-empty-copy p{margin:3px 0 0;font-size:13px;line-height:20px;color:var(--color-text-secondary)}
 .queue-sidebar .queue-footnote{display:flex;align-items:center;gap:7px;margin:0;padding-top:12px;text-align:start;font-size:12px;line-height:18px;color:var(--color-text-secondary)}
 .queue-footnote svg{flex:0 0 14px;width:14px;height:14px}
-.queue-sidebar .queue-row{border-radius:12px;padding:14px}
+.queue-sidebar .queue-row{border-radius:var(--radius-panel);padding:14px}
 .queue-sidebar .queue-row-copy>strong{font-size:14px;line-height:21px;font-weight:600}
 @media(max-width:599px){#queue-card{padding:16px}.queue-sidebar #queue-title{font-size:16px}}
 
