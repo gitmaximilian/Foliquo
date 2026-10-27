@@ -18,7 +18,7 @@ if(process.platform==='linux'){
  const service=join(generated,'service');
  await mkdir(join(service,'runtime'),{recursive:true});
  await cp(process.execPath,join(service,'runtime/node'));
- await cp(resolve(dirname(process.execPath),'../../LICENSE'),join(service,'runtime/LICENSE'));
+ await cp(resolve(dirname(process.execPath),'../LICENSE'),join(service,'runtime/LICENSE'));
 }
 const office=join(generated,'office');
 await mkdir(office,{recursive:true});
