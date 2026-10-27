@@ -62,7 +62,11 @@ jobs:
           sudo flatpak install -y --noninteractive flathub org.gnome.Platform//48 org.gnome.Sdk//48
       - run: npm ci --ignore-scripts
       - name: Build native window and bundled resources
+        if: runner.os != 'macOS'
         run: npm run desktop:build
+      - name: Build macOS app without Tauri's interactive DMG layout step
+        if: runner.os == 'macOS'
+        run: npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri build --bundles app
       - name: Check bundled service and one fictional export
         run: node scripts/smoke-desktop.mjs
       - name: Collect macOS app and DMG
