@@ -134,8 +134,8 @@ try {
     socket.addEventListener('open', () => { clearTimeout(timer); resolve(); }, {once: true});
     socket.addEventListener('error', () => { clearTimeout(timer); reject(new Error('Could not connect to the Windows WebView2 page.')); }, {once: true});
   });
-  await cdp('Runtime.enable');
-  await cdp('Log.enable');
+  // Runtime.evaluate works without enabling the event streams. Some hosted
+  // WebView2 builds expose the page target but never answer Runtime.enable.
   const expression = "(()=>{const s=document.querySelector('.app-shell');const main=document.querySelector('#main-content');const body=(s?.innerText||document.body?.innerText||'').trim();return {url:location.href,title:document.title,ready:document.readyState,desktop:window.__FOLIQUO_DESKTOP__===true,shell:!!s,main:!!main,body:body.slice(0,1200),bodyLength:body.length,styles:document.styleSheets.length,background:getComputedStyle(document.body).backgroundColor}})()";
   let state;
   const renderDeadline = Date.now() + 30000;
