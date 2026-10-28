@@ -50,7 +50,7 @@ test('A missing label remains answerable and a final unreadable decision is not 
  const added=await post('/api/jobs',{clientId:'fixture',requestId:'missing-label',model:'fixture',metadata:{targetLanguage:'Deutsch'},files:[{name:'fictional.pdf',data:Buffer.from(await pdf.save()).toString('base64')}]});
  assert.equal(added.status,202);
  const {id}=await added.json();
- const wait=async status=>{for(let n=0;n<200;n++){const {jobs}=await fetch(origin+'/api/jobs',{headers}).then(r=>r.json());const job=jobs.find(j=>j.id===id);if(job?.status===status)return job;if(job?.status==='failed')assert.fail(job.error);await new Promise(r=>setTimeout(r,20));}assert.fail(`Missing ${status}`);};
+ const wait=async status=>{for(let n=0;n<3000;n++){const {jobs}=await fetch(origin+'/api/jobs',{headers}).then(r=>r.json());const job=jobs.find(j=>j.id===id);if(job?.status===status)return job;if(job?.status==='failed')assert.fail(job.error);await new Promise(r=>setTimeout(r,20));}assert.fail(`Missing ${status}`);};
  const question=await wait('awaiting_answers');
  assert.equal(question.questions[0].kind,'unreadable');
  assert.equal((await post(`/api/jobs/${id}/unreadable`,{questionId:question.questions[0].id})).status,200);

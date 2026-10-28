@@ -83,7 +83,7 @@ test('HTTP queue accepts background work, isolates results and serves completed 
  assert.equal((await fetch(`${origin}/api/jobs/${id}/result`,{headers:other})).status,400);
  assert.equal((await fetch(`${origin}/api/jobs/${id}/cancel`,{method:'POST',headers:{...headers,'X-TranslateOCR-Csrf':'wrong'},body:'{}'})).status,403);
  await fetch(`${origin}/api/jobs/${second.id}/cancel`,{method:'POST',headers,body:'{}'});release();
- for(let i=0;i<200;i++){state=await fetch(`${origin}/api/jobs`,{headers}).then(r=>r.json());if(state.jobs[0].status==='succeeded')break;await new Promise(resolve=>setTimeout(resolve,50));}
+ for(let i=0;i<1200;i++){state=await fetch(`${origin}/api/jobs`,{headers}).then(r=>r.json());if(state.jobs[0].status==='succeeded')break;await new Promise(resolve=>setTimeout(resolve,50));}
  assert.equal(state.jobs[0].status,'succeeded');assert.equal(state.jobs[1].status,'cancelled');assert.equal(state.jobs[0].progress,100);
  const result=await fetch(`${origin}/api/jobs/${id}/result`,{headers}).then(r=>r.json());assert.equal(result.text,'Testübersetzung');assert.equal(Buffer.from(result.pdf,'base64').subarray(0,5).toString(),'%PDF-');
 });

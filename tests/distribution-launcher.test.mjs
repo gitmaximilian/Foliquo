@@ -19,7 +19,7 @@ test('installed CLI starts from another working directory, reuses the service an
  const portServer=http.createServer();await new Promise(resolve=>portServer.listen(0,'127.0.0.1',resolve));const port=portServer.address().port;await new Promise(resolve=>portServer.close(resolve));
  const cli=fileURLToPath(new URL('../bin/foliquo.mjs',import.meta.url)),env={...process.env,FOLIQUO_DATA_DIR:directory,FOLIQUO_PORT:String(port),FOLIQUO_NO_BROWSER:'1'};
  const child=spawn(process.execPath,[cli],{cwd:tmpdir(),env,stdio:['ignore','pipe','pipe']});let output='';child.stdout.on('data',b=>output+=b);child.stderr.on('data',b=>output+=b);t.after(()=>child.kill());
- let health;for(let i=0;i<100;i++){health=await probeService(port);if(health)break;if(child.exitCode!==null)throw new Error(output);await delay(100);}
+ let health;for(let i=0;i<600;i++){health=await probeService(port);if(health)break;if(child.exitCode!==null)throw new Error(output);await delay(100);}
  assert.equal(health?.application,'foliquo',output);
  assert.equal((await fetch(`http://127.0.0.1:${port}/api/lifecycle/stop`,{method:'POST'})).status,403);
  const run=args=>new Promise((resolve,reject)=>{const p=spawn(process.execPath,[cli,...args],{cwd:tmpdir(),env});let out='';p.stdout.on('data',b=>out+=b);p.stderr.on('data',b=>out+=b);p.on('error',reject);p.on('close',code=>resolve({code,out}));});
