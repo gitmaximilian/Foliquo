@@ -1,15 +1,18 @@
 # Foliquo desktop apps
 
-Free desktop packages for Windows 10/11 x64, macOS 15+ (Apple Silicon and Intel), and Linux x64 are attached to the [desktop apps release](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v0.11.6). The release includes checksums and per-platform build reports. These are direct downloads; the GitHub Actions artifact browser is not needed.
+Free desktop packages for Windows 10/11 x64, macOS 15+ (Apple Silicon and Intel), and Linux x64 are attached to the [desktop apps release](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v0.11.7). The release includes checksums and per-platform build reports. These are direct downloads; the GitHub Actions artifact browser is not needed.
 
 ## Downloads
 
-- Windows x64: `Foliquo_0.11.6_x64-setup.exe`
+- Windows x64 direct installer: `Foliquo_0.11.7_x64-setup.exe`
+- Windows MSIX Store-intake candidate: `Foliquo-Desktop-0.11.7-Windows-x64-Store-intake.msix` (not for direct installation; see below)
 - macOS Apple Silicon: `Foliquo-Desktop-macOS-arm64.dmg`
 - macOS Intel: `Foliquo-Desktop-macOS-x64.dmg`
-- Linux x64: `Foliquo-Desktop-0.11.6-Linux-x64.flatpak`
+- Linux x64: `Foliquo-Desktop-0.11.7-Linux-x64.flatpak`
 
 The Windows installer is a regular unsigned per-user installer. Windows SmartScreen may show a warning because the community app has no paid code-signing certificate. The macOS apps are unsigned and not notarized; after verifying the download, macOS may require a one-time Open Anyway approval in System Settings → Privacy & Security. Do not turn off either operating system’s protection globally. The Linux package is a local Flatpak bundle, not a Flathub listing. No store certification or trusted publisher signature is claimed.
+
+The separate MSIX is an unsigned Store-intake candidate, not an end-user installer. Its manifest identity is provisional; its Name and Publisher must exactly match the app identity assigned in Partner Center before submission. The candidate is not Store-certified or Store-signed and is not suitable for direct side-loading.
 
 ## Install
 
@@ -26,7 +29,7 @@ Choose the DMG matching the Mac’s processor, open it, and drag Foliquo into Ap
 Install Flatpak if needed, then install the downloaded bundle:
 
 ```sh
-flatpak install --user ./Foliquo-Desktop-0.11.6-Linux-x64.flatpak
+flatpak install --user ./Foliquo-Desktop-0.11.7-Linux-x64.flatpak
 ```
 
 Flatpak can fetch the GNOME 50 runtime when it is not already installed. Start Foliquo from the application menu or with:
