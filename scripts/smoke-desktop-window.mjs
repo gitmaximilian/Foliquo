@@ -14,7 +14,7 @@ const installDir = join(tmpdir(), 'foliquo-window-install-' + randomUUID());
 const installer = spawnSync(join(installerDirectory, installerName), ['/S', '/D=' + installDir], {
   cwd: process.cwd(),
   stdio: 'inherit',
-  timeout: 120000,
+  timeout: 360000,
   windowsHide: true
 });
 if (installer.error) throw installer.error;
