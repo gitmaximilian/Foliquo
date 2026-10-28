@@ -27,7 +27,7 @@ jobs:
           cache: npm
       - name: Install macOS export tool
         if: runner.os == 'macOS'
-        run: brew install --cask libreoffice
+        run: brew update && brew install --cask libreoffice
       - name: Install Windows export tool
         if: runner.os == 'Windows'
         shell: pwsh
