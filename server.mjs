@@ -291,7 +291,9 @@ const job=queue.add({owner:active.id,clientId:input.clientId,requestId:input.req
   });
   server.flushWorkspace=persist;server.on('close',()=>{if(retentionTimer)clearInterval(retentionTimer);});return server;
 }
-if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+const entryPath=process.argv[1]&&resolve(process.argv[1]),modulePath=fileURLToPath(import.meta.url);
+const isMain=entryPath&&(process.platform==='win32'?entryPath.toLowerCase()===modulePath.toLowerCase():entryPath===modulePath);
+if(isMain){
  let unlock,app,recordPath;
  try {
   const port=servicePort();if(await probeService(port))throw new Error('A Foliquo service is already running on this port.');
