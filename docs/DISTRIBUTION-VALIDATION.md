@@ -1,14 +1,14 @@
 # Foliquo Community distribution verification
 
-## Current release — 0.11.3
+## Current release — 0.11.10
 
-[Release 0.11.3](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.11.3) is public for Windows x64, Linux x64, and macOS ARM64/Intel, with actual checksums and signature status. [All release gates passed](https://github.com/gitmaximilian/Foliquo/actions/runs/40465445154), including 140 tests on the native builds, both Homebrew architectures and official WinGet validation.
+The regular stable browser/CLI release [v0.11.10](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.11.10) and native desktop release [desktop-v0.11.10](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v0.11.10) are public. Windows x64, macOS Apple Silicon and Intel, and Linux x64 desktop build jobs, package checks, checksum checks, and the release publishing jobs passed in the [core release workflow](https://github.com/gitmaximilian/Foliquo/actions/runs/40779778895) and [desktop release workflow](https://github.com/gitmaximilian/Foliquo/actions/runs/40779779502). The desktop workflow also verified a rendered Windows app window and a fictional export; updater validation passed for Windows and both Mac architectures.
 
-The official Homebrew tap points to 0.11.3. An actual public Homebrew upgrade from 0.11.1 to 0.11.3 passed locally; private workspace key, preferences and ChatGPT authorization were preserved and all eight live models remained available.
+The Homebrew tap now points to 0.11.10. Both native tap checks passed, and [the formula update PR](https://github.com/gitmaximilian/homebrew-tap/pull/1) was merged. Its ARM64 and Intel download hashes match the public release checksums.
 
-[WinGet submission #462448](https://github.com/microsoft/winget-pkgs/pull/462448) now contains the generated 0.11.3 manifests. Microsoft moderation/indexing is still pending; no public WinGet command for Foliquo is advertised. The previously documented hosted WinGet installation limitation remains separate from the successful native installer lifecycle checks.
+[WinGet submission #462448](https://github.com/microsoft/winget-pkgs/pull/462448) now contains only the 0.11.10 manifest set, and Microsoft's CLA check passes. Microsoft moderator approval and indexing are still pending; full `winget install --manifest` acceptance remains unverified, so no WinGet installation command is advertised.
 
-The unpublished 0.11.2 candidate was cancelled before publication to include version-neutral installation links. Its tag was preserved, without a binary release. Website downloads and the real-app screenshot were updated to 0.11.3.
+The Windows installer and macOS applications are not signed with paid platform certificates and may show first-install warnings. macOS packages are not notarized; Linux is distributed as a local Flatpak bundle, not through Flathub. The website was left unchanged for this GitHub release update.
 
 ## Original 0.11.1 verification
 
@@ -33,7 +33,7 @@ Version: 0.11.1. Published on October 26, 2026 after all release gates passed.
 Public website: https://maximilianauer.at/projects/foliquo/
 Repository implementation: https://github.com/gitmaximilian/Foliquo/pull/3
 
-## Published installation paths
+### Published installation paths recorded for v0.11.1
 
 - macOS: `brew install --cask libreoffice`, `brew install gitmaximilian/tap/foliquo`, then `foliquo`.
 - Windows: download [the per-user x64 installer](https://github.com/gitmaximilian/Foliquo/releases/download/v0.11.1/Foliquo-Community-0.11.1-Windows-x64-Setup.exe), install LibreOffice Writer, and open Foliquo Community from Start. `Foliquo.exe doctor` checks exports.
@@ -42,18 +42,18 @@ Repository implementation: https://github.com/gitmaximilian/Foliquo/pull/3
 - [Successful release gates](https://github.com/gitmaximilian/Foliquo/actions/runs/40405697137): four native builds, two native Homebrew lifecycles and official WinGet 1.29.380 validation.
 - Historical v0.11.0 tag is retained but has no published release because its gates failed. Tags and old releases were not rewritten.
 
-## Remaining manual acceptance
+### Remaining manual acceptance recorded for v0.11.1
 
 Physical Windows clean-account interaction and SmartScreen appearance, a historical-version installer upgrade, optional Authenticode certificate configuration, and Microsoft's independent review/indexing remain separate. The account owner approved the CLA and Microsoft's license/cla check passed. No OS protection was disabled. For future automatic tap-update pull requests, a narrowly scoped TAP_GITHUB_TOKEN is optional; the first public tap was published using the existing authorized account.
 
-## Package-manager publication evidence
+### Package-manager publication evidence recorded for v0.11.1
 
 - [Public tap CI](https://github.com/gitmaximilian/homebrew-tap/actions/runs/40408197556): both ARM64 and Intel passed against public immutable release downloads.
 - [WinGet submission #462448](https://github.com/microsoft/winget-pkgs/pull/462448): open; CLA passed; not merged or indexed at report time. No public Foliquo WinGet installation command is advertised.
 - [Package-update preparation](https://github.com/gitmaximilian/Foliquo/actions/runs/40408998522): passed, including metadata download/checksum/extraction. Without the optional scoped tap token it produces reviewed update files rather than claiming an automatic repository update.
 - The existing website was published through its original Cloudflare Pages project. German navigation from Demo back to `/projects/?lang=de` was verified by an actual public browser click. Desktop/mobile source-review images and README image were captured from the running demo.
 
-## WinGet acceptance limitation
+### WinGet acceptance limitation recorded for v0.11.1
 
 [Published-manifest acceptance run](https://github.com/gitmaximilian/Foliquo/actions/runs/40409514273) passed official manifest validation and public installer download/hash verification. WinGet then stalled at “Starting package install…” and the bounded test failed after four minutes. Process diagnostics showed WinGet but no Foliquo setup process; no Inno installer log was created. This does not establish the root cause. Full WinGet installation/uninstallation is **not verified** and remains a required desktop-session or Microsoft review check. The separately tested Windows installer and public direct download remain available. The Microsoft PR explicitly leaves this acceptance checkbox unchecked.
 
