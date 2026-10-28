@@ -292,7 +292,8 @@ const job=queue.add({owner:active.id,clientId:input.clientId,requestId:input.req
   server.flushWorkspace=persist;server.on('close',()=>{if(retentionTimer)clearInterval(retentionTimer);});return server;
 }
 const entryPath=process.argv[1]&&resolve(process.argv[1]),modulePath=fileURLToPath(import.meta.url);
-const isMain=entryPath&&(process.platform==='win32'?entryPath.toLowerCase()===modulePath.toLowerCase():entryPath===modulePath);
+const legacyMain=entryPath&&(process.platform==='win32'?entryPath.toLowerCase()===modulePath.toLowerCase():entryPath===modulePath);
+const isMain=import.meta.main??legacyMain;
 if(isMain){
  let unlock,app,recordPath;
  try {
