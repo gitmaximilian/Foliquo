@@ -5,6 +5,7 @@ import {readdir,writeFile} from 'node:fs/promises';
 const directory=new URL('../release-desktop/final/',import.meta.url);
 const files=(await readdir(directory)).filter(name=>!['SHA256SUMS','BUILD-REPORT.txt'].includes(name)).sort();
 if(!files.length)throw new Error('No desktop package was built.');
+const hasUpdaterSignature=files.some(name=>name.endsWith('.sig'));
 const checks=[];
 for(const name of files){
  const hash=createHash('sha256');
@@ -12,4 +13,4 @@ for(const name of files){
  checks.push(`${hash.digest('hex')}  ${name}`);
 }
 await writeFile(new URL('SHA256SUMS',directory),checks.join('\n')+'\n');
-await writeFile(new URL('BUILD-REPORT.txt',directory),`Commit: ${process.env.GITHUB_SHA||'local'}\nPlatform: ${process.env.DESKTOP_PLATFORM||process.platform}\nSigned: no\nStore submission: no\n`);
+await writeFile(new URL('BUILD-REPORT.txt',directory),`Commit: ${process.env.GITHUB_SHA||'local'}\nPlatform: ${process.env.DESKTOP_PLATFORM||process.platform}\nOS code signature: no\nTauri updater signature: ${hasUpdaterSignature?'yes':'no'}\nStore submission: no\n`);

@@ -69,9 +69,15 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Build native window and bundled resources
         if: runner.os != 'macOS'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run desktop:build
       - name: Build macOS app without Tauri's interactive DMG layout step
         if: runner.os == 'macOS'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri build --bundles app
       - name: Check bundled service and one fictional export
         run: node scripts/smoke-desktop.mjs
@@ -85,14 +91,21 @@ jobs:
           mkdir -p release-desktop/final
           app=$(find desktop/src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app' -print -quit)
           test -d "$app"
+          updater=$(find desktop/src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app.tar.gz' -print -quit)
+          test -n "$updater"
+          test -f "$updater.sig"
           ditto -c -k --sequesterRsrc --keepParent "$app" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.zip"
           hdiutil create -quiet -srcfolder "$app" -volname Foliquo -format UDZO "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.dmg"
+          cp "$updater" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.app.tar.gz"
+          cp "$updater.sig" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.app.tar.gz.sig"
       - name: Collect Windows desktop installer
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           New-Item release-desktop/final -ItemType Directory -Force | Out-Null
-          Copy-Item desktop/src-tauri/target/release/bundle/nsis/*-setup.exe release-desktop/final/
+          $nsis = 'desktop/src-tauri/target/release/bundle/nsis'
+          Copy-Item "$nsis/*-setup.exe" release-desktop/final/
+          Copy-Item "$nsis/*.sig" release-desktop/final/
           ./desktop/windows/build-msix.ps1
           Copy-Item release-desktop/*-Store-intake.msix release-desktop/final/
       - name: Build local Flatpak bundle
@@ -146,11 +159,15 @@ jobs:
               esac
             done
           done
-          test -f "release-assets/Foliquo_0.11.7_x64-setup.exe"
-          test -f "release-assets/Foliquo-Desktop-0.11.7-Windows-x64-Store-intake.msix"
+          test -f "release-assets/Foliquo_${version}_x64-setup.exe"
+          test -f "release-assets/Foliquo_${version}_x64-setup.exe.sig"
+          test -f "release-assets/Foliquo-Desktop-${version}-Windows-x64-Store-intake.msix"
           test -f "release-assets/Foliquo-Desktop-macOS-arm64.dmg"
           test -f "release-assets/Foliquo-Desktop-macOS-x64.dmg"
-          test -f "release-assets/Foliquo-Desktop-0.11.7-Linux-x64.flatpak"
+          test -f "release-assets/Foliquo-Desktop-macOS-arm64.app.tar.gz.sig"
+          test -f "release-assets/Foliquo-Desktop-macOS-x64.app.tar.gz.sig"
+          test -f "release-assets/Foliquo-Desktop-${version}-Linux-x64.flatpak"
+          node scripts/create-updater-manifest.mjs release-assets
           cd release-assets
           find . -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
           sha256sum -c SHA256SUMS
@@ -163,5 +180,5 @@ jobs:
           version="${GITHUB_REF_NAME#desktop-v}"
           mapfile -t assets < <(find release-assets -maxdepth 1 -type f -print | sort)
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "Foliquo Community v$version — Desktop apps" \
-            --notes-file "docs/RELEASE-$version.md" "${assets[@]}"
+            --latest --notes-file "docs/RELEASE-$version.md" "${assets[@]}"
           echo "Published Windows, macOS (Apple Silicon and Intel), and Linux desktop packages." >> "$GITHUB_STEP_SUMMARY"

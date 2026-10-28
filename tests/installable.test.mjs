@@ -26,11 +26,11 @@ test('setup page explains browser-only use and keeps local workspace during manu
  assert.match(readme,/Homebrew/);assert.match(readme,/preserv/i);
 });
 
-test('update check reports a newer GitHub release without exposing any workspace data',async t=>{
- const port=15982,connection={data:{},status:()=>({connected:false})};const app=createApp({connection,port,fetcher:async()=>new Response(JSON.stringify({tag_name:'v99.0.0',published_at:'2026-10-24T00:00:00Z'}),{status:200,headers:{'content-type':'application/json'}})});
+test('update check reports the desktop release tag without exposing workspace data',async t=>{
+ const port=15982,connection={data:{},status:()=>({connected:false})};const app=createApp({connection,port,fetcher:async()=>new Response(JSON.stringify({tag_name:'desktop-v99.0.0',published_at:'2026-10-24T00:00:00Z'}),{status:200,headers:{'content-type':'application/json'}})});
  await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});t.after(()=>new Promise(resolve=>app.close(resolve)));
  const base=`http://127.0.0.1:${port}`,root=await fetch(base),cookie=root.headers.get('set-cookie').split(';')[0],result=await fetch(`${base}/api/update-check`,{headers:{cookie}}).then(r=>r.json());
- assert.equal(result.current,CURRENT_VERSION);assert.equal(result.latest,'99.0.0');assert.equal(result.updateAvailable,true);assert.equal(result.url,'https://github.com/gitmaximilian/Foliquo/releases/tag/v99.0.0');assert.equal(Object.hasOwn(result,'documents'),false);
+ assert.equal(result.current,CURRENT_VERSION);assert.equal(result.latest,'99.0.0');assert.equal(result.updateAvailable,true);assert.equal(result.url,'https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v99.0.0');assert.equal(Object.hasOwn(result,'documents'),false);
 });
 
 test('browser service no longer exposes native-app or PWA install endpoints',async t=>{

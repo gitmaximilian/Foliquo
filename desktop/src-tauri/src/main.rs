@@ -8,8 +8,10 @@ use std::{
     thread,
     time::Duration,
 };
-use tauri::{utils::config::WebviewUrl, webview::{DownloadEvent, NewWindowResponse, WebviewWindowBuilder}, Manager, WindowEvent};
+use tauri::{utils::config::WebviewUrl, webview::{DownloadEvent, NewWindowResponse, WebviewWindowBuilder}, AppHandle, Manager, WindowEvent};
 use tauri_plugin_opener::OpenerExt;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use tauri_plugin_updater::UpdaterExt;
 
 struct OwnedService {
     child: Mutex<Option<Child>>,
@@ -154,9 +156,71 @@ fn start_service(app: &tauri::App) -> Result<(u16, Option<OwnedService>), String
     Err("The local Foliquo service did not become ready. Check desktop-service.log in the Foliquo log directory.".into())
 }
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn emit_updater_state(app: &AppHandle, payload: serde_json::Value) {
+    let Ok(payload) = serde_json::to_string(&payload) else { return };
+    let script = format!("window.dispatchEvent(new CustomEvent('foliquo-desktop-updater',{{detail:{payload}}}));");
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.eval(&script);
+    }
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn request_update(app: AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        let updater = match app.updater() {
+            Ok(updater) => updater,
+            Err(error) => {
+                eprintln!("Foliquo updater setup failed: {error}");
+                emit_updater_state(&app, serde_json::json!({"state":"failed"}));
+                return;
+            }
+        };
+        let update = match updater.check().await {
+            Ok(Some(update)) => update,
+            Ok(None) => {
+                emit_updater_state(&app, serde_json::json!({"state":"unavailable"}));
+                return;
+            }
+            Err(error) => {
+                eprintln!("Foliquo updater check failed: {error}");
+                emit_updater_state(&app, serde_json::json!({"state":"failed"}));
+                return;
+            }
+        };
+        let version = update.version.clone();
+        emit_updater_state(&app, serde_json::json!({"state":"downloading","version":version,"downloaded":0,"total":null}));
+        #[cfg(target_os = "windows")]
+        let update = update.restart_after_install(true);
+        let progress_app = app.clone();
+        let progress_version = version.clone();
+        let install_app = app.clone();
+        let install_version = version.clone();
+        let mut downloaded = 0_u64;
+        let result = update.download_and_install(
+            move |chunk, total| {
+                downloaded += chunk as u64;
+                emit_updater_state(&progress_app, serde_json::json!({"state":"downloading","version":progress_version,"downloaded":downloaded,"total":total}));
+            },
+            move || emit_updater_state(&install_app, serde_json::json!({"state":"installing","version":install_version})),
+        ).await;
+        if let Err(error) = result {
+            eprintln!("Foliquo updater installation failed: {error}");
+            emit_updater_state(&app, serde_json::json!({"state":"failed"}));
+            return;
+        }
+        emit_updater_state(&app, serde_json::json!({"state":"installed","version":version}));
+        #[cfg(target_os = "macos")]
+        app.restart();
+    });
+}
+
 fn main() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init());
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    builder
         .setup(|app| {
             let startup = start_service(app);
             let app_for_navigation = app.handle().clone();
@@ -177,6 +241,13 @@ fn main() {
                 .inner_size(1280.0, 820.0)
                 .min_inner_size(800.0, 560.0)
                 .on_navigation(move |url| {
+                    if url.scheme() == "foliquo-update" {
+                        if url.host_str() == Some("install") {
+                            #[cfg(any(target_os = "macos", target_os = "windows"))]
+                            request_update(app_for_navigation.clone());
+                        }
+                        return false;
+                    }
                     // Tauri uses its custom scheme on macOS/Linux and the
                     // tauri.localhost origin for local assets on Windows.
                     // Keep both available for the service-start error page,
@@ -192,6 +263,13 @@ fn main() {
                     false
                 })
                 .on_new_window(move |url, _| {
+                    if url.scheme() == "foliquo-update" {
+                        if url.host_str() == Some("install") {
+                            #[cfg(any(target_os = "macos", target_os = "windows"))]
+                            request_update(app_for_new_window.clone());
+                        }
+                        return NewWindowResponse::Deny;
+                    }
                     if url.scheme() == "https" || url.scheme() == "mailto" {
                         let _ = app_for_new_window.opener().open_url(url.as_str(), None::<&str>);
                     }

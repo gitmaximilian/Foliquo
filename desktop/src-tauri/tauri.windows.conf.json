@@ -1,5 +1,13 @@
 {
   "bundle": {
-    "targets": ["nsis"]
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaW5nIHB1YmxpYyBrZXk6IEIyRkM2ODg5Mjg3RDg0ODMKUldTRGhIMG9pV2o4c3BJL0RrbThRc0QvanZhQkVNR2s0SHBTZmxRell0aUVLUmtMRXZ6eFVDRkIK",
+      "endpoints": ["https://github.com/gitmaximilian/Foliquo/releases/latest/download/latest.json"],
+      "windows": {"installMode": "passive"}
+    }
   }
 }

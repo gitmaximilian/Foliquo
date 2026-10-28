@@ -1,0 +1,62 @@
+name: Desktop updater validation
+on:
+  push:
+    branches: [codex/native-desktop]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macOS-arm64
+          - os: macos-15-intel
+            platform: macOS-x64
+          - os: windows-2022
+            platform: Windows-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install macOS export tool
+        if: runner.os == 'macOS'
+        run: brew install --cask libreoffice
+      - name: Install Windows export tool
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./packaging/windows/prepare-libreoffice.ps1
+      - run: npm ci --ignore-scripts
+      - name: Build signed macOS updater package
+        if: runner.os == 'macOS'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri build --bundles app
+      - name: Build signed Windows updater installer
+        if: runner.os == 'Windows'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run desktop:build
+      - name: Check bundled service and fictional export
+        run: node scripts/smoke-desktop.mjs
+      - name: Verify the Windows window renders Foliquo
+        if: runner.os == 'Windows'
+        run: node scripts/smoke-desktop-window.mjs
+      - name: Verify platform updater signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            version="$(node -p "JSON.parse(require('fs').readFileSync('package.json')).version")"
+            test -f "desktop/src-tauri/target/release/bundle/nsis/Foliquo_${version}_x64-setup.exe.sig"
+          else
+            test -f desktop/src-tauri/target/release/bundle/macos/Foliquo.app.tar.gz.sig
+          fi

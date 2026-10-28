@@ -154,7 +154,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
         try{
           const response=await networkFetch('https://api.github.com/repos/gitmaximilian/Foliquo/releases/latest',{headers:{accept:'application/vnd.github+json','user-agent':'Foliquo-update-check'},signal:AbortSignal.timeout(7000)},{stage:'update_check'},fetcher);
           if(!response.ok)throw new Error(`GitHub replied with ${response.status}`);
-          const release=await response.json(),releaseTag=String(release.tag_name||''),tag=releaseTag.replace(/^v/,'');
+          const release=await response.json(),releaseTag=String(release.tag_name||''),tag=releaseTag.replace(/^(?:desktop-)?v/,'');
           if(!/^\d+\.\d+\.\d+$/.test(tag))throw new Error('The latest release has no valid version tag.');
           const cmp=(a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);for(let i=0;i<3;i++)if(x[i]!==y[i])return x[i]>y[i]?1:-1;return 0;};
           json(res,{current,latest:tag,updateAvailable:cmp(tag,current)>0,url:`https://github.com/gitmaximilian/Foliquo/releases/tag/${releaseTag}`,publishedAt:release.published_at||null});
