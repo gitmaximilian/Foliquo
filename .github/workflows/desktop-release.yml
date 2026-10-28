@@ -149,7 +149,7 @@ jobs:
           test -f "release-assets/Foliquo-Desktop-macOS-x64.dmg"
           test -f "release-assets/Foliquo-Desktop-0.11.6-Linux-x64.flatpak"
           cd release-assets
-          find . -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
           sha256sum -c SHA256SUMS
       - name: Publish the verified desktop apps release
         env:
