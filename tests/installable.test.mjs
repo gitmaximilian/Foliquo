@@ -10,7 +10,7 @@ test('the browser interface remains available alongside the optional desktop win
  for(const view of ['studio','documents','review','workspace','guide'])assert.ok(html.includes(`<section id="${view}-view"`),`missing ${view} view`);
  assert.doesNotMatch(html,/dossiers-view|data-view="dossiers"|manifest\.webmanifest|service-worker|install-app|Private workspace|Dein privater Workflow|DEINE FASSUNG · DEIN FEINSCHLIFF/);
  assert.match(html,/Bildausschnitt auswählen/);assert.match(html,/id="scan-crop-stage"/);assert.match(html,/id="update-check"/);assert.match(html,/id="update-download"/);
- assert.match(html,/id="scan-pdf-page"/);assert.match(await source('../dist/source-viewer.js'),/source-selectable-text/);assert.match(await source('../dist/source-text.js'),/localOcr/);
+ assert.match(html,/id="scan-pdf-page"/);const viewer=await source('../dist/source-viewer.js');assert.match(viewer,/source-selectable-text/);assert.match(viewer,/Gesamten Text kopieren/);assert.match(viewer,/async function copyText\(\)\{copyButton\.disabled=true;try\{if\(!textContent\)[\s\S]*?const text=textContent\|\|await readSourceText\(\)/);assert.match(viewer,/copyButton\.hidden=false/);assert.match(await source('../dist/source-text.js'),/localOcr/);
  assert.equal(pkg.main,undefined);assert.equal(pkg.build,undefined);
  assert.equal(pkg.devDependencies?.['@tauri-apps/cli'],'2.12.4');
  assert.equal(pkg.scripts['desktop:build']!==undefined,true);
