@@ -14,16 +14,16 @@ const office=process.platform==='win32'?join(generated,'office/LibreOffice/progr
 const workspace=await mkdtemp(join(tmpdir(),'foliquo-desktop-smoke-'));
 const port=await new Promise((resolve,reject)=>{const server=createServer();server.once('error',reject);server.listen(0,'127.0.0.1',()=>{const value=server.address().port;server.close(()=>resolve(value));});});
 const origin=`http://127.0.0.1:${port}`;
-const child=spawn(node,[join(service,'server.mjs')],{cwd:service,env:{...process.env,FOLIQUO_PORT:String(port),FOLIQUO_DATA_DIR:workspace,TRANSLATEOCR_SOFFICE:office,FOLIQUO_NO_BROWSER:'1'},stdio:'ignore'});
-let exited=false;child.once('exit',()=>{exited=true;});
+const child=spawn(node,[join(service,'server.mjs')],{cwd:service,env:{...process.env,FOLIQUO_PORT:String(port),FOLIQUO_DATA_DIR:workspace,TRANSLATEOCR_SOFFICE:office,FOLIQUO_NO_BROWSER:'1'},stdio:['ignore','pipe','pipe']});
+let exited=false;const startupOutput=[];for(const [name,stream] of [['stdout',child.stdout],['stderr',child.stderr]]){stream.setEncoding('utf8');stream.on('data',chunk=>{startupOutput.push(`${name}: ${chunk}`);if(startupOutput.length>40)startupOutput.shift();});}child.once('error',error=>{exited=true;startupOutput.push(`spawn error: ${error.message}`);});child.once('exit',(code,signal)=>{exited=true;startupOutput.push(`process exit: code=${code}, signal=${signal}`);});
 try{
  let ready=false;
- for(let attempt=0;attempt<75;attempt++){
+ for(let attempt=0;attempt<300;attempt++){
   if(exited)throw new Error('Bundled Foliquo service exited before becoming ready.');
   try{const response=await fetch(`${origin}/api/health`,{signal:AbortSignal.timeout(500)});const health=await response.json();if(response.ok&&health.application==='foliquo'&&health.desktopBridge===1){ready=true;break;}}catch{}
   await delay(200);
  }
- if(!ready)throw new Error('Bundled Foliquo service did not start.');
+ if(!ready)throw new Error(`Bundled Foliquo service did not start within 60 seconds.${startupOutput.length?`\n${startupOutput.join('').slice(-3000)}`:''}`);
  const home=await fetch(origin),cookie=home.headers.get('set-cookie')?.split(';')[0];
  if(!cookie)throw new Error('Bundled service did not establish a browser session.');
  const session=await fetch(`${origin}/api/session`,{headers:{cookie}}).then(response=>response.json());

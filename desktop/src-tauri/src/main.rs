@@ -134,7 +134,7 @@ fn start_service(app: &tauri::App) -> Result<(u16, Option<OwnedService>), String
         .stderr(Stdio::from(log))
         .spawn().map_err(|e| format!("The bundled Node service could not start: {e}"))?;
     let expected_id = workspace_id(&workspace);
-    for _ in 0..80 {
+    for _ in 0..400 {
         if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
             return Err(format!("The local service exited during startup ({status}). Check desktop-service.log in the Foliquo log directory."));
         }
