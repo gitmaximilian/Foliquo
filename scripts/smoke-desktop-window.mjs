@@ -62,6 +62,29 @@ let socket;
 const pending = new Map();
 const browserErrors = [];
 let commandId = 0;
+async function stopOwnedService() {
+  let record;
+  try { record = JSON.parse(await readFile(join(dataDir, 'service.json'), 'utf8')); } catch { return; }
+  if (!Number.isInteger(record.pid) || !Number.isInteger(record.port) || !record.instance || !record.token) return;
+  const healthUrl = 'http://127.0.0.1:' + record.port + '/api/health';
+  try {
+    const health = await fetch(healthUrl, {signal: AbortSignal.timeout(1000)}).then(response => response.json());
+    if (health.application !== 'foliquo' || health.instance !== record.instance) return;
+    await fetch('http://127.0.0.1:' + record.port + '/api/lifecycle/stop', {
+      method: 'POST',
+      headers: {authorization: 'Bearer ' + record.token},
+      signal: AbortSignal.timeout(3000)
+    });
+  } catch {}
+  for (let attempt = 0; attempt < 40; attempt++) {
+    try {
+      const health = await fetch(healthUrl, {signal: AbortSignal.timeout(300)}).then(response => response.json());
+      if (health.instance !== record.instance) return;
+    } catch { return; }
+    await delay(100);
+  }
+  spawnSync('taskkill.exe', ['/pid', String(record.pid), '/t', '/f'], {stdio: 'ignore'});
+}
 function cdp(method, params = {}) {
   const id = ++commandId;
   return new Promise((resolve, reject) => {
@@ -129,10 +152,20 @@ try {
   console.log('Windows WebView2 rendered the Foliquo workspace: ' + JSON.stringify(state));
 } finally {
   try { socket?.close(); } catch {}
+  await stopOwnedService();
   if (!exited) {
     if (child.pid) spawnSync('taskkill.exe', ['/pid', String(child.pid), '/t', '/f'], {stdio: 'ignore'});
-    await Promise.race([new Promise(resolve => child.once('exit', resolve)), delay(5000)]);
+    await Promise.race([new Promise(resolve => child.once('exit', resolve)), delay(10000)]);
   }
-  await rm(installDir, {recursive: true, force: true});
-  await rm(dataDir, {recursive: true, force: true});
+  await stopOwnedService();
+  for (let attempt = 0; attempt < 8; attempt++) {
+    try {
+      await rm(installDir, {recursive: true, force: true});
+      await rm(dataDir, {recursive: true, force: true});
+      break;
+    } catch (error) {
+      if (!['EPERM', 'EBUSY', 'EACCES'].includes(error.code) || attempt === 7) throw error;
+      await delay(500 * (attempt + 1));
+    }
+  }
 }
