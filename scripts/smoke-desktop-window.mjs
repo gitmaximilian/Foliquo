@@ -2,12 +2,38 @@ import {spawn, spawnSync} from 'node:child_process';
 import {createServer} from 'node:net';
 import {randomUUID} from 'node:crypto';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
-import {rm} from 'node:fs/promises';
+import {basename,join} from 'node:path';
+import {readdir,rm} from 'node:fs/promises';
 import {setTimeout as delay} from 'node:timers/promises';
 
 if (process.platform !== 'win32') throw new Error('This native window smoke check runs on Windows only.');
-const executable = join(process.cwd(), 'desktop/src-tauri/target/release/foliquo-desktop.exe');
+const installerDirectory = join(process.cwd(), 'desktop/src-tauri/target/release/bundle/nsis');
+const installerName = (await readdir(installerDirectory)).find(name => name.endsWith('-setup.exe'));
+if (!installerName) throw new Error('The Windows NSIS installer was not produced.');
+const installDir = join(tmpdir(), 'foliquo-window-install-' + randomUUID());
+const installer = spawnSync(join(installerDirectory, installerName), ['/S', '/D=' + installDir], {
+  cwd: process.cwd(),
+  stdio: 'inherit',
+  timeout: 120000,
+  windowsHide: true
+});
+if (installer.error) throw installer.error;
+if (installer.status !== 0) throw new Error('The Windows desktop installer failed with exit code ' + installer.status + '.');
+
+async function findInstalledApp(directory) {
+  for (const entry of await readdir(directory, {withFileTypes: true})) {
+    const path = join(directory, entry.name);
+    if (entry.isFile() && basename(path).toLowerCase() === 'foliquo-desktop.exe') return path;
+    if (entry.isDirectory()) {
+      const found = await findInstalledApp(path);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+const executable = await findInstalledApp(installDir);
+if (!executable) throw new Error('The Windows installer did not install foliquo-desktop.exe.');
 const portServer = createServer();
 const debugPort = await new Promise((resolve, reject) => {
   portServer.once('error', reject);
@@ -18,7 +44,7 @@ const debugPort = await new Promise((resolve, reject) => {
 });
 const dataDir = join(tmpdir(), 'foliquo-window-smoke-' + randomUUID());
 const child = spawn(executable, [], {
-  cwd: process.cwd(),
+  cwd: installDir,
   env: {
     ...process.env,
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=' + debugPort,
@@ -105,5 +131,6 @@ try {
     if (child.pid) spawnSync('taskkill.exe', ['/pid', String(child.pid), '/t', '/f'], {stdio: 'ignore'});
     await Promise.race([new Promise(resolve => child.once('exit', resolve)), delay(5000)]);
   }
+  await rm(installDir, {recursive: true, force: true});
   await rm(dataDir, {recursive: true, force: true});
 }

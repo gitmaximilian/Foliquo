@@ -172,7 +172,14 @@ fn main() {
                 .inner_size(1280.0, 820.0)
                 .min_inner_size(800.0, 560.0)
                 .on_navigation(move |url| {
-                    if url.scheme() == "tauri" { return true }
+                    // Tauri uses its custom scheme on macOS/Linux and the
+                    // tauri.localhost origin for local assets on Windows.
+                    // Keep both available for the service-start error page,
+                    // and allow WebView2's initial empty document.
+                    if url.as_str() == "about:blank"
+                        || url.scheme() == "tauri"
+                        || (matches!(url.scheme(), "http" | "https") && url.host_str() == Some("tauri.localhost"))
+                    { return true }
                     if url.scheme() == "http" && url.host_str() == Some("127.0.0.1") && url.port() == local_port { return true }
                     if url.scheme() == "https" || url.scheme() == "mailto" {
                         let _ = app_for_navigation.opener().open_url(url.as_str(), None::<&str>);
