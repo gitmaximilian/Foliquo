@@ -110,7 +110,11 @@ fn start_service(app: &tauri::App) -> Result<(u16, Option<OwnedService>), String
     let workspace = workspace_directory()?;
     let (port, reuse) = select_port(&workspace)?;
     if reuse { return Ok((port, None)) }
-    let logs = app.path().app_log_dir().map_err(|e| e.to_string())?;
+    let logs = env::var_os("FOLIQUO_LOG_DIR")
+        .map(PathBuf::from)
+        .map(Ok)
+        .unwrap_or_else(|| app.path().app_log_dir())
+        .map_err(|e| e.to_string())?;
     fs::create_dir_all(&logs).map_err(|e| e.to_string())?;
     let log = OpenOptions::new().create(true).append(true).open(logs.join("desktop-service.log")).map_err(|e| e.to_string())?;
     let mut child = Command::new(&node)

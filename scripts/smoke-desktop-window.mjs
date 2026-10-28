@@ -3,7 +3,7 @@ import {createServer} from 'node:net';
 import {randomUUID} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import {basename,join} from 'node:path';
-import {readdir,rm} from 'node:fs/promises';
+import {readFile,readdir,rm} from 'node:fs/promises';
 import {setTimeout as delay} from 'node:timers/promises';
 
 if (process.platform !== 'win32') throw new Error('This native window smoke check runs on Windows only.');
@@ -49,6 +49,7 @@ const child = spawn(executable, [], {
     ...process.env,
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=' + debugPort,
     FOLIQUO_DATA_DIR: dataDir,
+    FOLIQUO_LOG_DIR: join(dataDir, 'logs'),
     FOLIQUO_NO_BROWSER: '1'
   },
   stdio: 'ignore',
@@ -122,7 +123,8 @@ try {
     await delay(400);
   }
   if (!state?.url?.startsWith('http://127.0.0.1:') || state.ready !== 'complete' || !state.shell || !state.main || !state.desktop || state.styles < 1 || state.bodyLength < 40) {
-    throw new Error('The native window did not render the Foliquo workspace: ' + JSON.stringify({state, browserErrors: browserErrors.slice(-20)}));
+    const serviceLog = await readFile(join(dataDir, 'logs', 'desktop-service.log'), 'utf8').catch(() => '');
+    throw new Error('The native window did not render the Foliquo workspace: ' + JSON.stringify({state, browserErrors: browserErrors.slice(-20), serviceLog: serviceLog.slice(-5000)}));
   }
   console.log('Windows WebView2 rendered the Foliquo workspace: ' + JSON.stringify(state));
 } finally {
