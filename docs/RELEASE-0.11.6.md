@@ -1,6 +1,6 @@
-## Foliquo Community v0.11.6 — Desktop Preview
+## Foliquo Community v0.11.6 — Desktop apps
 
-Free desktop packages for Windows, macOS, and Linux are ready for direct download. This is a pre-release for the desktop app; the stable browser and CLI release remains unchanged.
+Foliquo desktop apps for Windows, macOS, and Linux are ready for direct download. This is a regular GitHub release for the desktop edition.
 
 ### Downloads
 
@@ -12,4 +12,4 @@ Free desktop packages for Windows, macOS, and Linux are ready for direct downloa
 
 The app bundles the pinned Node runtime and LibreOffice Writer for document export. Windows includes the WebView2 offline setup. The app uses Foliquo’s local-only service and retains user data in the platform data directory. It can reuse a compatible service and opens ChatGPT login in the system browser.
 
-**Unsigned preview:** Windows may display SmartScreen. macOS packages are unsigned and not notarized, so Gatekeeper can require a one-time per-app approval. Linux is a local bundle and is not published on Flathub. These packages are not store-certified, and no trusted publisher signature is claimed. See the [desktop install guide](https://github.com/gitmaximilian/Foliquo/blob/desktop-preview-v0.11.6/docs/DESKTOP-PREVIEW.md) before installing.
+**Unsigned packages:** Windows may display SmartScreen. macOS packages are unsigned and not notarized, so Gatekeeper can require a one-time per-app approval. Linux is a local bundle and is not published on Flathub. These packages are not store-certified, and no trusted publisher signature is claimed. See the [desktop install guide](https://github.com/gitmaximilian/Foliquo/blob/desktop-v0.11.6/docs/DESKTOP-APPS.md) before installing.

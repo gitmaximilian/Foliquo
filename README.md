@@ -7,13 +7,13 @@
 <p align="center">
   <strong>From document to editable translation.</strong><br>
   Foliquo Community is the free local workspace for noncommercial use covered by its license.<br>
-  Choose the browser workspace or a native desktop preview for macOS, Windows, or Linux.
+  Choose the browser workspace or a native desktop app for macOS, Windows, or Linux.
 </p>
 
 <p align="center">
   <a href="https://maximilianauer.at/projects/foliquo/demo/?lang=en"><strong>Try the demo</strong></a> ·
-  <a href="https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-preview-v0.11.6"><strong>Desktop app downloads</strong></a> ·
-  <a href="docs/DESKTOP-PREVIEW.md">Desktop setup guide</a> ·
+  <a href="https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v0.11.6"><strong>Desktop app downloads</strong></a> ·
+  <a href="docs/DESKTOP-APPS.md">Desktop setup guide</a> ·
   <a href="https://github.com/gitmaximilian/Foliquo/releases"><strong>Stable browser/CLI downloads</strong></a> ·
   <a href="https://maximilianauer.at/projects/foliquo/">Project story</a>
 </p>
@@ -56,17 +56,17 @@ Wheel or trackpad zoom, drag-to-pan, fit-to-view, keyboard controls and a larger
 
 Foliquo opens a local browser-based workspace. It listens only on `127.0.0.1`; keep its console open while working.
 
-**Desktop apps:** Free Windows, macOS (Apple Silicon and Intel), and Linux x64 packages are published on the [0.11.6 GitHub release](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-preview-v0.11.6), with a [platform install guide](docs/DESKTOP-PREVIEW.md). The Windows installer and macOS apps are unsigned and can show operating-system warnings; Linux is a local Flatpak bundle, not a Flathub listing.
+**Desktop apps:** Free Windows, macOS (Apple Silicon and Intel), and Linux x64 packages are published on the [0.11.6 GitHub release](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v0.11.6), with a [platform install guide](docs/DESKTOP-APPS.md). The Windows installer and macOS apps are unsigned and can show operating-system warnings; Linux is a local Flatpak bundle, not a Flathub listing.
 
 **Stable browser/CLI distribution:** [The latest published version](https://github.com/gitmaximilian/Foliquo/releases/latest) has verified platform downloads and checksums. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. Foliquo is not yet available through WinGet; [the Microsoft submission](https://github.com/microsoft/winget-pkgs/pull/462448) is under review.
 
 | Platform | Installation and use |
 | --- | --- |
 | **macOS 15+, Apple Silicon / Intel** | Download the matching DMG from the desktop release. The app bundles Node and LibreOffice Writer. It is unsigned and not notarized; Gatekeeper may require a one-time approval. |
-| **Windows 10/11 x64** | Download the per-user desktop installer. It includes Node, LibreOffice Writer, and WebView2 offline setup. It is unsigned and may show SmartScreen. The preview MSIX is not included because it lacks a Store publisher identity. |
+| **Windows 10/11 x64** | Download the per-user desktop installer. It includes Node, LibreOffice Writer, and WebView2 offline setup. It is unsigned and may show SmartScreen. The MSIX is not included because it lacks a Store publisher identity. |
 | **Linux x64** | Install the Flatpak bundle from the desktop release. It includes Node and LibreOffice Writer and uses the GNOME 50 runtime; see the guide for the install command. |
 
-Read [the desktop preview guide](docs/DESKTOP-PREVIEW.md) for package install and platform-specific first-launch notes. For browser/CLI packages, run `foliquo doctor` to verify PDF/Word export, `foliquo stop` to stop the service and `foliquo data-dir` to locate your private workspace. Browser startup never downloads application code.
+Read [the desktop apps guide](docs/DESKTOP-APPS.md) for package install and platform-specific first-launch notes. For browser/CLI packages, run `foliquo doctor` to verify PDF/Word export, `foliquo stop` to stop the service and `foliquo data-dir` to locate your private workspace. Browser startup never downloads application code.
 
 ### Data, updates and uninstall
 
@@ -83,7 +83,7 @@ Jobs, preferences and provider credentials are stored in the encrypted local wor
 ## Requirements
 
 - Windows 10 1809+/11 x64, macOS 15+ (packaged builds), or Linux x64 with glibc 2.35+.
-- Desktop preview packages bundle the official pinned Node.js 24 runtime and LibreOffice Writer. Browser/CLI packages need Node.js 22+ and LibreOffice Writer installed separately.
+- Desktop app release bundle the official pinned Node.js 24 runtime and LibreOffice Writer. Browser/CLI packages need Node.js 22+ and LibreOffice Writer installed separately.
 - A modern browser. Keep the launcher terminal open while using the site.
 
 ## Developer checks

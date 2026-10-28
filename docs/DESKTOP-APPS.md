@@ -1,6 +1,6 @@
 # Foliquo desktop apps
 
-Free desktop packages for Windows 10/11 x64, macOS 15+ (Apple Silicon and Intel), and Linux x64 are attached to the [desktop preview release](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-preview-v0.11.6). The release includes checksums and per-platform build reports. These are direct downloads; the GitHub Actions artifact browser is not needed.
+Free desktop packages for Windows 10/11 x64, macOS 15+ (Apple Silicon and Intel), and Linux x64 are attached to the [desktop apps release](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v0.11.6). The release includes checksums and per-platform build reports. These are direct downloads; the GitHub Actions artifact browser is not needed.
 
 ## Downloads
 
@@ -9,7 +9,7 @@ Free desktop packages for Windows 10/11 x64, macOS 15+ (Apple Silicon and Intel)
 - macOS Intel: `Foliquo-Desktop-macOS-x64.dmg`
 - Linux x64: `Foliquo-Desktop-0.11.6-Linux-x64.flatpak`
 
-The Windows installer is an unsigned per-user installer. Windows SmartScreen may show a warning because the community app has no paid code-signing certificate. The macOS apps are unsigned and not notarized; after verifying the download, macOS may require a one-time Open Anyway approval in System Settings → Privacy & Security. Do not turn off either operating system’s protection globally. The Linux package is a local Flatpak bundle, not a Flathub listing. No store certification or trusted publisher signature is claimed.
+The Windows installer is a regular unsigned per-user installer. Windows SmartScreen may show a warning because the community app has no paid code-signing certificate. The macOS apps are unsigned and not notarized; after verifying the download, macOS may require a one-time Open Anyway approval in System Settings → Privacy & Security. Do not turn off either operating system’s protection globally. The Linux package is a local Flatpak bundle, not a Flathub listing. No store certification or trusted publisher signature is claimed.
 
 ## Install
 
@@ -19,7 +19,7 @@ Download the Windows installer and run it for the current Windows account. The p
 
 ### macOS
 
-Choose the DMG matching the Mac’s processor, open it, and drag Foliquo into Applications. On first launch, use the one-time approval in Privacy & Security if Gatekeeper blocks this unsigned preview. Apple Silicon and Intel packages are separate.
+Choose the DMG matching the Mac’s processor, open it, and drag Foliquo into Applications. On first launch, use the one-time approval in Privacy & Security if Gatekeeper blocks these unsigned packages. Apple Silicon and Intel packages are separate.
 
 ### Linux
 
@@ -43,6 +43,6 @@ The original browser and CLI use remain available. Desktop packages include the 
 
 ## Updates and verification
 
-Use the release’s `SHA256SUMS` file to verify downloads. Install a newer desktop preview from its release to update; Foliquo keeps local data in the same platform data directory. The unsigned preview is distributed for direct testing and does not imply Microsoft Store, Mac App Store, or Flathub approval.
+Use the release’s `SHA256SUMS` file to verify downloads. Install a newer desktop release to update; Foliquo keeps local data in the same platform data directory. The unsigned packages are distributed directly and do not imply Microsoft Store, Mac App Store, or Flathub approval.
 
-The latest source and build workflow are on the `codex/native-desktop` branch. Each build report records the source commit, target platform, and unsigned status. The packages include the required upstream license and notice files; see [third-party notices](THIRD-PARTY.md).
+The latest source and build workflow are on the [`codex/native-desktop` branch](https://github.com/gitmaximilian/Foliquo/tree/codex/native-desktop). Each build report records the source commit, target platform, and unsigned status. The packages include the required upstream license and notice files; see [third-party notices](THIRD-PARTY.md).

@@ -1,8 +1,8 @@
-name: Desktop preview packages
+name: Desktop app release
 on:
   push:
     branches: [codex/native-desktop]
-    tags: [desktop-preview-v*]
+    tags: [desktop-v*]
   workflow_dispatch:
 permissions:
   contents: read
@@ -87,13 +87,11 @@ jobs:
           test -d "$app"
           ditto -c -k --sequesterRsrc --keepParent "$app" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.zip"
           hdiutil create -quiet -srcfolder "$app" -volname Foliquo -format UDZO "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.dmg"
-      - name: Build unsigned Windows MSIX preview and collect installer
+      - name: Collect Windows desktop installer
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ./desktop/windows/build-msix.ps1
           New-Item release-desktop/final -ItemType Directory -Force | Out-Null
-          Copy-Item release-desktop/*.msix release-desktop/final/
           Copy-Item desktop/src-tauri/target/release/bundle/nsis/*-setup.exe release-desktop/final/
       - name: Build local Flatpak bundle
         if: runner.os == 'Linux'
@@ -113,7 +111,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
   publish-release:
-    if: startsWith(github.ref, 'refs/tags/desktop-preview-v')
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
     needs: build
     permissions:
       contents: write
@@ -130,7 +128,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#desktop-preview-v}"
+          version="${GITHUB_REF_NAME#desktop-v}"
           test "$(node -p 'JSON.parse(require("fs").readFileSync("package.json")).version')" = "$version"
           test -f "docs/RELEASE-$version.md"
           for artifact in release-assets/desktop-*; do
@@ -153,15 +151,14 @@ jobs:
           cd release-assets
           find . -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
           sha256sum -c SHA256SUMS
-      - name: Publish the verified desktop preview release
+      - name: Publish the verified desktop apps release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#desktop-preview-v}"
+          version="${GITHUB_REF_NAME#desktop-v}"
           mapfile -t assets < <(find release-assets -maxdepth 1 -type f -print | sort)
-          gh release create "$GITHUB_REF_NAME" --verify-tag --prerelease \
-            --title "Foliquo Community v$version — Desktop Preview" \
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Foliquo Community v$version — Desktop apps" \
             --notes-file "docs/RELEASE-$version.md" "${assets[@]}"
           echo "Published Windows, macOS (Apple Silicon and Intel), and Linux desktop packages." >> "$GITHUB_STEP_SUMMARY"
