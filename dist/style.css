@@ -1932,3 +1932,7 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .desktop-update-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
 .desktop-update-actions button{min-height:42px;padding:9px 16px}
 @media(max-width:480px){.desktop-update-panel{padding:20px}.desktop-update-actions{flex-direction:column-reverse}.desktop-update-actions button{width:100%}}
+
+.source-text-select-layer{position:absolute;inset:0;z-index:4;overflow:hidden;user-select:text;-webkit-user-select:text;pointer-events:none}.source-selectable-text{position:absolute;display:block;overflow:hidden;white-space:pre;line-height:1;color:transparent;opacity:.02;pointer-events:auto;user-select:text;-webkit-user-select:text;cursor:text}.source-selectable-text::selection{color:transparent;background:#4a8dfc88}
+
+#toast .toast-action{display:inline-flex;margin-inline-start:14px;min-height:36px;padding:6px 12px;border:1px solid #8bb8ff;border-radius:var(--radius-control);background:#2e79e8;color:#07182e;font:inherit;font-weight:700;cursor:pointer;animation:question-cta-pulse 1.8s ease-in-out infinite}#toast .toast-action:hover{transform:translateY(-1px);filter:brightness(1.12)}@keyframes question-cta-pulse{0%,100%{box-shadow:0 0 0 0 #7bb0ff00}50%{box-shadow:0 0 0 5px #7bb0ff35}}.question-answer-submit{margin-top:8px;min-width:180px;animation:question-cta-pulse 2s ease-in-out 2}@media(prefers-reduced-motion:reduce){#toast .toast-action,.question-answer-submit{animation:none}}

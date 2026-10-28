@@ -10,6 +10,7 @@ test('the browser interface remains available alongside the optional desktop win
  for(const view of ['studio','documents','review','workspace','guide'])assert.ok(html.includes(`<section id="${view}-view"`),`missing ${view} view`);
  assert.doesNotMatch(html,/dossiers-view|data-view="dossiers"|manifest\.webmanifest|service-worker|install-app|Private workspace|Dein privater Workflow|DEINE FASSUNG · DEIN FEINSCHLIFF/);
  assert.match(html,/Bildausschnitt auswählen/);assert.match(html,/id="scan-crop-stage"/);assert.match(html,/id="update-check"/);assert.match(html,/id="update-download"/);
+ assert.match(html,/id="scan-pdf-page"/);assert.match(await source('../dist/source-viewer.js'),/source-selectable-text/);assert.match(await source('../dist/source-text.js'),/localOcr/);
  assert.equal(pkg.main,undefined);assert.equal(pkg.build,undefined);
  assert.equal(pkg.devDependencies?.['@tauri-apps/cli'],'2.12.4');
  assert.equal(pkg.scripts['desktop:build']!==undefined,true);
@@ -35,5 +36,5 @@ test('update check reports the desktop release tag without exposing workspace da
 
 test('browser service no longer exposes native-app or PWA install endpoints',async t=>{
  const port=15983,app=createApp({connection:{data:{},status:()=>({connected:false})},port});await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});t.after(()=>new Promise(resolve=>app.close(resolve)));
- const base=`http://127.0.0.1:${port}`,root=await fetch(base),cookie=root.headers.get('set-cookie').split(';')[0];for(const path of ['/manifest.webmanifest','/service-worker.js','/install.js'])assert.equal((await fetch(`${base}${path}`,{headers:{cookie}})).status,404,path);
+ const base=`http://127.0.0.1:${port}`,root=await fetch(base),cookie=root.headers.get('set-cookie').split(';')[0];for(const path of ['/manifest.webmanifest','/service-worker.js','/install.js'])assert.equal((await fetch(`${base}${path}`,{headers:{cookie}})).status,404,path);for(const path of ['/vendor/tesseract/worker.min.js','/vendor/tesseract/core/tesseract-core.wasm.js','/vendor/tesseract/lang/ara.traineddata.gz']){const response=await fetch(`${base}${path}`,{headers:{cookie}});assert.equal(response.status,200,path);assert.ok(Number(response.headers.get('content-length')||0)===0||Number(response.headers.get('content-length'))>1000);}
 });

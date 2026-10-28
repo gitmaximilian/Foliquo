@@ -20,7 +20,7 @@ function renderJobsHeader(){
  const status=$('#jobs-header-status');if(status.dataset.status!==state.label){status.dataset.status=state.label;status.textContent=state.label;}
 }
 let queueMutationVersion=0;
-let queueState={jobs:[],paused:false},queueSubmitting=false,queuePollTimer=null,queuePolling=false,queueLoaded=false,queueLastAnnouncement='';
+let queueState={jobs:[],paused:false},queueSubmitting=false,queuePollTimer=null,queuePolling=false,queueLoaded=false,queueLastAnnouncement='',questionNoticeKeys=new Set();
 let clarificationJobId=null,clarificationFocusJobId=null,clarificationSignature='',clarificationSubmitting=false,questionOriginalReady=Promise.resolve();
 const queueSnapshots=new Map(),queueResultCache=new Map(),queueAutoFetching=new Set();
 let queueRowNodes=new Map();
@@ -41,7 +41,8 @@ function updateQueueButton(){
  const note=$('#composer-note');if(note)note.dataset.empty=String(!files.length&&!window.fileIntakePending);const provider=window.translateProviderContextState?.providerName||'';if(note)note.textContent=window.fileIntakePending?(window.TOCRI18n?.t('Dateien werden geprüft …')||'Dateien werden geprüft …'):!files.length?'Dateien hinzufügen, um zu starten.':window.isLanguagePairValid?.()===false?(window.TOCRI18n?.t('Ausgangs- und Zielsprache müssen unterschiedlich sein.')||'Ausgangs- und Zielsprache müssen unterschiedlich sein.'):!providerReady||!$('#model').value?(window.TOCRI18n?.t('KI einrichten, um zu übersetzen.')||'KI einrichten, um zu übersetzen.'):(window.TOCRI18n?.t('Die ausgewählten Dateien werden an {provider} gesendet. Das PDF enthält die Originalseiten; Word die bearbeitbare Übersetzung.')||'Die ausgewählten Dateien werden an {provider} gesendet. Das PDF enthält die Originalseiten; Word die bearbeitbare Übersetzung.').replace('{provider}',provider);
 }
 function updateQueueLiveAnnouncement(force=false){
- const jobs=queueState.jobs,active=jobs.find(j=>['running','cancelling'].includes(j.status)),pending=jobs.filter(j=>['queued','running','cancelling'].includes(j.status));
+  const jobs=queueState.jobs,active=jobs.find(j=>['running','cancelling'].includes(j.status)),pending=jobs.filter(j=>['queued','running','cancelling'].includes(j.status));
+ for(const job of jobs.filter(j=>j.status==='awaiting_answers'&&j.questions?.length)){const key=job.id+':'+job.questions.map(q=>q.id).join(',');if(!questionNoticeKeys.has(key)){questionNoticeKeys.add(key);if(clarificationJobId!==job.id)toast('Antworten werden benötigt.',{label:'Rückfragen beantworten',onClick:()=>showClarifications(job,true)});}}
  const announcement=`${active?.id||''}:${active?.stage||''}:${pending.length}:${jobs.filter(j=>j.status==='succeeded').length}:${jobs.filter(j=>j.status==='awaiting_answers').length}`;
  if(!force&&announcement===queueLastAnnouncement)return;
  queueLastAnnouncement=announcement;
@@ -230,7 +231,8 @@ function showClarifications(job,scroll){
     actions.append(unreadable);
    }
    const hint=document.createElement('small');hint.className='question-action-hint';hint.textContent=window.TOCRI18n?.t('Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.')||'Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.';
-   field.append(label,context,suggestion,actions,hint,answer);return field;
+   const send=document.createElement('button');send.type='button';send.className='primary question-answer-submit';send.textContent=window.TOCRI18n?.t('Antwort senden')||'Antwort senden';send.disabled=!answer.value.trim();answer.addEventListener('input',()=>{send.disabled=!answer.value.trim();});send.onclick=()=>void acceptClarification(job,q,answer.value.trim());
+   field.append(label,context,suggestion,actions,hint,answer,send);return field;
   });$('#clarification-fields').replaceChildren(...fields);
  }$('#clarification-card').hidden=false;renderSavedClarificationFiles(storedDraft);const answerLauncher=document.querySelector(`[data-job-id="${CSS.escape(job.id)}"][data-queue-action="answer"]`),focusReturn=answerLauncher&&!answerLauncher.closest('[inert]')?answerLauncher:$('#jobs-open');window.showClarificationDialog(focusReturn);if(scroll){$('#clarification-fields textarea')?.focus({preventScroll:true});}
 }
