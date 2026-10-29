@@ -1,0 +1,1 @@
+defect_id,session_id,document_id,blinded_output_id,rater_id,prior_source_familiarity,severity,category,stage,affected_field_count,source_region_id,non_personal_description,adjudicated_severity,adjudication_reason

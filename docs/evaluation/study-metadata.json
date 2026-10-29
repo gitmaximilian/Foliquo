@@ -1,0 +1,32 @@
+{
+  "status": "prepared_not_run",
+  "participants_recruited": 0,
+  "eligible_documents_collected": 0,
+  "planned_minimum_independent_documents": 30,
+  "planned_participants_min": 3,
+  "planned_participants_max": 5,
+  "recommended_participants": 4,
+  "baseline": { "release_tag": null, "source_commit": null, "package_name": null, "sha256": null },
+  "candidate": { "release_tag": null, "source_commit": null, "package_name": null, "sha256": null },
+  "language_pairs": [],
+  "operating_systems": [],
+  "provider": null,
+  "exact_model_id": null,
+  "account_plan": null,
+  "frozen_style_sample_set": null,
+  "assignment_seed": null,
+  "session_timeout_minutes": null,
+  "provider_call_budget": null,
+  "retention_period_days": null,
+  "approvals": {
+    "participant_invitation": false,
+    "document_use_and_redaction": false,
+    "provider_transmission": false,
+    "account_and_spend_limit": false,
+    "analysis_and_decision_rule": false,
+    "aggregate_publication": false
+  },
+  "live_provider_calls_performed": 0,
+  "quality_gain_measured": false,
+  "notes": "Empty template. Copy outside Git before recording real participants, documents or results."
+}
