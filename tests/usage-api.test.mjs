@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
+import {createServer as createNetServer} from 'node:net';
 import {join} from 'node:path';
 import {Workspace} from '../lib/workspace.mjs';
 import {newUsageRequest} from '../lib/usage.mjs';
@@ -10,7 +11,7 @@ import {PDFDocument,StandardFonts} from 'pdf-lib';
 import {createHash} from 'node:crypto';
 
 async function start(t,provider,subject=null){
- const directory=await mkdtemp(join(tmpdir(),'foliquo-usage-')),workspace=await new Workspace(directory).init(),port=49000+Math.floor(Math.random()*1000),origin=`http://127.0.0.1:${port}`;
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-usage-')),workspace=await new Workspace(directory).init(),port=await availablePort(),origin=`http://127.0.0.1:${port}`;
  const server=createApp({connection:{data:subject?{subject}:{},status:()=>({connected:true,planEnabled:true})},workspace,provider,port});await new Promise((resolve,reject)=>server.once('error',reject).listen(port,'127.0.0.1',resolve));
  t.after(async()=>{await new Promise(resolve=>server.close(resolve));for(let attempt=0;attempt<20;attempt++){const pending=workspace.tail;await pending;await new Promise(resolve=>setImmediate(resolve));if(pending===workspace.tail)break;}await workspace.tail;await rm(directory,{recursive:true,force:true});});
  const page=await fetch(origin),cookie=page.headers.get('set-cookie').split(';')[0],session=await fetch(origin+'/api/session',{headers:{cookie}}).then(response=>response.json());
@@ -18,6 +19,7 @@ async function start(t,provider,subject=null){
  const get=path=>fetch(origin+path,{headers:{cookie}});
  return {workspace,origin,post,get};
 }
+async function availablePort(){const server=createNetServer();await new Promise((resolve,reject)=>server.once('error',reject).listen(0,'127.0.0.1',resolve));const {port}=server.address();await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));return port;}
 function fixtureProvider(){let call=0;return {id:'openai',selected:'openai',status:()=>({connected:true,planEnabled:true}),models:async()=>[{id:'fictional-model',name:'Fictional model'}],respond:async(request,signal,progress,onUsage)=>{signal.throwIfAborted();call++;onUsage({inputTokens:100,outputTokens:20},{complete:true,responseId:`response-${call}`});if(request.instructions.startsWith('Lies ausschließlich'))return JSON.stringify({documentType:'Fiktive Urkunde',fields:[{label:'Name',kind:'name',source:'Alex Example',translated:'Alex Example',fileIndex:0,page:1,box:null}],uncertainRegions:[]});return JSON.stringify({status:'ready',sourceLanguage:'English',documentType:'Fictional certificate',questions:[],text:'Name | Alex Example',fields:[],regions:[]});}};}
 const turn=()=>new Promise(resolve=>setTimeout(resolve,25));
 async function waitForJob(app,id,status){for(let i=0;i<1200;i++){const data=await app.get('/api/jobs').then(response=>response.json()),job=data.jobs.find(item=>item.id===id);if(job?.status===status)return job;if(job?.status==='failed'&&status!=='failed')throw new Error(`Job ${id} failed before reaching ${status}: ${job.error}`);await turn();}throw new Error(`Job ${id} did not reach ${status} within 30 seconds.`);}
@@ -39,7 +41,7 @@ test('a server-reported ChatGPT plan limit is recorded as Foliquo-scoped and lea
 });
 
 test('an interrupted job is marked uncertain and is never replayed automatically on startup',async t=>{
- const directory=await mkdtemp(join(tmpdir(),'foliquo-recovery-')),workspace=await new Workspace(directory).init(),port=49700+Math.floor(Math.random()*100),origin=`http://127.0.0.1:${port}`,sessionId='fictional-session',csrf='fictional-csrf',jobId='00000000-0000-4000-8000-000000000001',startedAt=Date.now()-5000,usage=newUsageRequest({provider:'openai',model:'fictional-model',operation:'translation',jobId},startedAt);let calls=0;
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-recovery-')),workspace=await new Workspace(directory).init(),port=await availablePort(),origin=`http://127.0.0.1:${port}`,sessionId='fictional-session',csrf='fictional-csrf',jobId='00000000-0000-4000-8000-000000000001',startedAt=Date.now()-5000,usage=newUsageRequest({provider:'openai',model:'fictional-model',operation:'translation',jobId},startedAt);let calls=0;
  workspace.data.sessions=[[sessionId,{id:sessionId,csrf,expiresAt:Date.now()+86400000}]];workspace.data.usage=[usage];workspace.data.jobs=[{id:jobId,owner:sessionId,clientId:'fictional-client',requestId:'fictional-request',payload:{provider:'openai',model:'fictional-model',metadata:{jobId,targetLanguage:'Deutsch'},files:[{name:'fictional.txt',type:'text/plain',bytes:Buffer.from('fictional source')}],checkpoints:{translation:{phase:'translation',fingerprint:'a'.repeat(64),status:'in_flight',startedAt,attempts:[{usageId:usage.id,startedAt,status:'in_flight'}]}}},provider:'openai',stage:'translation',status:'running',createdAt:startedAt,startedAt,finishedAt:null,stageStartedAt:startedAt,units:1,estimatedSeconds:20,targetLanguage:'Deutsch',names:['fictional.txt'],events:[]}];
  const provider={id:'openai',selected:'openai',status:()=>({connected:true,planEnabled:true}),models:async()=>[{id:'fictional-model',name:'Fictional model'}],respond:async()=>{calls++;return 'never automatically sent';}},server=createApp({connection:{status:()=>({connected:true,planEnabled:true})},workspace,provider,port});await new Promise((resolve,reject)=>server.once('error',reject).listen(port,'127.0.0.1',resolve));
  t.after(async()=>{await new Promise(resolve=>server.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});});
