@@ -12,7 +12,7 @@ import {createHash} from 'node:crypto';
 async function start(t,provider,subject=null){
  const directory=await mkdtemp(join(tmpdir(),'foliquo-usage-')),workspace=await new Workspace(directory).init(),port=49000+Math.floor(Math.random()*1000),origin=`http://127.0.0.1:${port}`;
  const server=createApp({connection:{data:subject?{subject}:{},status:()=>({connected:true,planEnabled:true})},workspace,provider,port});await new Promise((resolve,reject)=>server.once('error',reject).listen(port,'127.0.0.1',resolve));
- t.after(async()=>{await new Promise(resolve=>server.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});});
+ t.after(async()=>{await new Promise(resolve=>server.close(resolve));for(let attempt=0;attempt<20;attempt++){const pending=workspace.tail;await pending;await new Promise(resolve=>setImmediate(resolve));if(pending===workspace.tail)break;}await workspace.tail;await rm(directory,{recursive:true,force:true});});
  const page=await fetch(origin),cookie=page.headers.get('set-cookie').split(';')[0],session=await fetch(origin+'/api/session',{headers:{cookie}}).then(response=>response.json());
  const post=(path,data)=>fetch(origin+path,{method:'POST',headers:{cookie,origin,'content-type':'application/json','x-foliquo-csrf':session.csrf},body:JSON.stringify(data)});
  const get=path=>fetch(origin+path,{headers:{cookie}});
