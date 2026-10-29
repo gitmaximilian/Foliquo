@@ -25,6 +25,23 @@ function renderReviewControls(){
  const blocked=reviewUnavailable||!reviewData?.result;for(const id of ['review-final-pdf','review-final-word','review-final-both'])$("#"+id).disabled=blocked;
  $('#review-version').textContent=reviewData?reviewCopy('Version {version}',{version:reviewData.version}):reviewCopy('Wird geladen');
  $('#review-final-status').textContent=reviewUnavailable?reviewCopy('Dieser Auftrag ist abgelaufen. Bitte zurückgehen und die Dateien erneut hochladen.'):!reviewData?.result?reviewCopy('Die Übersetzung wird geladen …'):reviewCopy('Version {version}',{version:reviewData.version});
+ renderLearningOffer(reviewData);
+}
+function renderLearningOffer(snapshot){
+ const card=$('#learning-offer'),button=$('#review-learning-finish'),offer=snapshot?.learningOffer,state=offer?.state;
+ const known=['offered','preflight','analyzing','pending_review','interrupted','active','dismissed','removed'].includes(state);
+ card.hidden=!['offered','preflight','analyzing','pending_review','interrupted','active'].includes(state);
+ button.hidden=Boolean(snapshot?.learningPromptDisabled)||known||!snapshot?.result||snapshot?.hasQuestions||snapshot?.busy||snapshot?.proposal;
+ button.disabled=reviewUnavailable||reviewSubmitting;
+ $('#learning-offer-actions').hidden=!['offered','preflight'].includes(state);
+ $('#learning-preflight').hidden=state!=='preflight';
+ $('#learning-offer-copy').hidden=state!=='offered';
+ $('#learning-offer-status').textContent=state==='analyzing'?'Die vollständige Musteranalyse läuft. Bereits abgeschlossene Abschnitte werden lokal gesichert.':state==='pending_review'?'Analyse abgeschlossen. Prüfe die erkannten Regeln im Bereich Anlernen, bevor du sie aktivierst.':state==='interrupted'?'Die Analyse wurde unterbrochen. Gesicherte Abschnitte bleiben erhalten; du kannst sie im Bereich Anlernen fortsetzen.':state==='active'?'Dieses Muster ist freigegeben und kann bei passenden neuen Aufträgen helfen.':'';
+ if(state==='preflight'){
+  const p=offer.preflight||{};const provider=({chatgpt:'ChatGPT-Konto',openai:'OpenAI API',anthropic:'Anthropic API',deepseek:'DeepSeek API'})[offer.provider]||offer.provider;
+  $('#learning-preflight-summary').textContent=`${offer.pages} Seiten · etwa ${offer.requests} Modellanfragen · ${provider} · ${offer.model}`;
+  $('#learning-preflight-content').textContent=p.content||'';$('#learning-preflight-standard').textContent=p.standard||'';
+ }
 }
 function renderReview(snapshot){
  if(!snapshot.result&&reviewData?.jobId===snapshot.jobId&&reviewData.version===snapshot.version&&reviewData.result)snapshot={...snapshot,result:reviewData.result,names:snapshot.names||reviewData.names};
@@ -53,6 +70,21 @@ $('#review-form').onsubmit=async event=>{
  catch(error){if(id===reviewJobId){$('#review-error').textContent=error.message;await loadReview();}}
  finally{reviewSubmitting=false;if(id===reviewJobId)renderReviewControls();}
 };
+async function learningOfferAction(action,extra={}){
+ if(!reviewJobId||!reviewData)return;const id=reviewJobId,version=reviewData.version;$('#learning-offer-status').textContent=reviewCopy('Wird gespeichert …');
+ try{const snapshot=await localRequest(`/api/jobs/${id}/learn`,{action,version,...extra}).then(r=>r.json());if(id!==reviewJobId)return;renderReview(snapshot);if(action==='start')toast(reviewCopy('Die Musteranalyse wurde gestartet.'));await loadReview(true);}
+ catch(error){if(id===reviewJobId){$('#learning-offer-status').textContent='';$('#review-error').textContent=error.message;}}
+}
+$('#review-learning-finish').onclick=()=>void learningOfferAction('finish');
+$('#learning-offer-add').onclick=()=>{
+ if(!providerReady){window.openAISettings?.($('#review-learning-finish'));$('#learning-offer-status').textContent=reviewCopy('Verbinde zuerst einen Anbieter, um die Musteranalyse vorzubereiten.');return;}
+ const model=$('#model')?.value;if(!model){window.openAISettings?.($('#review-learning-finish'));$('#learning-offer-status').textContent=reviewCopy('Bitte zuerst ein Modell auswählen.');return;}
+ void learningOfferAction('prepare',{provider:activeProvider||'chatgpt',model});
+};
+$('#learning-offer-later').onclick=()=>void learningOfferAction('dismiss');
+$('#learning-offer-never').onclick=()=>void learningOfferAction('never');
+$('#learning-analysis-start').onclick=()=>void learningOfferAction('start',{provider:activeProvider||'chatgpt',model:$('#model')?.value,confirmed:true});
+$('#learning-analysis-cancel').onclick=()=>void learningOfferAction('cancel');
 $('#review-prompt').onkeydown=event=>{if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();$('#review-form').requestSubmit();}};
 function reviewPreviewMode(mode){$('#review-pdf').hidden=mode!=='pdf';$('#review-text').hidden=mode!=='text';$('#review-show-pdf').classList.toggle('active',mode==='pdf');$('#review-show-text').classList.toggle('active',mode==='text');}
 $('#review-show-pdf').onclick=()=>reviewPreviewMode('pdf');$('#review-show-text').onclick=()=>reviewPreviewMode('text');
