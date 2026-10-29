@@ -71,4 +71,4 @@ Source setup uses package-lock.json and disables npm lifecycle scripts. Linux se
 - **Port in use:** an existing Foliquo service reopens in the browser. An unrelated service is rejected; choose another port with `FOLIQUO_PORT` (1024–65535).
 - **Workspace already in use:** stop the other instance before sharing its data directory. A stale service lock is recovered only when its owner PID no longer exists. An incomplete lock requires checking that all Foliquo processes are stopped before removing `service.lock`.
 - **Browser does not open:** open the loopback URL printed in the console. `FOLIQUO_NO_BROWSER=1` supports automated checks.
-- **Update available:** the in-app update check links to the version's release page. Follow your platform's update procedure; it never installs an update or sends workspace data to GitHub.
+- **Browser/CLI update available:** the in-app update check links to the version's release page and never installs an update or sends workspace data to GitHub. Windows and macOS desktop apps from v0.11.8 use the signed in-app updater; versions earlier than v0.11.8 must be updated manually once.

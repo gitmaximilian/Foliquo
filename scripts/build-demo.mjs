@@ -10,16 +10,16 @@ import {zipSync,strToU8} from 'fflate';
 const root=fileURLToPath(new URL('..',import.meta.url)),out=join(root,'dist/demo/assets');
 await mkdir(out,{recursive:true});
 const locales={
- de:{target:'Deutsch',source:'Englisch',name:'Name',birth:'Geburtsdatum',number:'Dokumentnummer',features:'Merkmale',none:'keine besonderen Merkmale',front:'(Vorderseite)',back:'(Rückseite)',stamp:'[Stempel: Fiktive Demo-Behörde]',signature:'[Unterschrift vorhanden]',sample:'FIKTIVES MUSTERDOKUMENT',original:'FICTIONAL SAMPLE DRIVING LICENCE'},
- en:{target:'English',source:'Arabisch',name:'Name',birth:'Date of birth',number:'Document number',features:'Features',none:'No distinguishing features',front:'(Front)',back:'(Back)',stamp:'[Stamp: fictional demo authority]',signature:'[Signature present]',sample:'FICTIONAL SAMPLE TRANSLATION',original:'نموذج خيالي لرخصة قيادة'},
- ar:{target:'Arabisch',source:'Englisch',name:'الاسم',birth:'تاريخ الميلاد',number:'رقم الوثيقة',features:'السمات',none:'لا توجد سمات مميزة',front:'(الوجه الأمامي)',back:'(الوجه الخلفي)',stamp:'[الختم: جهة تجريبية خيالية]',signature:'[يوجد توقيع]',sample:'مستند نموذجي خيالي',original:'FICTIONAL SAMPLE DRIVING LICENCE'}
+ de:{target:'Deutsch',source:'Englisch',name:'Name',birth:'Geburtsdatum',number:'Dokumentnummer',features:'Merkmale',none:'keine besonderen Merkmale',front:'(Vorderseite)',back:'(Rückseite)',stamp:'Stempel:\nFiktive Demo-Behörde',signature:'[Unterschrift: unleserlich]',sample:'FIKTIVES MUSTERDOKUMENT',original:'FICTIONAL SAMPLE DRIVING LICENCE'},
+ en:{target:'English',source:'Arabisch',name:'Name',birth:'Date of birth',number:'Document number',features:'Features',none:'No distinguishing features',front:'(Front)',back:'(Back)',stamp:'Stamp:\nFictional demo authority',signature:'[Signature: unreadable]',sample:'FICTIONAL SAMPLE TRANSLATION',original:'نموذج خيالي لرخصة قيادة'},
+ ar:{target:'Arabisch',source:'Englisch',name:'الاسم',birth:'تاريخ الميلاد',number:'رقم الوثيقة',features:'السمات',none:'لا توجد سمات مميزة',front:'(الوجه الأمامي)',back:'(الوجه الخلفي)',stamp:'ختم:\nجهة تجريبية خيالية',signature:'[توقيع: غير مقروء]',sample:'مستند نموذجي خيالي',original:'FICTIONAL SAMPLE DRIVING LICENCE'}
 };
 
 async function makeOriginal(locale){
  if(locale==='en'){
   const escape=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
   const paragraph=(s,bold=false)=>`<w:p><w:pPr><w:bidi/><w:jc w:val="right"/><w:spacing w:after="260"/></w:pPr><w:r><w:rPr><w:rtl/>${bold?'<w:b/><w:bCs/>':''}</w:rPr><w:t xml:space="preserve">${escape(s)}</w:t></w:r></w:p>`;
-  const front=['رخصة قيادة مصرية نموذجية','الوجه الأمامي','الاسم: عمر حسن','تاريخ الميلاد: 7 مارس 1998','رقم الرخصة: DEMO-12345','مستند خيالي لأغراض العرض فقط'].map((s,i)=>paragraph(s,i===0)).join('');
+  const front=['رخصة قيادة مصرية نموذجية','الوجه الأمامي','الاسم: ليلى سمير نصار','تاريخ الميلاد: 18 سبتمبر 1994','رقم الرخصة: FQ-DEMO-2048','مستند خيالي لأغراض العرض فقط'].map((s,i)=>paragraph(s,i===0)).join('');
   const back=['الوجه الخلفي','الختم: جهة تجريبية خيالية','يوجد توقيع','لا يمثل شخصًا أو جهة حقيقية'].map(paragraph).join('');
   const document=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${front}<w:p><w:r><w:br w:type="page"/></w:r></w:p>${back}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1200" w:right="1200" w:bottom="1200" w:left="1200"/></w:sectPr></w:body></w:document>`;
   const types='<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>';
@@ -30,7 +30,7 @@ async function makeOriginal(locale){
  const original=await PDFDocument.create(),font=await original.embedFont(StandardFonts.Helvetica);
  for(const side of ['FRONT','BACK']){
   const page=original.addPage([595,842]);page.drawRectangle({x:0,y:0,width:595,height:842,color:rgb(.97,.96,.99)});
-  for(const[i,line]of ['FICTIONAL EGYPTIAN SAMPLE DRIVING LICENCE',side,'Name: Omar Hassan','Date of birth: 7 March 1998','Licence number: DEMO-12345','Stamp: fictional demo authority','No real person or authority'].entries())page.drawText(line,{x:55,y:760-i*75,size:i===0?16:14,font});
+  for(const[i,line]of ['FICTIONAL EGYPTIAN SAMPLE DRIVING LICENCE',side,'Name: Layla Samir Nassar','Date of birth: 18 September 1994','Licence number: FQ-DEMO-2048','Stamp: fictional demo authority','No real person or authority'].entries())page.drawText(line,{x:55,y:760-i*75,size:i===0?16:14,font});
  }
  return Buffer.from(await original.save());
 }
@@ -39,9 +39,9 @@ for(const [locale,labels] of Object.entries(locales)){
  const source=await makeOriginal(locale);
  await writeFile(join(out,`original-${locale}.pdf`),source);
  for(const version of ['initial','final']){
-  const name=version==='final'?'Omar Hasan':'Omar Hassan';
-  const translatedName=locale==='ar'?`عمر حسن (${name})`:name;
-  const text=[labels.sample,labels.front,`${labels.name} | ${translatedName}`,`${labels.birth} | 07.03.1998`,`${labels.number} | DEMO-12345`,`${labels.features} | ${labels.none}`,labels.back,labels.stamp,labels.signature].join('\n');
+  const name=version==='final'?'Leila Samir Nassar':'Layla Samir Nassar';
+  const translatedName=locale==='ar'?`ليلى سمير نصار (${name})`:name;
+  const text=[labels.sample,labels.front,`${labels.name} | ${translatedName}`,`${labels.birth} | 18.09.1994`,`${labels.number} | FQ-DEMO-2048`,`${labels.features} | ${labels.none}`,labels.back,labels.stamp,labels.signature].join('\n');
   const metadata={language:labels.source,targetLanguage:labels.target,example:true};
   const pdf=await createTranslationPDF(text,[{type:'application/pdf',name:`fictional-driving-licence-${locale}.pdf`,bytes:source}],metadata);
   const word=createTranslationWord(text,metadata);

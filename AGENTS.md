@@ -1,6 +1,6 @@
 # Foliquo repository notes
 
-Foliquo is a browser-only application backed by a local Node.js service. Native installers may wrap the local browser service. Do not add Electron or installable PWA behavior. Keep the local service bound to loopback (`127.0.0.1`) and preserve the browser-only setup and update guide.
+Foliquo is a local Node.js application with a browser interface and an optional Tauri desktop window. Keep the browser/CLI interface available. Do not add Electron or installable PWA behavior. Keep the local service bound to loopback (`127.0.0.1`) and preserve the browser setup and update guide.
 
 ## Development
 

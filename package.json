@@ -1,6 +1,6 @@
 {
   "name": "foliquo",
-  "version": "0.11.3",
+  "version": "0.11.11",
   "private": false,
   "license": "SEE LICENSE IN LICENSE",
   "author": {
@@ -20,20 +20,29 @@
     "doctor": "node scripts/check-install.mjs",
     "setup": "node scripts/bootstrap.mjs",
     "package": "node scripts/package-release.mjs",
-    "release:metadata": "node scripts/release-metadata.mjs"
+    "release:metadata": "node scripts/release-metadata.mjs",
+    "desktop:prepare": "node scripts/prepare-desktop.mjs",
+    "desktop:build": "node scripts/prepare-desktop.mjs && cd desktop && tauri build"
   },
   "dependencies": {
     "@expo-google-fonts/noto-serif": "^0.4.2",
     "@pdf-lib/fontkit": "^1.1.1",
+    "@tesseract.js-data/ara": "1.0.0",
+    "@tesseract.js-data/deu": "1.0.0",
+    "@tesseract.js-data/eng": "1.0.0",
     "bmp-js": "^0.1.0",
     "fflate": "^0.8.3",
     "heic-convert": "^2.1.0",
     "jose": "^6.1.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.4.299",
-    "sharp": "^0.35.5"
+    "sharp": "^0.35.5",
+    "tesseract.js": "7.0.0"
   },
   "bin": {
     "foliquo": "bin/foliquo.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4"
   }
 }

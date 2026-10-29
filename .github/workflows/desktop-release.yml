@@ -1,0 +1,184 @@
+name: Desktop app release
+on:
+  push:
+    branches: [codex/native-desktop]
+    tags: [desktop-v*]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install export prerequisite for focused acceptance
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update
+          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends libreoffice-writer
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run benchmark
+      - run: npm run acceptance
+      - run: npm run demo:build
+  build:
+    if: github.event_name != 'push' || github.ref_type == 'tag'
+    needs: checks
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macOS-arm64
+          - os: macos-15-intel
+            platform: macOS-x64
+          - os: windows-2022
+            platform: Windows-x64
+          - os: ubuntu-22.04
+            platform: Linux-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install macOS export tool
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install --cask libreoffice
+      - name: Install Windows export tool
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./packaging/windows/prepare-libreoffice.ps1
+      - name: Install Linux build and export tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update
+          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf libreoffice-writer flatpak flatpak-builder elfutils
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y --noninteractive flathub org.gnome.Platform//50 org.gnome.Sdk//50
+      - run: npm ci --ignore-scripts
+      - name: Build native window and bundled resources
+        if: runner.os != 'macOS'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run desktop:build
+      - name: Build macOS app without Tauri's interactive DMG layout step
+        if: runner.os == 'macOS'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri build --bundles app
+      - name: Check bundled service and one fictional export
+        run: node scripts/smoke-desktop.mjs
+      - name: Verify the native Windows window renders the workspace
+        if: runner.os == 'Windows'
+        run: node scripts/smoke-desktop-window.mjs
+      - name: Collect macOS app and DMG
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p release-desktop/final
+          app=$(find desktop/src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app' -print -quit)
+          test -d "$app"
+          updater=$(find desktop/src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app.tar.gz' -print -quit)
+          test -n "$updater"
+          test -f "$updater.sig"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.zip"
+          hdiutil create -quiet -srcfolder "$app" -volname Foliquo -format UDZO "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.dmg"
+          cp "$updater" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.app.tar.gz"
+          cp "$updater.sig" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.app.tar.gz.sig"
+      - name: Collect Windows desktop installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item release-desktop/final -ItemType Directory -Force | Out-Null
+          $nsis = 'desktop/src-tauri/target/release/bundle/nsis'
+          Copy-Item "$nsis/*-setup.exe" release-desktop/final/
+          Copy-Item "$nsis/*.sig" release-desktop/final/
+          ./desktop/windows/build-msix.ps1
+          Copy-Item release-desktop/*-Store-intake.msix release-desktop/final/
+      - name: Build local Flatpak bundle
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          bash desktop/linux/build-flatpak.sh
+          mkdir -p release-desktop/final
+          cp release-desktop/*.flatpak release-desktop/final/
+      - name: Checksums and package evidence
+        env:
+          DESKTOP_PLATFORM: ${{ matrix.platform }}
+        run: node scripts/finalize-desktop.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: release-desktop/final/*
+          if-no-files-found: error
+          retention-days: 30
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    needs: build
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: desktop-*
+          path: release-assets
+          merge-multiple: false
+      - name: Verify platform packages and prepare public assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#desktop-v}"
+          test "$(node -p 'JSON.parse(require("fs").readFileSync("package.json")).version')" = "$version"
+          test -f "docs/RELEASE-$version.md"
+          for artifact in release-assets/desktop-*; do
+            test -d "$artifact"
+            platform="${artifact##*/desktop-}"
+            (cd "$artifact" && sha256sum -c SHA256SUMS)
+            cp "$artifact/BUILD-REPORT.txt" "release-assets/BUILD-REPORT-$platform.txt"
+            for file in "$artifact"/*; do
+              name="${file##*/}"
+              case "$name" in
+                SHA256SUMS|BUILD-REPORT.txt) continue ;;
+                *) mv "$file" release-assets/"$name" ;;
+              esac
+            done
+          done
+          test -f "release-assets/Foliquo_${version}_x64-setup.exe"
+          test -f "release-assets/Foliquo_${version}_x64-setup.exe.sig"
+          test -f "release-assets/Foliquo-Desktop-${version}-Windows-x64-Store-intake.msix"
+          test -f "release-assets/Foliquo-Desktop-macOS-arm64.dmg"
+          test -f "release-assets/Foliquo-Desktop-macOS-x64.dmg"
+          test -f "release-assets/Foliquo-Desktop-macOS-arm64.app.tar.gz.sig"
+          test -f "release-assets/Foliquo-Desktop-macOS-x64.app.tar.gz.sig"
+          test -f "release-assets/Foliquo-Desktop-${version}-Linux-x64.flatpak"
+          node scripts/create-updater-manifest.mjs release-assets
+          cd release-assets
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - name: Publish the verified desktop apps release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#desktop-v}"
+          mapfile -t assets < <(find release-assets -maxdepth 1 -type f -print | sort)
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Foliquo Community v$version — Desktop apps" \
+            --latest --notes-file "docs/RELEASE-$version.md" "${assets[@]}"
+          echo "Published Windows, macOS (Apple Silicon and Intel), and Linux desktop packages." >> "$GITHUB_STEP_SUMMARY"

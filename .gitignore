@@ -21,3 +21,6 @@ coverage/
 
 release/
 .packaging/
+desktop/generated/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/

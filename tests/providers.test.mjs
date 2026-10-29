@@ -41,3 +41,15 @@ test('Claude respects returned model output limits',async()=>{
  let submitted;const {manager}=setup(async(url,options={})=>String(url).includes('/models?')?Response.json({data:[{id:'claude-fixture',max_tokens:8192}],has_more:false}):(submitted=JSON.parse(options.body),anthropicStream('complete')));
  manager.setKey('anthropic','sk-ant-fixture');await manager.select('anthropic');await manager.respond({model:'claude-fixture',input:[{role:'user',content:[{type:'input_text',text:'fictional'}]}]});assert.equal(submitted.max_tokens,8192);
 });
+
+test('OpenAI Responses usage events expose provider token details without changing the text result',async()=>{
+ const {manager}=setup(async(url)=>String(url).endsWith('/models')?Response.json({data:[{id:'gpt-6.1-sol'}]}):new Response(`data: ${JSON.stringify({type:'response.output_text.delta',delta:'ready'})}\n\ndata: ${JSON.stringify({type:'response.completed',response:{id:'resp_fictional',usage:{input_tokens:120,output_tokens:35,total_tokens:155,input_tokens_details:{cached_tokens:20},output_tokens_details:{reasoning_tokens:7}}}})}\n\n`));
+ manager.setKey('openai','sk-openai-test-key');await manager.select('openai');const reports=[];const text=await manager.respond({model:'gpt-6.1-sol',input:[{role:'user',content:[{type:'input_text',text:'fictional'}]}]},AbortSignal.timeout(1000),()=>{},(usage,meta)=>reports.push({usage,meta}));assert.equal(text,'ready');assert.deepEqual(reports.at(-1),{usage:{inputTokens:120,outputTokens:35,cachedInputTokens:20,reasoningTokens:7},meta:{complete:true,responseId:'resp_fictional'}});
+});
+
+test('Anthropic usage includes cached input and priced cache-write breakdowns',async()=>{
+ const first={type:'message_start',message:{id:'msg_fictional',usage:{input_tokens:40,cache_read_input_tokens:10,cache_creation_input_tokens:5,cache_creation:{ephemeral_5m_input_tokens:5,ephemeral_1h_input_tokens:0}}}};
+ const events=[first,{type:'content_block_delta',delta:{type:'text_delta',text:'translated'}},{type:'message_delta',usage:{output_tokens:12}},{type:'message_stop'}];
+ const {manager}=setup(async(url)=>String(url).includes('/models?')?Response.json({data:[{id:'claude-sonnet-4-5'}],has_more:false}):new Response(events.map(event=>`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join('')));
+ manager.setKey('anthropic','sk-ant-test-key');await manager.select('anthropic');const reports=[];const text=await manager.respond({model:'claude-sonnet-4-5',input:[{role:'user',content:[{type:'input_text',text:'fictional'}]}]},AbortSignal.timeout(1000),()=>{},(usage,meta)=>reports.push({usage,meta}));assert.equal(text,'translated');assert.deepEqual(reports[0].usage,{inputTokens:55,cachedInputTokens:10,cacheWrite5mTokens:5,cacheWrite1hTokens:0});assert.equal(reports.at(-1).meta.complete,true);assert.equal(reports.at(-1).meta.responseId,'msg_fictional');
+});

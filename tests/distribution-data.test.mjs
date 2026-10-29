@@ -15,13 +15,13 @@ test('per-user paths follow platform conventions and reject relative overrides',
 test('migration preserves encrypted bytes, credentials and source and is idempotent at startup',async t=>{
  const root=await mkdtemp(join(tmpdir(),'foliquo-migration-test-'));t.after(()=>rm(root,{recursive:true,force:true}));
  const source=join(root,'.local'),target=join(root,'persistent'),workspace=await new Workspace(source).init();
- workspace.data.settings.locale='ar';workspace.data.settings.apiProviders={fictional:{apiKey:'synthetic-test-only'}};await workspace.save();
+ workspace.data.settings.locale='ar';workspace.data.settings.apiProviders={openai:{apiKey:'synthetic-test-only'}};await workspace.save();
  await writeFile(join(source,'chatgpt.json'),JSON.stringify({hostId:'synthetic',token:'fictional'}));
  const before=await readFile(join(source,'workspace.enc'));
  await prepareDataDirectory(root,{env:{},target});
  assert.deepEqual(await readFile(join(target,'workspace.enc')),before);assert.deepEqual(await readFile(join(source,'workspace.enc')),before);
  assert.deepEqual(await readFile(join(target,'workspace.key')),await readFile(join(source,'workspace.key')));
- assert.equal((await new Workspace(target).init()).data.settings.apiProviders.fictional.apiKey,'synthetic-test-only');
+ assert.equal((await new Workspace(target).init()).data.settings.apiProviders.openai.apiKey,'synthetic-test-only');
  assert.equal((await new Workspace(target).init()).data.settings.locale,'ar');
  await prepareDataDirectory(root,{env:{},target});
  await assert.rejects(migrateWorkspace(source,target),/already contains/);

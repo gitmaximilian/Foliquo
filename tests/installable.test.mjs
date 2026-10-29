@@ -5,13 +5,15 @@ import {readFile,stat} from 'node:fs/promises';
 import {createApp} from '../server.mjs';
 
 const source=path=>readFile(new URL(path,import.meta.url),'utf8');
-test('the user interface is browser-only and provides a clean localized work path',async()=>{
+test('the browser interface remains available alongside the optional desktop window',async()=>{
  const html=await source('../dist/index.html'),pkg=JSON.parse(await source('../package.json'));
  for(const view of ['studio','documents','review','workspace','guide'])assert.ok(html.includes(`<section id="${view}-view"`),`missing ${view} view`);
  assert.doesNotMatch(html,/dossiers-view|data-view="dossiers"|manifest\.webmanifest|service-worker|install-app|Private workspace|Dein privater Workflow|DEINE FASSUNG · DEIN FEINSCHLIFF/);
  assert.match(html,/Bildausschnitt auswählen/);assert.match(html,/id="scan-crop-stage"/);assert.match(html,/id="update-check"/);assert.match(html,/id="update-download"/);
- assert.equal(pkg.main,undefined);assert.equal(pkg.build,undefined);assert.equal(pkg.devDependencies,undefined);
- assert.ok(!Object.keys(pkg.scripts).some(k=>k.startsWith('desktop:')));
+ assert.match(html,/id="scan-pdf-page"/);const viewer=await source('../dist/source-viewer.js');assert.match(viewer,/source-selectable-text/);assert.match(viewer,/Gesamten Text kopieren/);assert.match(viewer,/async function copyText\(\)\{copyButton\.disabled=true;try\{if\(!textContent\)[\s\S]*?const text=textContent\|\|await readSourceText\(\)/);assert.match(viewer,/copyButton\.hidden=false/);assert.match(await source('../dist/source-text.js'),/localOcr/);
+ assert.equal(pkg.main,undefined);assert.equal(pkg.build,undefined);
+ assert.equal(pkg.devDependencies?.['@tauri-apps/cli'],'2.12.4');
+ assert.equal(pkg.scripts['desktop:build']!==undefined,true);
 });
 
 test('one-click setup and browser launchers exist for the three desktop operating systems',async()=>{
@@ -25,14 +27,14 @@ test('setup page explains browser-only use and keeps local workspace during manu
  assert.match(readme,/Homebrew/);assert.match(readme,/preserv/i);
 });
 
-test('update check reports a newer GitHub release without exposing any workspace data',async t=>{
- const port=15982,connection={data:{},status:()=>({connected:false})};const app=createApp({connection,port,fetcher:async()=>new Response(JSON.stringify({tag_name:'v99.0.0',published_at:'2026-10-24T00:00:00Z'}),{status:200,headers:{'content-type':'application/json'}})});
+test('update check reports the desktop release tag without exposing workspace data',async t=>{
+ const port=15982,connection={data:{},status:()=>({connected:false})};const app=createApp({connection,port,fetcher:async()=>new Response(JSON.stringify({tag_name:'desktop-v99.0.0',published_at:'2026-10-24T00:00:00Z'}),{status:200,headers:{'content-type':'application/json'}})});
  await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});t.after(()=>new Promise(resolve=>app.close(resolve)));
  const base=`http://127.0.0.1:${port}`,root=await fetch(base),cookie=root.headers.get('set-cookie').split(';')[0],result=await fetch(`${base}/api/update-check`,{headers:{cookie}}).then(r=>r.json());
- assert.equal(result.current,CURRENT_VERSION);assert.equal(result.latest,'99.0.0');assert.equal(result.updateAvailable,true);assert.equal(result.url,'https://github.com/gitmaximilian/Foliquo/releases/tag/v99.0.0');assert.equal(Object.hasOwn(result,'documents'),false);
+ assert.equal(result.current,CURRENT_VERSION);assert.equal(result.latest,'99.0.0');assert.equal(result.updateAvailable,true);assert.equal(result.url,'https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v99.0.0');assert.equal(Object.hasOwn(result,'documents'),false);
 });
 
 test('browser service no longer exposes native-app or PWA install endpoints',async t=>{
  const port=15983,app=createApp({connection:{data:{},status:()=>({connected:false})},port});await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});t.after(()=>new Promise(resolve=>app.close(resolve)));
- const base=`http://127.0.0.1:${port}`,root=await fetch(base),cookie=root.headers.get('set-cookie').split(';')[0];for(const path of ['/manifest.webmanifest','/service-worker.js','/install.js'])assert.equal((await fetch(`${base}${path}`,{headers:{cookie}})).status,404,path);
+ const base=`http://127.0.0.1:${port}`,root=await fetch(base),cookie=root.headers.get('set-cookie').split(';')[0];for(const path of ['/manifest.webmanifest','/service-worker.js','/install.js'])assert.equal((await fetch(`${base}${path}`,{headers:{cookie}})).status,404,path);for(const path of ['/vendor/tesseract/worker.min.js','/vendor/tesseract/core/tesseract-core.wasm.js','/vendor/tesseract/lang/ara.traineddata.gz']){const response=await fetch(`${base}${path}`,{headers:{cookie}});assert.equal(response.status,200,path);assert.ok(Number(response.headers.get('content-length')||0)===0||Number(response.headers.get('content-length'))>1000);}
 });
