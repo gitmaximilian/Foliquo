@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildSourceInventory,sourceCoverage} from '../lib/source-inventory.mjs';
+import {PDFDocument,StandardFonts} from 'pdf-lib';
+import {buildSourceInventory,extractEmbeddedSourceBlocks,sourceCoverage} from '../lib/source-inventory.mjs';
 import {documentFromLegacyText} from '../lib/document-adapter.mjs';
 
 test('source inventory creates deterministic page IDs, links extracted fields, and leaves unreviewed page content open',()=>{
@@ -20,4 +21,10 @@ test('duplicate source observations normalize once and table cells remain addres
  const field={label:'Number',source:'DEMO-482',translated:'Nummer | DEMO-482',fileIndex:0,page:1,box:[.1,.2,.3,.1]},document=documentFromLegacyText('Nummer | DEMO-482');
  const inventory=buildSourceInventory({files:[{data:'ZmljdGlvbmFs'}],pageCounts:[1],fields:[field],regions:[{...field,kind:'stamp'}],document});
  assert.equal(inventory.items.length,2);assert.deepEqual(inventory.items[1].targetNodeIds,[document.blocks[0].rows[0][0].id,document.blocks[0].rows[0][1].id]);
+});
+
+test('embedded source PDF text is extracted locally with normalized source coordinates',async()=>{
+ const pdf=await PDFDocument.create(),page=pdf.addPage([600,800]),font=await pdf.embedFont(StandardFonts.Helvetica);page.drawText('Fictional source paragraph',{x:72,y:700,size:14,font});const blocks=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}]);
+ assert.equal(blocks.length,1);assert.equal(blocks[0].sourceText,'Fictional source paragraph');assert.equal(blocks[0].kind,'heading');assert.equal(blocks[0].extractionMethod,'embedded-text');assert.equal(blocks[0].fileIndex,0);assert.equal(blocks[0].page,1);assert.equal(blocks[0].box.length,4);assert.ok(blocks[0].box.every(value=>value>=0&&value<=1));
+ const limited=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}],{maxPages:0});assert.equal(limited.truncated,true);assert.equal(limited.length,0);
 });
