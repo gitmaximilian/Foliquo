@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {Readable} from 'node:stream';
 import {Workspace} from '../lib/workspace.mjs';
+import {createApp} from '../server.mjs';
 
 async function workspace(t){const directory=await mkdtemp(join(tmpdir(),'foliquo-recovery-')),value=await new Workspace(directory).init();t.after(async()=>{await value.tail.catch(()=>{});await rm(directory,{recursive:true,force:true});});return value;}
 
@@ -48,6 +49,27 @@ test('a missing authenticated sidecar object restores the complete committed gen
  const value=await workspace(t),now=Date.now();value.data.jobs.push({id:'fictional-object-recovery-job',owner:'fictional-owner',status:'succeeded',createdAt:now,finishedAt:now,payload:{files:[{name:'fictional-source.bin',bytes:Buffer.from('FICTIONAL SOURCE BYTES')}]},result:{text:'Preserved fictional translation'},questions:[]});await value.save();
  const object=value.jobStore.index.jobs[0].objects[0],objectPath=join(value.directory,object.type,`${object.id}.enc`);await rm(objectPath);
  const reopened=await new Workspace(value.directory).init();assert.equal(reopened.data.jobs[0].result.text,'Preserved fictional translation');assert.equal(reopened.data.jobs[0].payload.files[0].bytes.toString(),'FICTIONAL SOURCE BYTES');assert.ok(reopened.recoveredFrom);
+});
+
+test('lazy archived sidecar corruption restores a verified point and reloads the job in the running workspace',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-lazy-recovery-')),value=await new Workspace(directory,{lazyJobs:true}).init();t.after(async()=>{await value.tail.catch(()=>{});await rm(directory,{recursive:true,force:true});});
+ const id='fictional-lazy-recovery-job',now=Date.now();value.data.jobs.push({id,owner:'fictional-owner',status:'succeeded',createdAt:now,finishedAt:now,payload:{files:[{name:'fictional-source.bin',bytes:Buffer.from('FICTIONAL SOURCE BYTES')}]},result:{text:'Preserved fictional translation'},questions:[]});await value.save();
+ const object=value.jobStore.index.jobs[0].objects[0],objectPath=join(value.directory,object.type,`${object.id}.enc`);await rm(objectPath);value.jobStore.cache.clear();value.jobStore.cacheSize=0;
+ await assert.rejects(()=>value.jobStore.getJob(id),{code:'ERR_FOLIQUO_JOB_STORE_CORRUPT'});
+ const recovered=await value.recoverFromLatest();assert.ok(recovered);const job=await value.jobStore.getJob(id);assert.equal(job.result.text,'Preserved fictional translation');assert.equal(job.payload.files[0].bytes.toString(),'FICTIONAL SOURCE BYTES');assert.equal(value.recoveredFrom.id,recovered.id);
+});
+
+test('opening a corrupted lazy archive through HTTP restores its local point and returns the recovered review',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-http-lazy-recovery-')),value=await new Workspace(directory,{lazyJobs:true}).init(),port=46000+Math.floor(Math.random()*1000);let app,runtime;
+ t.after(async()=>{if(app?.listening)await new Promise(resolve=>app.close(resolve));await Promise.all([value.tail.catch(()=>{}),runtime?.tail.catch(()=>{})]);await rm(directory,{recursive:true,force:true});});
+ const sessionId='fictional-recovery-session',jobId='f1c710ca-3ba0-4d83-9b1a-87e567d81234',now=Date.now();value.data.sessions=[[sessionId,{id:sessionId,csrf:'fictional-csrf',expiresAt:now+60_000}]];value.data.jobs.push({id:jobId,owner:sessionId,status:'succeeded',createdAt:now,finishedAt:now,names:['Fictional.pdf'],payload:{files:[{name:'Fictional.pdf',bytes:Buffer.from('FICTIONAL SOURCE BYTES')}]},result:{text:'Fictional reviewed translation',word:'RkFLRQ==',context:{},checks:[],fields:[],regions:[],references:[]},questions:[]});await value.save();
+ runtime=await new Workspace(directory,{lazyJobs:true}).init();app=createApp({workspace:runtime,port,connection:{status:()=>({connected:false,planEnabled:false})}});await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});
+ const localSession=await fetch(`http://127.0.0.1:${port}/api/session`,{headers:{cookie:`urkundenklar=${sessionId}`}}).then(response=>response.json());assert.equal(localSession.csrf,'fictional-csrf');
+ await runtime.tail;assert.deepEqual(runtime.jobStore.listSummaries({owner:sessionId}).map(job=>job.id),[jobId]);assert.equal(runtime.data.jobs.length,0);const object=runtime.jobStore.index.jobs[0].objects[0];await rm(join(runtime.directory,object.type,`${object.id}.enc`));runtime.jobStore.cache.clear();runtime.jobStore.cacheSize=0;
+ const response=await fetch(`http://127.0.0.1:${port}/api/jobs/${jobId}/review`,{headers:{cookie:`urkundenklar=${sessionId}`}}),snapshot=await response.json();assert.equal(response.status,200,JSON.stringify({snapshot,recoveredFrom:runtime.recoveredFrom}));assert.equal(snapshot.jobId,jobId);assert.equal(snapshot.version,1);assert.equal(runtime.recoveredFrom.reason,'daily');
+ const recovered=await runtime.jobStore.getJob(jobId);assert.equal(recovered.result.text,'Fictional reviewed translation');assert.equal(recovered.payload.files[0].bytes.toString(),'FICTIONAL SOURCE BYTES');
+ const wordObject=runtime.jobStore.index.jobs[0].objects.find(item=>item.path===JSON.stringify(['result','word']));assert.ok(wordObject);await rm(join(runtime.directory,wordObject.type,`${wordObject.id}.enc`));runtime.jobStore.cache.clear();runtime.jobStore.cacheSize=0;
+ const download=await fetch(`http://127.0.0.1:${port}/api/jobs/${jobId}/download/word`,{headers:{cookie:`urkundenklar=${sessionId}`}});assert.equal(download.status,200);assert.equal(Buffer.from(await download.arrayBuffer()).toString(),'FAKE');
 });
 
 test('a missing or invalid local workspace key is recovered from the encrypted point',async t=>{

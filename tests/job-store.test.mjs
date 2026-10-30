@@ -102,6 +102,13 @@ test('owner-scoped job metadata keeps sidecar objects as references without hydr
  assert.equal(store.getObjectInfo(job.id,['result','pdf'],'fictional-owner').size,3);assert.equal(await store.getJobMetadata(job.id,'another-owner'),null);
 });
 
+test('metadata and streamed object integrity failures carry the recoverable corruption code',async t=>{
+ const {directory,store}=await fixture(t),job={...fictionalJob('fictional-corrupt-metadata'),payload:{files:[{name:'fictional-source.bin',bytes:Buffer.from('FICTIONAL SOURCE')}]},result:{text:'fictional result',word:'RkFLRQ=='}};await store.commitJob(job);
+ const entry=store.index.jobs[0],word=entry.objects.find(object=>object.path===JSON.stringify(['result','word']));assert.ok(word);
+ await rm(join(directory,word.type,`${word.id}.enc`));await assert.rejects(()=>store.withJobObject(job.id,['result','word'],'fictional-owner',async()=>{}),{code:'ERR_FOLIQUO_JOB_STORE_CORRUPT'});
+ await rm(join(directory,'record',`${entry.recordId}.enc`));await assert.rejects(()=>store.getJobMetadata(job.id,'fictional-owner'),{code:'ERR_FOLIQUO_JOB_STORE_CORRUPT'});
+});
+
 test('history search and document-type filters run across the complete owner index before paging',async t=>{
  const {store}=await fixture(t),records=[fictionalJob('fictional-filter-1'),fictionalJob('fictional-filter-2'),{...fictionalJob('fictional-filter-birth',5000),createdAt:4000,names:['older-birth-record.pdf'],detected:{sourceLanguage:'English',documentType:'Birth certificate'}}];
  await store.commitJobs(records);
