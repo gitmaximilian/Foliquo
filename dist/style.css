@@ -1150,6 +1150,8 @@ body>*{display:none!important}
 .library-toolbar input{flex:1;width:100%;height:40px;font-size:var(--text-control-size)}
 .library-toolbar select{width:210px;height:40px;font-size:var(--text-control-size)}
 .library-results{overflow:auto}
+.library-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:16px;color:var(--muted)}
+.library-load-error{color:var(--color-danger)}
 .library-results:has(.action-menu[open]){padding-bottom:100px}
 .document-table{width:100%;border-collapse:collapse;text-align:start;font-size:14px}
 .document-table th{text-align:start;font-weight:500;color:var(--muted);font-size:13px;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}

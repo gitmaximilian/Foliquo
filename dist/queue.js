@@ -149,7 +149,7 @@ async function queueAction(action,job,launcher=document.activeElement){
    files=snapshot?[...snapshot]:result.previews.map(f=>{const raw=atob(f.data),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));return new File([bytes],f.type==='application/pdf'?f.name.replace(/\.[^.]+$/,'')+'.pdf':f.name,{type:f.type});});
    for(const f of result.previews||[])convertedPreviews.set(f.name,f);renderFiles();view('studio');openEditor(launcher);$('#translation').value=result.text;$('#draft-tag').textContent='Übersetzung abgeschlossen';document.querySelectorAll('.review-checks input').forEach(el=>el.checked=false);cachedPDF={fingerprint:pdfFingerprint(),data:result.pdf};cachedWord={fingerprint:pdfFingerprint(),data:result.word};return;
   }
-  await localRequest(`/api/jobs/${job.id}/${action}`,{});if(action==='remove'){queueSnapshots.delete(job.id);queueResultCache.delete(job.id);}await pollQueue();
+  await localRequest(`/api/jobs/${job.id}/${action}`,{});if(action==='remove'){queueSnapshots.delete(job.id);queueResultCache.delete(job.id);}await pollQueue();if(action==='remove')await window.refreshDocumentHistory?.({removeId:job.id});
  }catch(error){toast(error.message);}
 }
 function queueFilename(job){const base=job.names[0]?.replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,70)||'foliquo';return `${base}-${job.targetLanguage}-uebersetzung.pdf`;}
