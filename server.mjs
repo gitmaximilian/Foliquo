@@ -189,7 +189,31 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
   function json(res,value,status=200) { res.writeHead(status,{'Content-Type':'application/json;charset=utf-8'});res.end(JSON.stringify(value)); }
   async function streamDownload(res,source,type,filename,length){res.writeHead(200,{'Content-Type':type,'Content-Disposition':`attachment; filename="${filename}"`,...(Number.isSafeInteger(length)?{'Content-Length':length}:{}),'Cache-Control':'no-store'});await pipeline(Readable.from(source),res);}
   async function streamStoredJobObject(res,job,path,type,filename){if(!workspace?.jobStore)return false;await workspace.tail;const info=workspace.jobStore.getObjectInfo(job.id,path,job.owner);if(!info||!Number.isSafeInteger(info.size))return false;return workspace.jobStore.withJobObject(job.id,path,job.owner,async({tempPath,size})=>{if(size!==info.size)throw new Error('Stored job object length does not match its index.');await streamDownload(res,createReadStream(tempPath),type,filename,size);});}
-  async function streamCompleteArchivedPdf(res,job){if(!workspace?.jobStore||!job?.result)return false;const result=job.result,pdfPath=['result','pdf'],pdfInfo=workspace.jobStore.getObjectInfo(job.id,pdfPath,job.owner);if(!pdfInfo)return false;const key=result.originalPreviews?.length?'originalPreviews':'previews',sources=result[key]||[];let originalPages=0;for(let index=0;index<sources.length;index++){const file=sources[index];if(file.type!=='application/pdf'){originalPages++;continue;}const path=['result',key,String(index),'data'],info=workspace.jobStore.getObjectInfo(job.id,path,job.owner);if(!info)return false;let pages=0;await workspace.jobStore.withJobObject(job.id,path,job.owner,async({tempPath})=>{pages=(await PDFDocument.load(await readFile(tempPath))).getPageCount();});originalPages+=pages;}let delivered=false;await workspace.jobStore.withJobObject(job.id,pdfPath,job.owner,async({tempPath,size})=>{const pdf=await PDFDocument.load(await readFile(tempPath)),expected=result.preflight?.translationPages,complete=!originalPages||(Number.isInteger(expected)?pdf.getPageCount()>=expected+originalPages:pdf.getPageCount()>originalPages);if(!complete)return;await streamDownload(res,createReadStream(tempPath),'application/pdf','foliquo-translation.pdf',size);delivered=true;});return delivered;}
+  async function streamCompleteArchivedPdf(res,job){
+    if(!workspace?.jobStore||!job?.result)return false;
+    const result=job.result,pdfPath=['result','pdf'],pdfInfo=workspace.jobStore.getObjectInfo(job.id,pdfPath,job.owner);if(!pdfInfo)return false;
+    let delivered=false;
+    await workspace.jobStore.withJobObject(job.id,pdfPath,job.owner,async({tempPath,size})=>{
+      const preflight=result.preflight,expected=preflight?.translationPages,pageCount=preflight?.pageCount,originalPages=preflight?.originalPages;
+      let complete=false;
+      if(typeof preflight?.digest==='string'&&/^[a-f0-9]{64}$/.test(preflight.digest)&&Number.isInteger(expected)&&expected>0&&Number.isInteger(pageCount)&&Number.isInteger(originalPages)&&originalPages>=0){
+        const digest=createHash('sha256');for await(const chunk of createReadStream(tempPath))digest.update(chunk);
+        if(digest.digest('hex')===preflight.digest)complete=pageCount>=expected+originalPages;
+      }
+      if(!complete){
+        const key=result.originalPreviews?.length?'originalPreviews':'previews',sources=result[key]||[];let sourcePages=0;
+        for(let index=0;index<sources.length;index++){
+          const file=sources[index];if(file.type!=='application/pdf'){sourcePages++;continue;}
+          const path=['result',key,String(index),'data'];if(!workspace.jobStore.getObjectInfo(job.id,path,job.owner))return;
+          await workspace.jobStore.withJobObject(job.id,path,job.owner,async({tempPath:sourcePath})=>{sourcePages+=(await PDFDocument.load(await readFile(sourcePath))).getPageCount();});
+        }
+        const pdf=await PDFDocument.load(await readFile(tempPath));complete=!sourcePages||(Number.isInteger(expected)?pdf.getPageCount()>=expected+sourcePages:pdf.getPageCount()>sourcePages);
+      }
+      if(!complete)return;
+      await streamDownload(res,createReadStream(tempPath),'application/pdf','foliquo-translation.pdf',size);delivered=true;
+    });
+    return delivered;
+  }
   async function streamArchivedBundle(res,job){if(!workspace?.jobStore||!job?.result)return false;const pdfPath=['result','pdf'],wordPath=['result','word'];if(!workspace.jobStore.getObjectInfo(job.id,pdfPath,job.owner)||!workspace.jobStore.getObjectInfo(job.id,wordPath,job.owner))return false;await workspace.tail;const output=new PassThrough({highWaterMark:64*1024});let pendingDrain=null;const archive=new Zip((error,chunk,final)=>{if(error){output.destroy(error);return;}if(chunk&&!output.write(chunk))pendingDrain=once(output,'drain');if(final)output.end();});const drain=async()=>{if(pendingDrain){const current=pendingDrain;pendingDrain=null;await current;}};const add=async(path,filename)=>workspace.jobStore.withJobObject(job.id,path,job.owner,async({tempPath})=>{const entry=new ZipPassThrough(filename);archive.add(entry);await drain();for await(const chunk of createReadStream(tempPath)){entry.push(chunk);await drain();}entry.push(new Uint8Array(0),true);await drain();});const producer=(async()=>{await add(pdfPath,'uebersetzung.pdf');await add(wordPath,'uebersetzung.docx');archive.end();})().catch(error=>output.destroy(error));res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':'attachment; filename="foliquo-pdf-word.zip"','Cache-Control':'no-store'});await pipeline(output,res);await producer;return true;}
   async function* base64Chunks(value){const chunkChars=64*1024;for(let offset=0;offset<value.length;offset+=chunkChars)yield Buffer.from(value.slice(offset,offset+chunkChars),'base64');}
   function base64ByteLength(value){const padding=value.endsWith('==')?2:value.endsWith('=')?1:0;return Math.floor(value.length*3/4)-padding;}

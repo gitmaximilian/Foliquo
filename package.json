@@ -17,6 +17,7 @@
     "test:browser": "playwright test",
     "test:storage": "node scripts/storage-scale.mjs",
     "test:storage:memory": "node --expose-gc scripts/storage-memory.mjs",
+    "test:storage:large-pdf": "node --expose-gc scripts/profile-large-pdf.mjs",
     "benchmark": "node scripts/benchmark.mjs",
     "demo:build": "node scripts/build-demo.mjs",
     "acceptance": "node scripts/acceptance.mjs",
