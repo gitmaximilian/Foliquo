@@ -6,6 +6,7 @@ import { validateDocuments, createTranslationPDF, translationRequest } from '../
 import { createApp } from '../server.mjs';
 import { Workspace } from '../lib/workspace.mjs';
 import { PDFDocument } from 'pdf-lib';
+import { unzipSync } from 'fflate';
 import { mkdtemp, stat, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -115,9 +116,10 @@ test('lazy job history loads an archived result on demand and keeps it out of qu
  workspace.jobStore.getJob=async()=>{throw new Error('Archived artifact routes should not hydrate the full job.');};
  const download=await fetch(`${origin}/api/jobs/${job.id}/download/pdf`,{headers});assert.equal(download.headers.get('content-type'),'application/pdf');assert.deepEqual(Buffer.from(await download.arrayBuffer()),pdfBytes);
  const wordDownload=await fetch(`${origin}/api/jobs/${job.id}/download/word`,{headers});assert.equal(wordDownload.headers.get('content-type'),'application/vnd.openxmlformats-officedocument.wordprocessingml.document');assert.deepEqual(Buffer.from(await wordDownload.arrayBuffer()),Buffer.from('FAKE'));
+ const bundle=await fetch(`${origin}/api/jobs/${job.id}/download/bundle`,{headers});assert.equal(bundle.headers.get('content-type'),'application/zip');const bundleFiles=unzipSync(new Uint8Array(await bundle.arrayBuffer()));assert.deepEqual(Buffer.from(bundleFiles['uebersetzung.pdf']),pdfBytes);assert.deepEqual(Buffer.from(bundleFiles['uebersetzung.docx']),Buffer.from('FAKE'));
  const sourceManifest=await fetch(`${origin}/api/jobs/${job.id}/source/manifest`,{headers}).then(r=>r.json());assert.equal(sourceManifest.files[0].size,sourceBytes.length);assert.equal('data' in sourceManifest.files[0],false);
  const sourceDownload=await fetch(`${origin}/api/jobs/${job.id}/source/0`,{headers});assert.deepEqual(Buffer.from(await sourceDownload.arrayBuffer()),sourceBytes);
- assert.equal(storedStreams,4,'PDF completeness inspection and PDF, Word, and source responses should use authenticated encrypted sidecars');
+ assert.equal(storedStreams,6,'PDF completeness inspection, PDF, Word, bundle, and source responses should use authenticated encrypted sidecars');
  const after=await fetch(`${origin}/api/jobs`,{headers}).then(r=>r.json());assert.equal(after.jobs.some(item=>item.id===job.id),false);
  const otherHome=await fetch(origin),otherCookie=otherHome.headers.get('set-cookie').split(';')[0];assert.equal((await fetch(`${origin}/api/jobs/${job.id}/result`,{headers:{cookie:otherCookie}})).status,400);assert.equal((await fetch(`${origin}/api/jobs/${job.id}/download/pdf`,{headers:{cookie:otherCookie}})).status,400);
 });
