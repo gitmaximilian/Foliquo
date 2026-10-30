@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDocumentModel,validateDocumentModel} from '../lib/document-model.mjs';
 import {documentFromLegacyText,documentToLegacyText} from '../lib/document-adapter.mjs';
+import {createTranslationWord} from '../lib/word.mjs';
+import {strFromU8,unzipSync} from 'fflate';
 
 test('legacy text adapter round-trips headings, mixed tables, blank lines, stamps, lists, page breaks, RTL, and final newline',()=>{
  const legacy='Vorderseite\nName: Alex Example\nNummer | DEMO-12345\n\n\tLabel\tValue\n\tA\tB\nStamp :\n  Fictional Authority  \n\n- first item\n2. second item\n[Seitenumbruch]\nالاسم: مثال\n';
@@ -34,4 +36,9 @@ test('legacy adapter preserves valid oversized text and falls back to paragraphs
  for(const legacy of [longLine,manyLines,wideRow,manyRows,manyItems])assert.equal(documentToLegacyText(documentFromLegacyText(legacy)),legacy);
  assert.throws(()=>validateDocumentModel({...documentFromLegacyText('short'),sourceRefs:false}),/Dokumentstruktur/);
  assert.throws(()=>validateDocumentModel({...documentFromLegacyText('short'),blocks:[{id:'large',type:'paragraph',content:'x'.repeat(1000000)},{id:'extra',type:'paragraph',content:'y'}]}),/Dokumentstruktur/);
+});
+
+test('Word export consumes the structured model and applies its validated table widths',()=>{
+ const model=documentFromLegacyText('Fictional field | Fictional value\nAnother field | Another value');model.blocks.find(block=>block.type==='table').relativeColumnWidths=[25,75];const xml=strFromU8(unzipSync(createTranslationWord(model,{targetLanguage:'Deutsch'}))['word/document.xml']),widths=[...xml.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map(match=>Number(match[1]));
+ assert.match(xml,/Fictional field/);assert.match(xml,/Another value/);assert.equal(widths.length,2);assert.ok(widths[0]<widths[1]);assert.ok(Math.abs(widths[0]/widths[1]-1/3)<0.02);
 });
