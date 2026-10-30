@@ -95,6 +95,8 @@ test('HTTP queue accepts background work, isolates results and serves completed 
  const pdfDownload=await fetch(`${origin}/api/jobs/${id}/download/pdf`,{headers});assert.equal(pdfDownload.headers.get('content-type'),'application/pdf');assert.equal(Buffer.from(await pdfDownload.arrayBuffer()).subarray(0,5).toString(),'%PDF-');
  const wordDownload=await fetch(`${origin}/api/jobs/${id}/download/word`,{headers});assert.equal(wordDownload.headers.get('content-type'),'application/vnd.openxmlformats-officedocument.wordprocessingml.document');assert.equal(Buffer.from(await wordDownload.arrayBuffer()).subarray(0,2).toString(),'PK');
  const bundleDownload=await fetch(`${origin}/api/jobs/${id}/download/bundle`,{headers});assert.equal(bundleDownload.headers.get('content-type'),'application/zip');assert.equal(Buffer.from(await bundleDownload.arrayBuffer()).subarray(0,2).toString(),'PK');
+ const sourceManifest=await fetch(`${origin}/api/jobs/${id}/source/manifest`,{headers}).then(r=>r.json());assert.equal(sourceManifest.files.length,1);assert.equal(sourceManifest.files[0].index,0);assert.equal(sourceManifest.files[0].type,'application/pdf');assert.equal('data' in sourceManifest.files[0],false);
+ const sourceDownload=await fetch(`${origin}/api/jobs/${id}/source/0`,{headers});assert.equal(sourceDownload.headers.get('content-type'),'application/pdf');assert.equal(Buffer.from(await sourceDownload.arrayBuffer()).subarray(0,5).toString(),'%PDF-');assert.equal((await fetch(`${origin}/api/jobs/${id}/source/0`,{headers:other})).status,400);assert.equal((await fetch(`${origin}/api/jobs/${id}/source/9`,{headers})).status,400);
 });
 
 test('lazy job history loads an archived result on demand and keeps it out of queue polling',async t=>{
