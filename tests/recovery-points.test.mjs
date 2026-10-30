@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdir,mkdtemp,readFile,readdir,rm,writeFile} from 'node:fs/promises';
+import {chmod,mkdir,mkdtemp,readFile,readdir,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {Readable} from 'node:stream';
@@ -27,6 +27,15 @@ test('EACCES while preparing a restore leaves the active generation untouched an
  const originalWriter=value.recoveryPoints.writeFile;value.recoveryPoints.writeFile=async(path,...args)=>{if(path.includes('.recovery-restore-state.tmp-'))throw Object.assign(new Error('injected denied restore marker'),{code:'EACCES'});return originalWriter(path,...args);};
  assert.equal(await value.recoveryPoints.restoreLatest(),null);assert.equal((await readFile(manifestPath)).toString(),'damaged active manifest');assert.deepEqual(await readFile(indexPath),indexBefore);assert.equal((await readdir(value.directory)).some(name=>name==='.recovery-restore.pending'),false);assert.equal((await readdir(value.directory)).some(name=>name.startsWith('.recovery-restore-')),false);
  value.recoveryPoints.writeFile=originalWriter;assert.ok(await value.recoveryPoints.restoreLatest());const reopened=await new Workspace(value.directory).init();assert.equal(reopened.data.glossary[0].target,'committed target');
+});
+
+test('OS-enforced restore permission denial preserves the active manifest and permits retry',async t=>{
+ if(process.platform==='win32'){t.skip('Windows permission semantics require a platform-specific ACL fixture.');return;}
+ const value=await workspace(t);value.put('glossary',{name:'Fictional OS permission recovery',source:'fictional source',target:'committed target'});await value.save();const manifestPath=join(value.directory,'workspace.enc'),indexPath=join(value.directory,'record','job-index-00000000000000000000000000000000.enc'),indexBefore=await readFile(indexPath);await rm(manifestPath);await writeFile(manifestPath,Buffer.from('damaged active manifest'));
+ await chmod(value.directory,0o500);let denied=false;try{await writeFile(join(value.directory,'permission-probe.tmp'),'probe',{flag:'wx'});}catch(error){denied=error.code==='EACCES'||error.code==='EPERM';}
+ if(!denied){await chmod(value.directory,0o700);t.skip('The current process can bypass POSIX directory write permissions.');return;}
+ try{assert.equal(await value.recoveryPoints.restoreLatest(),null);assert.equal((await readFile(manifestPath)).toString(),'damaged active manifest');assert.deepEqual(await readFile(indexPath),indexBefore);assert.equal((await readdir(value.directory)).some(name=>name.startsWith('.recovery-restore-')),false);}finally{await chmod(value.directory,0o700);}
+ assert.ok(await value.recoveryPoints.restoreLatest());const reopened=await new Workspace(value.directory).init();assert.equal(reopened.data.glossary[0].target,'committed target');
 });
 
 test('a committed save remains available and reports an ENOSPC recovery-point failure',async t=>{
