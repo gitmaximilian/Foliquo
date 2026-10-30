@@ -42,8 +42,22 @@ import {checkpointFingerprint,reusableCheckpoint,beginCheckpoint,completeCheckpo
 import {createImportBatch,batchFiles,batchSnapshot,batchForOwner,availableBatchSlots,nextBatchGroup} from './lib/import-batches.mjs';
 import {putDossier,dossierFor,addFact,dossierChecks} from './lib/dossiers.mjs';
 import {jobDocumentGroup} from './lib/job-store.mjs';
+import {compareGlossaryImport,exportGlossaryCSV,parseGlossaryCSV} from './lib/glossary-csv.mjs';
 
 const root = fileURLToPath(new URL('.',import.meta.url));
+function glossaryConflictQuestions(payload,context){
+ const pending=[],clarifications=payload.metadata.clarifications||[],retained=[];
+ for(const conflict of context.glossaryConflicts||[]){
+  const targets=[...new Set(conflict.entries.map(entry=>entry.target))],contextKey=`Glossarentscheidung · ${conflict.source} · ${targets.join(' | ')}`;
+  const decision=clarifications.find(item=>item.context===contextKey&&typeof item.answer==='string');
+  if(!decision){pending.push({question:`Welche Übersetzung soll Foliquo für „${conflict.source}“ verwenden? Nenne eine der vorgeschlagenen Übersetzungen oder gib eine passende eigene Übersetzung an.`,context:contextKey});continue;}
+  const chosen=decision.answer.trim().slice(0,300);if(!chosen){pending.push({question:`Welche Übersetzung soll Foliquo für „${conflict.source}“ verwenden?`,context:contextKey});continue;}
+  const term={...conflict.entries[0],source:conflict.source,target:chosen,status:'approved',scope:'job',scopeId:payload.metadata.jobId||'',jobId:payload.metadata.jobId||'',name:conflict.source};retained.push(term);
+ }
+ if(pending.length)return pending;
+ context.terms=[...(context.terms||[]),...retained];context.glossaryConflicts=[];context.glossaryConflictDecisions=retained.map(({source,target})=>({source,target}));context.contextVersion=createHash('sha256').update(JSON.stringify({prior:context.contextVersion,terms:context.terms,decisions:context.glossaryConflictDecisions})).digest('hex').slice(0,32);
+ return [];
+}
 const assets = {'/':'index.html','/index.html':'index.html','/theme.js':'theme.js','/theme.css':'theme.css','/icons/icon.svg':'brand/community/svg/icon-color.svg','/icons/icon-180.png':'brand/community/png/app-icon-light-180.png','/icons/icon-192.png':'brand/community/png/app-icon-light-192.png','/icons/icon-512.png':'brand/community/png/app-icon-light-512.png','/app.js':'app.js','/import-batches.js':'import-batches.js','/workspace-dialogs.js':'workspace-dialogs.js','/question-copy.js':'question-copy.js','/ai-settings.js':'ai-settings.js','/connection.js':'connection.js','/queue-status.js':'queue-status.js','/queue.js':'queue.js','/review.js':'review.js','/style.css':'style.css','/workspace.js':'workspace.js','/source-geometry.js':'source-geometry.js','/source-viewer.js':'source-viewer.js','/source-text.js':'source-text.js','/inspector.js':'inspector.js','/workflow.js':'workflow.js','/studio.js':'studio.js','/runtime-i18n.js':'runtime-i18n.js','/i18n.js':'i18n.js','/updates.js':'updates.js','/scan-metrics.mjs':'scan-metrics.mjs','/layout-audit.mjs':'layout-audit.mjs'};
 export function createApp({ connection, port = 4318, fetcher = fetch, workspace=null, provider=null, allowExternalOAuthCallback=false, lifecycle=null }) {
   const origin = `http://127.0.0.1:${port}`, sessions = new Map(workspace?.data.sessions||[]),locationTasks=new Map(),learningTasks=new Map(),batchTasks=new Map(); let pending = null, processing = false, reviewing=0,usageReservationTail=Promise.resolve();
@@ -103,6 +117,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     }
 
     if(!payload.contextSnapshot)context=await pinJobContext(payload,{...payload.metadata,documentType:payload.sourceExtraction?.documentType||payload.metadata.documentType},payload.metadata.jobId,owner,onCheckpoint);else context=payload.contextSnapshot;
+    const glossaryQuestions=glossaryConflictQuestions(payload,context);if(glossaryQuestions.length)return {requiresInput:true,questions:glossaryQuestions,detected:{sourceLanguage:payload.metadata.sourceLanguage||'Automatisch',documentType:payload.sourceExtraction?.documentType||payload.metadata.documentType||'Dokument'}};
     const renderMeta={...payload.metadata,...(context.layout&&!payload.revision?{layout:context.layout}:{})};
     const request=translationRequest(payload.model,documents,renderMeta);if(payload.metadata.nameSpellings)request.input[0].content.push({type:'input_text',text:'Vom Benutzer bestätigte Namensschreibweise(n), nur für die passende Person verwenden: '+payload.metadata.nameSpellings});
     if(definitions.length){request.instructions+='\nDie bestätigte Formularvorlage definiert feste Felder. Ordne alle vorhandenen Angaben den Feldbezeichnungen zu, verwende die Zielbezeichnungen und frage bei fehlenden Pflichtfeldern nach. Erhalte alle übrigen Inhalte vollständig; erfinde keine Werte.';request.input[0].content.push({type:'input_text',text:'Bestätigte Formularzuordnung: '+JSON.stringify(definitions)});}
@@ -114,8 +129,10 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     renderMeta.profile=context.profile?{id:context.profile.id,name:context.profile.name,documentType:context.profile.documentType,version:context.profile.version||1}:null;
     renderMeta.contextVersion=context.contextVersion;
     renderMeta.contextPinnedAt=context.contextPinnedAt;
-    renderMeta.contextVersions={template:context.template?.version||null,profile:context.profile?.version||null,dossier:context.dossierVersion||null,learning:(context.appliedLearning||[]).map(item=>({id:item.id,version:item.profileVersion}))};
+    renderMeta.contextVersions={template:context.template?.version||null,profile:context.profile?.version||null,dossier:context.dossierVersion||null,glossary:(context.terms||[]).map(term=>({id:term.id,version:term.version||1})),learning:(context.appliedLearning||[]).map(item=>({id:item.id,version:item.profileVersion}))};
     renderMeta.terms=context.terms||[];
+    renderMeta.glossaryConflicts=context.glossaryConflicts||[];
+    renderMeta.glossaryConflictDecisions=context.glossaryConflictDecisions||[];
     renderMeta.examples=(context.examples||[]).map(entry=>({id:entry.id,name:entry.name,documentType:entry.documentType,targetLanguage:entry.targetLanguage}));
     renderMeta.dossierId=context.dossierId||'';
     renderMeta.dossierFacts=context.dossierFacts||[];
@@ -296,6 +313,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
       const learningSource=url.pathname.match(/^\/api\/learning\/([a-f0-9-]+)\/source$/);
       if(req.method==='GET'&&learningSource){const entry=workspace?.data.learning?.find(e=>e.id===learningSource[1]),source=entry?.sources?.[0]||entry?.source;if(!source?.data)throw new Error('Muster nicht gefunden.');json(res,{name:source.name,type:source.type,data:source.data});return;}
       if(req.method==='GET'&&url.pathname==='/api/library'){if(!workspace)throw new Error('Bibliothek benötigt einen persistenten Workspace.');json(res,workspace.library());return;}
+      if(req.method==='GET'&&url.pathname==='/api/library/glossary/export'){if(!workspace)throw new Error('Workspace erforderlich.');res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="foliquo-glossary.csv"','Cache-Control':'no-store'});res.end('\uFEFF'+exportGlossaryCSV(workspace.data.glossary));return;}
       if(req.method==='GET'&&url.pathname==='/api/dossiers'){if(!workspace)throw new Error('Workspace erforderlich.');json(res,{dossiers:workspace.data.dossiers.filter(item=>item.owner===active.id).map(item=>({...item,facts:item.facts.map(fact=>({...fact}))}))});return;}
       if(req.method==='POST'&&url.pathname==='/api/dossiers'){if(!workspace)throw new Error('Workspace erforderlich.');const input=await body(req,2000),dossier=putDossier(workspace,input,active.id);await persist();json(res,{dossier});return;}
       const dossierFactRoute=url.pathname.match(/^\/api\/dossiers\/([a-f0-9-]+)\/facts$/);
@@ -392,6 +410,8 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
       const workflowRoute=url.pathname.match(/^\/api\/jobs\/([a-f0-9-]+)\/(direct|protect|preflight)$/);
       if(workflowRoute){const job=queue.find(workflowRoute[1],active.id),input=await body(req,1500000),r=reviewState(job);if(workflowRoute[2]==='direct')await commitDirect(job,input,rebuild,editedResult(job,input));else if(workflowRoute[2]==='protect')lockFields(job,input,r);else applyBrowserAudit(job,input,r);await persist();json(res,reviewSnapshot(job));return;}
       if(url.pathname==='/api/library/preview'){const input=await body(req,6000);const layout=layoutSettings(input.layout);const text='Vorderseite\nFIKTIVE LAYOUTVORSCHAU\nName | Alex Example\nGeburtsdatum | 07.03.1998\nDokumentnummer | DEMO-12345\nMerkmale | keine besonderen Merkmale\n[Stempel: Fiktive Beispielbehörde]';const bytes=await createTranslationPDF(text,[],{targetLanguage:'Deutsch',language:'Englisch',layout,certificationConfirmed:input.certification===true});res.writeHead(200,{'Content-Type':'application/pdf'});res.end(bytes);return;}
+      if(req.method==='POST'&&url.pathname==='/api/library/glossary/import/preview'){if(!workspace)throw new Error('Workspace erforderlich.');const input=await body(req,1024*1024+4096),parsed=parseGlossaryCSV(input.csv,{mapping:input.mapping});json(res,{rows:parsed.rows,errors:parsed.errors,headers:parsed.headers,...compareGlossaryImport(parsed,workspace.data.glossary),total:parsed.rows.length});return;}
+      if(req.method==='POST'&&url.pathname==='/api/library/glossary/import/commit'){if(!workspace)throw new Error('Workspace erforderlich.');const input=await body(req,1024*1024+4096),parsed=parseGlossaryCSV(input.csv,{mapping:input.mapping}),comparison=compareGlossaryImport(parsed,workspace.data.glossary);if(parsed.errors.length||comparison.conflicts.length)throw Object.assign(new Error('CSV enthält Fehler oder widersprüchliche Begriffe. Bitte Vorschau korrigieren.'),{code:'GLOSSARY_IMPORT_CONFLICT',details:{errors:parsed.errors,conflicts:comparison.conflicts}});const duplicateRows=new Set(comparison.duplicates.map(item=>item.row)),entries=parsed.rows.filter(item=>!duplicateRows.has(item.row)),before=structuredClone(workspace.data.glossary);try{for(const {entry}of entries)workspace.put('glossary',{...entry,name:entry.name||entry.source});await persist();}catch(error){workspace.data.glossary=before;throw error;}json(res,{imported:entries.length,duplicates:comparison.duplicates.length,glossary:workspace.library().glossary});return;}
       if(url.pathname==='/api/library/import-word'){if(!workspace)throw new Error('Workspace erforderlich.');const input=await body(req,15*1024*1024);const file=validateDocuments([input.file])[0];if(!/\.docx$/i.test(file.name))throw new Error('Bitte DOCX auswählen.');json(res,inspectWord(file.bytes));return;}
       if(url.pathname==='/api/library/save'){if(!workspace)throw new Error('Workspace erforderlich.');const input=await body(req);if(input.kind==='examples'){const originals=await prepareDocuments(input.entry.originals?.length?validateDocuments(input.entry.originals):[]);if(originals.reduce((n,f)=>n+f.bytes.length,0)>8*1024*1024)throw new Error('Beispiele maximal 8 MB.');input.entry.originals=originals.map(f=>({name:f.name,type:f.type,data:f.bytes.toString('base64')}));}workspace.put(input.kind,input.entry);await persist();json(res,workspace.library());return;}
       if(url.pathname==='/api/library/remove'){if(!workspace)throw new Error('Workspace erforderlich.');const input=await body(req,1000);workspace.remove(input.kind,input.id);await persist();json(res,workspace.library());return;}

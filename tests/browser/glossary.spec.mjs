@@ -1,0 +1,18 @@
+import {test,expect} from '@playwright/test';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createServer} from 'node:net';
+import {Workspace} from '../../lib/workspace.mjs';
+import {createApp} from '../../server.mjs';
+
+test('learning view manages glossary terms and previews mapped CSV before import',async({page})=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-browser-glossary-')),workspace=await new Workspace(directory).init();workspace.put('glossary',{name:'fictional seed',source:'fictional old term',target:'fictional old target'});
+ const probe=createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));const app=createApp({workspace,port,connection:{status:()=>({connected:false,planEnabled:false})}});await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});const origin=`http://127.0.0.1:${app.address().port}`,pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
+ try{
+  await page.goto(origin,{waitUntil:'networkidle'});await page.locator('#intro-skip').click();await page.evaluate(()=>view('workspace',{historyMode:'none'}));await expect(page.locator('#glossary-manager')).toBeVisible();await expect(page.locator('#glossary-list input[name="source"]')).toHaveValue('fictional old term');
+  await page.locator('#glossary-search').fill('fictional old');await expect(page.locator('#glossary-list .glossary-card')).toHaveCount(1);await page.locator('#glossary-search').fill('');
+  await page.locator('#glossary-file').setInputFiles({name:'fictional-glossary.csv',mimeType:'text/csv',buffer:Buffer.from('Original,Approved wording,Type\n"fictional imported phrase","fictional imported target",fictional-certificate\n')});await expect(page.locator('#glossary-mapping')).toBeVisible();await expect(page.locator('#glossary-import-status')).toContainText('1 Fehler');await page.locator('#glossary-preview-mapped').click();await expect(page.locator('#glossary-import-preview')).toContainText('fictional imported phrase');await page.getByRole('button',{name:'Import übernehmen'}).click();await expect(page.locator('#glossary-list input[name="source"]').nth(1)).toHaveValue('fictional imported phrase');
+  const importedCard=page.locator('#glossary-list .glossary-card').nth(1);await importedCard.locator('select[name="status"]').selectOption('disabled');await importedCard.getByRole('button',{name:'Änderungen speichern'}).click();await expect(importedCard.locator('select[name="status"]')).toHaveValue('disabled');expect(pageErrors).toEqual([]);
+ }finally{await page.close();app.closeAllConnections?.();await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});}
+});
