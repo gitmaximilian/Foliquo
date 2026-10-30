@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PDFDocument,StandardFonts} from 'pdf-lib';
 import {createCanvas} from '@napi-rs/canvas';
-import {buildSourceInventory,extractEmbeddedSourceBlocks,sourceCoverage} from '../lib/source-inventory.mjs';
+import {applySourceInventoryDecision,buildSourceInventory,extractEmbeddedSourceBlocks,sourceCoverage} from '../lib/source-inventory.mjs';
 import {extractLocalOcrSourceBlocks} from '../lib/learning-analysis.mjs';
 import {documentFromLegacyText} from '../lib/document-adapter.mjs';
+import {acceptRevision,rememberVersion} from '../lib/revisions.mjs';
 
 test('source inventory creates deterministic page IDs, links extracted fields, and leaves unreviewed page content open',()=>{
  const files=[{data:Buffer.from('fictional input').toString('base64')}],fields=[{label:'Document number',source:'DEMO-482',translated:'Dokumentnummer DEMO-482',fileIndex:0,page:2,box:[.1,.2,.3,.1]}],document=documentFromLegacyText('Dokumentnummer DEMO-482\nWeitere Übersetzung');
@@ -40,4 +41,29 @@ test('local OCR adds an explicitly uncertain page-level source block with unknow
 
 test('optional local OCR failures stay visible as incomplete review instead of failing the translated document',async()=>{
  const blocks=await extractLocalOcrSourceBlocks([{name:'broken.pdf',type:'application/pdf',bytes:Buffer.from('not a PDF')}]);assert.equal(blocks.length,0);assert.equal(blocks.ocrIncomplete,true);
+});
+
+test('source mappings are editable, versioned, and invalidate only their affected review checks',()=>{
+ const document=documentFromLegacyText('Translated name\nAn unrelated paragraph'),source={id:'src-1',pageId:'page-1',documentId:'doc-1',kind:'other',label:'Name',fileIndex:0,page:1,box:null,extractionMethod:'model',fieldId:'field-1',sourceText:'Source name',targetText:'Translated name',coverageStatus:'unreviewed',targetNodeIds:[],review:null};
+ const job={id:'job',finishedAt:1,result:{text:'Translated name\nAn unrelated paragraph',document,sourceInventory:{schema:1,items:[source],summary:sourceCoverage([source])},checks:[{id:'field-1',confirmed:true},{id:'other-field',confirmed:true},{id:'completeness',confirmed:true}]}};const review={version:1,busy:false,proposal:null,hasQuestions:false,finalizedVersion:1};
+ const change=applySourceInventoryDecision(job,{version:1,sourceId:'src-1',action:'map',targetNodeIds:[document.blocks[0].id]},review);
+ assert.equal(review.version,2);assert.equal(review.finalizedVersion,null);assert.equal(job.result.sourceInventory.items[0].coverageStatus,'mapped');assert.deepEqual(document.blocks[0].sourceBlockIds,['src-1']);assert.deepEqual(change.invalidatedCheckIds,['field-1']);assert.equal(job.result.checks.find(check=>check.id==='other-field').confirmed,true);assert.equal(job.result.checks.find(check=>check.id==='completeness').confirmed,true);
+ assert.throws(()=>applySourceInventoryDecision(job,{version:1,sourceId:'src-1',action:'unmap'},review),/aktuelle abgeschlossene Fassung/);
+ const unmap=applySourceInventoryDecision(job,{version:2,sourceId:'src-1',action:'unmap'},review);assert.equal(job.result.sourceInventory.items[0].coverageStatus,'unreviewed');assert.deepEqual(document.blocks[0].sourceBlockIds,[]);assert.equal(unmap.invalidatedCheckIds.length,0);
+ assert.throws(()=>applySourceInventoryDecision(job,{version:3,sourceId:'src-1',action:'exclude',reason:'  '},review),/Begründung/);
+ applySourceInventoryDecision(job,{version:3,sourceId:'src-1',action:'exclude',reason:'Not part of this translation.'},review);assert.equal(job.result.sourceInventory.items[0].coverageStatus,'excluded-reviewed');assert.equal(job.result.sourceInventory.items[0].review.reason,'Not part of this translation.');
+});
+
+test('manual source decisions survive a deterministic inventory rebuild',()=>{
+ const files=[{data:Buffer.from('fictional-source').toString('base64')}],document=documentFromLegacyText('Fictional translated name'),sourceBlocks=[{kind:'paragraph',label:'Fictional name',fileIndex:0,page:1,sourceText:'Example name',translated:'Fictional translated name',box:[.1,.1,.4,.1],extractionMethod:'embedded-text'}];
+ const first=buildSourceInventory({files,pageCounts:[1],sourceBlocks,document});const item=first.items.find(value=>value.label==='Fictional name'),job={finishedAt:1,result:{document,sourceInventory:first,checks:[]}},review={version:1,busy:false,proposal:null,hasQuestions:false,finalizedVersion:null};
+ applySourceInventoryDecision(job,{version:1,sourceId:item.id,action:'map',targetNodeIds:[document.blocks[0].id]},review);
+ const rebuilt=buildSourceInventory({files,pageCounts:[1],sourceBlocks,document,previousInventory:job.result.sourceInventory});const mapped=rebuilt.items.find(value=>value.id===item.id);
+ assert.equal(mapped.coverageStatus,'mapped');assert.deepEqual(mapped.targetNodeIds,[document.blocks[0].id]);assert.equal(mapped.review.decision,'map');assert.deepEqual(document.blocks[0].sourceBlockIds,[item.id]);
+});
+
+test('revision restore recovers the matching source map and document nodes',async()=>{
+ const document=documentFromLegacyText('Fictional translation'),item={id:'src-revision',documentId:'doc',pageId:'page',kind:'paragraph',label:'Fictional source',fileIndex:0,page:1,box:null,extractionMethod:'model',sourceText:'PRIVATE SOURCE',targetText:'Fictional translation',coverageStatus:'unreviewed',targetNodeIds:[],review:null},job={id:'job',status:'succeeded',finishedAt:1,result:{text:'Fictional translation',document,sourceInventory:{schema:1,items:[item],summary:sourceCoverage([item])},checks:[]}},review={version:1,busy:false,hasQuestions:false,messages:[],requests:[],finalizedVersion:null};job.review=review;
+ const firstTarget=document.blocks[0].id;rememberVersion(job);applySourceInventoryDecision(job,{version:1,sourceId:item.id,action:'map',targetNodeIds:[firstTarget]},review);rememberVersion(job);applySourceInventoryDecision(job,{version:2,sourceId:item.id,action:'unmap'},review);
+ const restored=await acceptRevision(job,{action:'restore',version:3,restoreVersion:2},async(text,base)=>({...base,text}));assert.equal(restored.version,4);assert.deepEqual(job.result.document.blocks[0].sourceBlockIds,[item.id]);assert.equal(job.result.sourceInventory.items[0].review.decision,'map');assert.equal(JSON.stringify(restored.versions).includes('PRIVATE SOURCE'),false);
 });

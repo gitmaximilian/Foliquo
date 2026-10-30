@@ -7,8 +7,9 @@ import {applyReview,reviewSnapshot,finalReview} from '../lib/reviews.mjs';
 import {createApp} from '../server.mjs';
 test('review snapshot exposes the compact source inventory without exposing original files',()=>{
  const inventory={schema:1,items:[{id:'page-1',page:1,coverageStatus:'unreviewed',sourceText:'PRIVATE ORIGINAL TEXT'}],summary:{total:1,reviewed:0,mapped:0,open:1,percent:0,label:'zugeordnete/geprüfte Quellbereiche'}};
- const job={id:'job',status:'succeeded',result:{text:'Fictional translation',pdf:'cGRm',word:'ZG9jeA==',sourceInventory:inventory,previews:[{name:'private.pdf',data:'cHJpdmF0ZQ=='}]}};
+ const job={id:'job',status:'succeeded',review:{version:2,versions:[{version:1,document:{blocks:[]},sourceInventory:inventory}]},result:{text:'Fictional translation',pdf:'cGRm',word:'ZG9jeA==',sourceInventory:inventory,previews:[{name:'private.pdf',data:'cHJpdmF0ZQ=='}]}};
  assert.equal(reviewSnapshot(job).sourceInventory.items[0].sourceText,undefined);assert.equal(JSON.stringify(reviewSnapshot(job)).includes('PRIVATE ORIGINAL TEXT'),false);assert.equal(JSON.stringify(reviewSnapshot(job)).includes('private.pdf'),false);
+ assert.equal('document'in reviewSnapshot(job).versions[0],false);assert.equal('sourceInventory'in reviewSnapshot(job).versions[0],false);
 });
 test('Dates use dots everywhere and German terminology applies without altering other target languages',()=>{
  assert.equal(normalizeDates('7.3.1998; 07 03 1998; 1998-03-07; 7/3/1998'),'07.03.1998; 07.03.1998; 07.03.1998; 07.03.1998');
