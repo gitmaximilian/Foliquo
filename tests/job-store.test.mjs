@@ -4,6 +4,7 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash,randomBytes} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
 import {JobStore} from '../lib/job-store.mjs';
 
 const fictionalJob=(id,finishedAt=1000)=>({id,owner:'fictional-owner',status:'succeeded',stage:'done',createdAt:100,finishedAt,provider:'chatgpt',model:'fictional-model',targetLanguage:'Deutsch',names:['fictional.pdf'],result:{text:'fictional result',pdf:'FAKE'},questions:[],review:{version:1}});
@@ -51,6 +52,21 @@ test('failed index commits keep the previous record and do not expose a partial 
  store.writeIndex=async()=>{throw new Error('simulated manifest write failure');};const changed={...job,result:{text:'new fictional data'}};
  await assert.rejects(()=>store.commitJob(changed),/manifest write failure/);store.writeIndex=oldWrite;
  const reopened=await new JobStore(directory,store.secure.key).init();assert.equal((await reopened.getJob(job.id)).result.text,'fictional result');assert.equal(reopened.index.jobs[0].recordId,oldRecordId);
+});
+
+test('process exits at JobStore commit boundaries reopen as a complete old or new job',async t=>{
+ const moduleUrl=new URL('../lib/job-store.mjs',import.meta.url).href,indexId='job-index-00000000000000000000000000000000';
+ const child=`import {JobStore} from ${JSON.stringify(moduleUrl)};
+const directory=process.argv[1],key=Buffer.from(process.argv[2],'base64'),point=process.argv[3],store=await new JobStore(directory,key).init(),write=store.secure.write.bind(store.secure);
+store.secure.write=async(id,type,source)=>{const result=await write(id,type,source);if(point==='after-object'&&type==='original')process.exit(71);if(point==='after-record'&&type==='record'&&id!==${JSON.stringify(indexId)})process.exit(72);if(point==='after-index'&&id===${JSON.stringify(indexId)})process.exit(73);return result;};
+await store.commitJob({id:'fictional-crash-job',owner:'fictional-owner',status:'succeeded',createdAt:1,finishedAt:2,payload:{files:[{name:'fictional.bin',bytes:Buffer.from('new-payload')}]},result:{text:'new-state'},questions:[]});`;
+ for(const [point,exitCode,expectedText,expectedBytes]of [['after-object',71,'old-state','old-payload'],['after-record',72,'old-state','old-payload'],['after-index',73,'new-state','new-payload']]){
+  const {directory,store}=await fixture(t),job={id:'fictional-crash-job',owner:'fictional-owner',status:'succeeded',createdAt:1,finishedAt:2,payload:{files:[{name:'fictional.bin',bytes:Buffer.from('old-payload')}]},result:{text:'old-state'},questions:[]};
+  await store.commitJob(job);const result=spawnSync(process.execPath,['--input-type=module','-e',child,directory,store.secure.key.toString('base64'),point],{encoding:'utf8'});
+  assert.equal(result.status,exitCode,result.stderr||result.stdout);const reopened=await new JobStore(directory,store.secure.key).init(),loaded=await reopened.getJob(job.id);
+  assert.equal(loaded.result.text,expectedText,`${point} must retain either the full committed old or full committed new record`);
+  assert.equal(loaded.payload.files[0].bytes.toString(),expectedBytes,`${point} must not mix data from different record generations`);
+ }
 });
 
 test('whole-collection commits reuse unchanged records and roll back staged updates on index failure',async t=>{
