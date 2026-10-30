@@ -10,6 +10,8 @@ Before scheduling or running the study, obtain approval for the participant invi
 
 ## Freeze the comparison
 
+The proposed published pair is Desktop 0.11.10 (baseline) and Desktop 0.11.11 (candidate). This is a planning choice, not a measured result or a frozen study configuration.
+
 Complete [study-metadata.json](evaluation/study-metadata.json) before the first measured session:
 
 - Record exact baseline/candidate release tags, source commits, package names and verified SHA-256 digests. A local version number or successful build alone does not prove publication.

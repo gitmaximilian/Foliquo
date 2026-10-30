@@ -6,8 +6,18 @@
   "planned_participants_min": 3,
   "planned_participants_max": 5,
   "recommended_participants": 4,
-  "baseline": { "release_tag": null, "source_commit": null, "package_name": null, "sha256": null },
-  "candidate": { "release_tag": null, "source_commit": null, "package_name": null, "sha256": null },
+  "baseline": {
+    "release_tag": "desktop-v0.11.10",
+    "source_commit": "d2156d1c3bb1222996ba8b792000eecf0927183b",
+    "package_name": null,
+    "sha256": null
+  },
+  "candidate": {
+    "release_tag": "desktop-v0.11.11",
+    "source_commit": "e4d9ad87baa2397e1d7cc221f76b17b4e3b78a0b",
+    "package_name": null,
+    "sha256": null
+  },
   "language_pairs": [],
   "operating_systems": [],
   "provider": null,
@@ -28,5 +38,6 @@
   },
   "live_provider_calls_performed": 0,
   "quality_gain_measured": false,
-  "notes": "Empty template. Copy outside Git before recording real participants, documents or results."
+  "notes": "Prepared template with a proposed published release pair. OS/package hashes and study settings remain unfrozen; all actual study data must stay outside Git.",
+  "release_pair_frozen_for_study": false
 }
