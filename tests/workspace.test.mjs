@@ -17,6 +17,7 @@ import {unzipSync,strFromU8} from 'fflate';
 import {createCipheriv,randomBytes} from 'node:crypto';
 import {Readable} from 'node:stream';
 import {spawnSync} from 'node:child_process';
+import {documentToLegacyText} from '../lib/document-adapter.mjs';
 async function store(t){const dir=await mkdtemp(join(tmpdir(),'translateocr-store-')),workspace=await new Workspace(dir).init();t.after(async()=>{await workspace.tail;await rm(dir,{recursive:true,force:true});});return workspace;}
 test('workspace startup removes only recognized interrupted restore and manifest staging files',async t=>{const workspace=await store(t);workspace.put('glossary',{name:'Fictional term',source:'fictional source',target:'fictional target'});await workspace.save();const manifest=await readFile(join(workspace.directory,'workspace.enc')),metadataTemp='workspace.enc.tmp-12345678-1234-4234-8234-123456789abc',restoreTemp='.restore-staging-abcdef';await writeFile(join(workspace.directory,metadataTemp),'partial encrypted manifest');await mkdir(join(workspace.directory,restoreTemp),{mode:0o700});await writeFile(join(workspace.directory,restoreTemp,'backup.enc'),'encrypted fictional upload',{mode:0o600});const reopened=await new Workspace(workspace.directory).init(),names=await readdir(workspace.directory);assert.equal(names.includes(metadataTemp),false);assert.equal(names.includes(restoreTemp),false);assert.deepEqual(await readFile(join(workspace.directory,'workspace.enc')),manifest);assert.equal(reopened.data.glossary[0].target,'fictional target');});
 function sealedWorkspace(data,key){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv);return Buffer.concat([Buffer.from('TOCR1'),iv,cipher.update(Buffer.from(JSON.stringify(data))),cipher.final(),cipher.getAuthTag()]);}
@@ -127,8 +128,8 @@ test('Explicit workspace templates, profiles, glossary and examples reach transl
  assert.deepEqual((await fetch(origin+'/api/dossiers',{headers:{cookie:otherCookie}}).then(r=>r.json())).dossiers,[],'dossiers stay scoped to their local session');
  const pdf=await PDFDocument.create();pdf.addPage();
  const created=await post('/api/jobs',{files:[{name:'original.pdf',type:'application/pdf',data:Buffer.from(await pdf.save()).toString('base64')}],clientId:'test',requestId:'one',model:'test',metadata:{targetLanguage:'Deutsch',documentType:'Licence',templateId:tpl.id,profileId:profile.id,dossierId:dossier.dossier.id,useExamples:true,referenceIds:[selected.id]}}).then(r=>r.json());
- let state;for(let i=0;i<3000;i++){state=await fetch(origin+`/api/jobs/${created.id}/review?preview=1`,{headers:{cookie}}).then(r=>r.json());if(state.result)break;await new Promise(resolve=>setTimeout(resolve,20));}
- assert.ok(state.result);assert.equal(calls.length,2);
+ let state;for(let i=0;i<3000;i++){state=await fetch(origin+`/api/jobs/${created.id}/review?preview=1&document=1`,{headers:{cookie}}).then(r=>r.json());if(state.result)break;await new Promise(resolve=>setTimeout(resolve,20));}
+ assert.ok(state.result);assert.equal(calls.length,2);assert.equal(state.document.schema,1);assert.equal(documentToLegacyText(state.document),state.result.text);const legacyPreview=await fetch(origin+`/api/jobs/${created.id}/review?preview=1`,{headers:{cookie}}).then(r=>r.json());assert.equal(legacyPreview.document,undefined);
  const intake=JSON.stringify(calls[0]),translation=JSON.stringify(calls[1]);
  assert.match(intake,/Document number/,'the chosen form is available while collecting source fields');
  assert.match(intake,/456/,'the selected dossier reaches source verification');
