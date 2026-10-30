@@ -48,6 +48,12 @@ test('job history summaries are owner-scoped, newest-first and paginated without
  assert.throws(()=>store.listSummariesPage({offset:-1}),/offset/);assert.throws(()=>store.listSummariesPage({limit:101}),/page size/);
 });
 
+test('owner-scoped job metadata keeps sidecar objects as references without hydrating payload bytes',async t=>{
+ const {store}=await fixture(t),job=fictionalJob('fictional-metadata-only');await store.commitJob(job);
+ const metadata=await store.getJobMetadata(job.id,'fictional-owner');assert.equal(metadata.id,job.id);assert.equal(metadata.result.text,'fictional result');assert.equal(typeof metadata.result.pdf,'object');assert.equal(JSON.stringify(metadata).includes('FAKE'),false);
+ assert.equal(store.getObjectInfo(job.id,['result','pdf'],'fictional-owner').size,3);assert.equal(await store.getJobMetadata(job.id,'another-owner'),null);
+});
+
 test('history search and document-type filters run across the complete owner index before paging',async t=>{
  const {store}=await fixture(t),records=[fictionalJob('fictional-filter-1'),fictionalJob('fictional-filter-2'),{...fictionalJob('fictional-filter-birth',5000),createdAt:4000,names:['older-birth-record.pdf'],detected:{sourceLanguage:'English',documentType:'Birth certificate'}}];
  await store.commitJobs(records);

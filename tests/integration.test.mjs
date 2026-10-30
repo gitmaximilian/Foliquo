@@ -113,6 +113,7 @@ test('lazy job history loads an archived result on demand and keeps it out of qu
  const practice=await fetch(`${origin}/api/practice/report`,{headers}).then(r=>r.json());assert.equal(practice.cases.length,1);assert.equal(practice.cases[0].rating,4);assert.equal(JSON.stringify(practice).includes('private'),false);
  const result=await fetch(`${origin}/api/jobs/${job.id}/result`,{headers});assert.equal(result.status,200);assert.equal((await result.json()).text,'Archived fictional translation');
  const download=await fetch(`${origin}/api/jobs/${job.id}/download/pdf`,{headers});assert.equal(download.headers.get('content-type'),'application/pdf');assert.deepEqual(Buffer.from(await download.arrayBuffer()),pdfBytes);
+ workspace.jobStore.getJob=async()=>{throw new Error('Source preview route should not hydrate the full archived job.');};
  const sourceManifest=await fetch(`${origin}/api/jobs/${job.id}/source/manifest`,{headers}).then(r=>r.json());assert.equal(sourceManifest.files[0].size,sourceBytes.length);assert.equal('data' in sourceManifest.files[0],false);
  const sourceDownload=await fetch(`${origin}/api/jobs/${job.id}/source/0`,{headers});assert.deepEqual(Buffer.from(await sourceDownload.arrayBuffer()),sourceBytes);
  assert.equal(storedStreams,2,'PDF and source responses should be served from authenticated encrypted sidecars');
