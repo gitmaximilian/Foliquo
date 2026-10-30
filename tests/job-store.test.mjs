@@ -75,3 +75,9 @@ test('failed-job summaries retain only the metadata needed for safe retry action
  assert.equal(summary.canRetry,true);assert.equal(summary.interrupted,true);assert.equal(summary.retryAfterAt,123456);assert.equal(summary.budgetConsentRequired,true);
  assert.equal(JSON.stringify(summary).includes('payload'),false);assert.equal(JSON.stringify(summary).includes('fictional result'),false);
 });
+
+test('job iteration reads owner-scoped archive records one at a time',async t=>{
+ const {store}=await fixture(t),first=fictionalJob('fictional-iterated-one'),privateJob={...fictionalJob('fictional-iterated-other'),owner:'other-owner'},last=fictionalJob('fictional-iterated-two');
+ await store.commitJobs([first,privateJob,last]);const visited=[];for await(const job of store.iterateJobs({owner:'fictional-owner'}))visited.push(job.id);
+ assert.deepEqual(visited,[first.id,last.id]);assert.equal(store.cacheSize<=store.cacheBytes,true);
+});
