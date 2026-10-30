@@ -7,9 +7,13 @@ import { createApp } from '../server.mjs';
 import { Workspace } from '../lib/workspace.mjs';
 import { PDFDocument } from 'pdf-lib';
 import { unzipSync } from 'fflate';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { mkdtemp, stat, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 const ready = (text,sourceLanguage='Arabisch',documentType='Führerschein')=>JSON.stringify({status:'ready',sourceLanguage,documentType,questions:[],text});
 const stream = events => new ReadableStream({start(controller){for(const e of events){const bytes=new TextEncoder().encode(`data: ${JSON.stringify(e)}\r\n\r\n`);controller.enqueue(bytes.slice(0,7));controller.enqueue(bytes.slice(7));}controller.close();}});
@@ -122,6 +126,20 @@ test('lazy job history loads an archived result on demand and keeps it out of qu
  assert.equal(storedStreams,6,'PDF completeness inspection, PDF, Word, bundle, and source responses should use authenticated encrypted sidecars');
  const after=await fetch(`${origin}/api/jobs`,{headers}).then(r=>r.json());assert.equal(after.jobs.some(item=>item.id===job.id),false);
  const otherHome=await fetch(origin),otherCookie=otherHome.headers.get('set-cookie').split(';')[0];assert.equal((await fetch(`${origin}/api/jobs/${job.id}/result`,{headers:{cookie:otherCookie}})).status,400);assert.equal((await fetch(`${origin}/api/jobs/${job.id}/download/pdf`,{headers:{cookie:otherCookie}})).status,400);
+});
+
+test('HTTP streams a valid archived PDF larger than the queue memory cap after restart',async t=>{
+ const port=16000+Math.floor(Math.random()*5000),dir=await mkdtemp(join(tmpdir(),'foliquo-large-pdf-http-')),origin=`http://127.0.0.1:${port}`;let workspace=await new Workspace(dir,{lazyJobs:true}).init(),app=createApp({connection:{status:()=>({connected:false})},port,workspace});
+ await new Promise((resolve,reject)=>app.once('error',reject).listen(port,'127.0.0.1',resolve));
+ t.after(async()=>{if(app?.listening)await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(dir,{recursive:true,force:true});});
+ const home=await fetch(origin),cookie=home.headers.get('set-cookie').split(';')[0],owner=decodeURIComponent(cookie.split('=')[1]),document=await PDFDocument.create();document.addPage();
+ const base=Buffer.from(await document.save()),artifactBytes=161*1024*1024;let pdfBytes=Buffer.alloc(artifactBytes,0x20);base.copy(pdfBytes);const expectedHash=createHash('sha256').update(pdfBytes).digest('hex');let pdfBase64=pdfBytes.toString('base64');pdfBytes=null;
+ let job={id:'12345678-1234-4234-8234-123456789abe',owner,status:'succeeded',stage:'done',createdAt:Date.now()-1000,finishedAt:Date.now()-500,names:['fictional-large-result.pdf'],result:{text:'Fictional large archived result',pdf:pdfBase64,preflight:{translationPages:1}},questions:[],payload:{files:[]}};
+ await workspace.jobStore.commitJob(job);job=null;pdfBase64=null;await workspace.tail;await workspace.save();await workspace.tail;
+ await new Promise(resolve=>app.close(resolve));workspace=await new Workspace(dir,{lazyJobs:true}).init();await workspace.tail;app=createApp({connection:{status:()=>({connected:false})},port,workspace});await new Promise((resolve,reject)=>app.once('error',reject).listen(port,'127.0.0.1',resolve));
+ workspace.jobStore.getJob=async()=>{throw new Error('Large archived result download must stream without hydrating its JobStore record.');};
+ const download=await fetch(`${origin}/api/jobs/12345678-1234-4234-8234-123456789abe/download/pdf`,{headers:{cookie}});assert.equal(download.status,200);assert.equal(download.headers.get('content-type'),'application/pdf');assert.equal(Number(download.headers.get('content-length')),artifactBytes);
+ const output=join(dir,'fictional-large-download.pdf');await pipeline(Readable.fromWeb(download.body),createWriteStream(output,{mode:0o600}));const digest=createHash('sha256');for await(const chunk of createReadStream(output))digest.update(chunk);assert.equal(digest.digest('hex'),expectedHash);
 });
 
 test('HTTP backup streams an encrypted legacy-compatible archive from lazy history',async t=>{
