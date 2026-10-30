@@ -92,12 +92,16 @@ test('HTTP queue accepts background work, isolates results and serves completed 
  for(let i=0;i<1200;i++){state=await fetch(`${origin}/api/jobs`,{headers}).then(r=>r.json());if(state.jobs[0].status==='succeeded')break;await new Promise(resolve=>setTimeout(resolve,50));}
  assert.equal(state.jobs[0].status,'succeeded');assert.equal(state.jobs[1].status,'cancelled');assert.equal(state.jobs[0].progress,100);
  const result=await fetch(`${origin}/api/jobs/${id}/result`,{headers}).then(r=>r.json());assert.equal(result.text,'Testübersetzung');assert.equal(Buffer.from(result.pdf,'base64').subarray(0,5).toString(),'%PDF-');
+ const pdfDownload=await fetch(`${origin}/api/jobs/${id}/download/pdf`,{headers});assert.equal(pdfDownload.headers.get('content-type'),'application/pdf');assert.equal(Buffer.from(await pdfDownload.arrayBuffer()).subarray(0,5).toString(),'%PDF-');
+ const wordDownload=await fetch(`${origin}/api/jobs/${id}/download/word`,{headers});assert.equal(wordDownload.headers.get('content-type'),'application/vnd.openxmlformats-officedocument.wordprocessingml.document');assert.equal(Buffer.from(await wordDownload.arrayBuffer()).subarray(0,2).toString(),'PK');
+ const bundleDownload=await fetch(`${origin}/api/jobs/${id}/download/bundle`,{headers});assert.equal(bundleDownload.headers.get('content-type'),'application/zip');assert.equal(Buffer.from(await bundleDownload.arrayBuffer()).subarray(0,2).toString(),'PK');
 });
 
 test('lazy job history loads an archived result on demand and keeps it out of queue polling',async t=>{
  const port=14320,dir=await mkdtemp(join(tmpdir(),'foliquo-lazy-http-')),workspace=await new Workspace(dir,{lazyJobs:true}).init(),origin=`http://127.0.0.1:${port}`;
  const app=createApp({connection:{data:{hostId:'host'},status:()=>({connected:false})},port,workspace});await new Promise(resolve=>app.listen(port,'127.0.0.1',resolve));
  t.after(async()=>{await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(dir,{recursive:true,force:true});});
+ await workspace.tail;
  const home=await fetch(origin),cookie=home.headers.get('set-cookie').split(';')[0],owner=decodeURIComponent(cookie.split('=')[1]);
  const pdf=await PDFDocument.create();pdf.addPage();const pdfBytes=Buffer.from(await pdf.save()),job={id:'12345678-1234-4234-8234-123456789abc',owner,status:'succeeded',stage:'done',createdAt:Date.now()-1000,finishedAt:Date.now()-500,names:['fictional-archive.pdf'],targetLanguage:'Deutsch',detected:{documentType:'Fictional document'},result:{text:'Archived fictional translation',pdf:pdfBytes.toString('base64'),word:'RkFLRQ==',previews:[]},practice:{startedAt:Date.now()-3000,stoppedAt:Date.now(),manualMinutes:2,rating:4,notes:'private fictional note'},questions:[],payload:{files:[]}};
  await workspace.jobStore.commitJob(job);
@@ -106,5 +110,5 @@ test('lazy job history loads an archived result on demand and keeps it out of qu
  const practice=await fetch(`${origin}/api/practice/report`,{headers}).then(r=>r.json());assert.equal(practice.cases.length,1);assert.equal(practice.cases[0].rating,4);assert.equal(JSON.stringify(practice).includes('private'),false);
  const result=await fetch(`${origin}/api/jobs/${job.id}/result`,{headers});assert.equal(result.status,200);assert.equal((await result.json()).text,'Archived fictional translation');
  const after=await fetch(`${origin}/api/jobs`,{headers}).then(r=>r.json());assert.equal(after.jobs.some(item=>item.id===job.id),false);
- const otherHome=await fetch(origin),otherCookie=otherHome.headers.get('set-cookie').split(';')[0];assert.equal((await fetch(`${origin}/api/jobs/${job.id}/result`,{headers:{cookie:otherCookie}})).status,400);
+ const otherHome=await fetch(origin),otherCookie=otherHome.headers.get('set-cookie').split(';')[0];assert.equal((await fetch(`${origin}/api/jobs/${job.id}/result`,{headers:{cookie:otherCookie}})).status,400);assert.equal((await fetch(`${origin}/api/jobs/${job.id}/download/pdf`,{headers:{cookie:otherCookie}})).status,400);
 });

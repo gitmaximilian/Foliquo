@@ -139,9 +139,9 @@ async function queueAction(action,job,launcher=document.activeElement){
   if(action==='retry'&&job.budgetConsentRequired){const warning='Foliquo kann den Betrag dieses API-Aufrufs nicht zuverlässig schätzen. Die lokale Monatsgrenze kann dadurch überschritten werden. Diesen einen Aufruf trotzdem erlauben?';if(!confirm(window.TOCRI18n?.t(warning)||warning))return;await localRequest('/api/usage/consent-once',{provider:job.provider,model:job.model,confirm:true});}
   if(action==='review'){await openReviewWorkspace(job.id);return;}
   if(action==='answer'){showClarifications(job,true);return;}
-  if(action==='word'){const result=await jobResult(job);downloadWord(result.word,queueFilename(job).replace(/\.pdf$/,'.docx'));return;}
+  if(action==='word'){await downloadJobFile(job,'word');return;}
   if(action==='bundle'){await downloadBundle(job);markDownloaded(job.id);return;}
-  if(action==='download'){const result=await jobResult(job);downloadPDF(result.pdf,queueFilename(job));markDownloaded(job.id);return;}
+  if(action==='download'){await downloadJobFile(job,'pdf');markDownloaded(job.id);return;}
   if(action==='open'){
    if((files.length||$('#translation').value.trim())&&!confirm('Die aktuelle Auswahl und der bearbeitbare Entwurf werden durch dieses Ergebnis ersetzt. Fortfahren?'))return;
    const result=await jobResult(job);example=false;$('#target-language').value=job.targetLanguage;window.syncLanguageSelectors?.();draftTargetLanguage=job.targetLanguage;detectedDocument=result.detected||null;window.syncTranslateContext?.();convertedPreviews.clear();
@@ -153,7 +153,8 @@ async function queueAction(action,job,launcher=document.activeElement){
  }catch(error){toast(error.message);}
 }
 function queueFilename(job){const base=job.names[0]?.replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,70)||'foliquo';return `${base}-${job.targetLanguage}-uebersetzung.pdf`;}
-async function downloadBundle(job){const response=await localRequest(`/api/jobs/${job.id}/bundle`);downloadBlob(await response.blob(),queueFilename(job).replace(/\.pdf$/,'-PDF-Word.zip'));}
+async function downloadJobFile(job,format){const response=await localRequest(`/api/jobs/${job.id}/download/${format}`);const suffix=format==='word'?'.docx':format==='bundle'?'-PDF-Word.zip':'.pdf',name=queueFilename(job).replace(/\.pdf$/,'')+suffix;downloadBlob(await response.blob(),name);}
+async function downloadBundle(job){return downloadJobFile(job,'bundle');}
 function announceCompletion(job){
  if(job.clientId!==queueClientId||queueAnnounced.has(job.id)||!job.hasResult)return;
  markCompletionAnnounced(job.id);toast('Übersetzung bereit. PDF und Word kannst du direkt herunterladen.');
