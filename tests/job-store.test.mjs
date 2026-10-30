@@ -19,10 +19,24 @@ test('job records commit atomically and the library index exposes bounded summar
 test('large archived jobs verify a compact record digest without JSON-stringifying hydrated payloads',async t=>{
  const {directory,store}=await fixture(t),bytes=Buffer.alloc(256*1024,0x5a),job={...fictionalJob('fictional-large-record'),payload:{files:[{name:'fictional-large.pdf',bytes}]}};store.cacheBytes=8*1024*1024;await store.commitJob(job);
  const entry=store.index.jobs[0];assert.match(entry.recordFingerprint,/^[a-f0-9]{64}$/);const persisted=await store.secure.read(entry.recordId,'record');assert.equal(createHash('sha256').update(persisted).digest('hex'),entry.recordFingerprint);
- const originalStringify=JSON.stringify;JSON.stringify=function(value,...args){if(value?.id===job.id&&value.payload?.files?.[0]?.bytes?.data?.length===bytes.length)throw new Error('whole archived job was serialized');return originalStringify.call(this,value,...args);};
+ const originalStringify=JSON.stringify;JSON.stringify=function(value,...args){if(value?.id===job.id&&Buffer.isBuffer(value.payload?.files?.[0]?.bytes))throw new Error('whole archived job was serialized');return originalStringify.call(this,value,...args);};
  let loaded;try{store.dropCache(job.id);loaded=await store.getJob(job.id);}finally{JSON.stringify=originalStringify;}
- assert.equal(loaded.payload.files[0].bytes.data.length,bytes.length);assert.ok(store.cache.has(job.id),'the heap-weighted cache estimate permits this bounded record');
+ assert.ok(Buffer.isBuffer(loaded.payload.files[0].bytes));assert.equal(loaded.payload.files[0].bytes.length,bytes.length);assert.ok(store.cache.has(job.id),'the heap-weighted cache estimate permits this bounded record');
  const digest=entry.recordFingerprint;entry.recordFingerprint='0'.repeat(64);store.dropCache(job.id);await assert.rejects(()=>store.getJob(job.id),/Encrypted job record is invalid/);entry.recordFingerprint=digest;
+});
+
+test('large binary job writes and unchanged-record detection avoid Buffer JSON expansion',async t=>{
+ const {store}=await fixture(t),bytes=Buffer.alloc(1024*1024,0x31),job={...fictionalJob('fictional-buffer-fingerprint'),payload:{files:[{name:'fictional-source.bin',bytes}]}};let wrote=false;const originalStringify=JSON.stringify;
+ JSON.stringify=function(value,...args){if(value?.id===job.id&&Buffer.isBuffer(value.payload?.files?.[0]?.bytes))throw new Error('raw binary job was JSON-stringified');return originalStringify.call(this,value,...args);};
+ try{await store.commitJobs([job]);wrote=true;}finally{JSON.stringify=originalStringify;}
+ assert.ok(wrote);const first=store.index.jobs[0];assert.equal(first.fingerprintVersion,2);assert.equal(store.getObjectInfo(job.id,['payload','files','0','bytes'],'fictional-owner').size,bytes.length);
+ const unchanged={...job,payload:{files:[{name:'fictional-source.bin',bytes:Buffer.from(bytes)}]}};await store.commitJobs([unchanged]);assert.equal(store.index.jobs[0].recordId,first.recordId,'equivalent Buffer content reuses the encrypted record');
+ const changedBytes=Buffer.from(bytes);changedBytes[changedBytes.length-1]^=0xff;const changed={...unchanged,payload:{files:[{name:'fictional-source.bin',bytes:changedBytes}]}};await store.commitJobs([changed]);assert.notEqual(store.index.jobs[0].recordId,first.recordId,'a changed source byte creates a new encrypted record');
+});
+
+test('legacy JSON fingerprints are verified once then upgraded to compact state fingerprints',async t=>{
+ const {directory,store}=await fixture(t),job=fictionalJob('fictional-legacy-fingerprint');await store.commitJob(job);const entry=store.index.jobs[0],recordId=entry.recordId;entry.fingerprint=createHash('sha256').update(JSON.stringify(job)).digest('hex');delete entry.fingerprintVersion;delete entry.recordFingerprint;await store.writeIndex(store.index);
+ const reopened=await new JobStore(directory,store.secure.key).init(),loaded=await reopened.getJob(job.id),upgraded=reopened.index.jobs[0];assert.equal(loaded.result.text,job.result.text);assert.equal(upgraded.fingerprintVersion,2);assert.match(upgraded.recordFingerprint,/^[a-f0-9]{64}$/);assert.equal(upgraded.recordId,recordId);await reopened.commitJobs([loaded]);assert.equal(reopened.index.jobs[0].recordId,recordId,'an unchanged legacy record remains reusable after its one-time upgrade');
 });
 
 test('legacy migration verifies every record before publishing its index and prunes only expired terminal jobs',async t=>{
