@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,readFile,readdir,rm,stat,writeFile} from 'node:fs/promises';
+import {mkdir,mkdtemp,readFile,readdir,rm,stat,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {Workspace} from '../lib/workspace.mjs';
@@ -17,6 +17,7 @@ import {unzipSync,strFromU8} from 'fflate';
 import {createCipheriv,randomBytes} from 'node:crypto';
 import {Readable} from 'node:stream';
 async function store(t){const dir=await mkdtemp(join(tmpdir(),'translateocr-store-')),workspace=await new Workspace(dir).init();t.after(async()=>{await workspace.tail;await rm(dir,{recursive:true,force:true});});return workspace;}
+test('workspace startup removes only recognized interrupted restore and manifest staging files',async t=>{const workspace=await store(t);workspace.put('glossary',{name:'Fictional term',source:'fictional source',target:'fictional target'});await workspace.save();const manifest=await readFile(join(workspace.directory,'workspace.enc')),metadataTemp='workspace.enc.tmp-12345678-1234-4234-8234-123456789abc',restoreTemp='.restore-staging-abcdef';await writeFile(join(workspace.directory,metadataTemp),'partial encrypted manifest');await mkdir(join(workspace.directory,restoreTemp),{mode:0o700});await writeFile(join(workspace.directory,restoreTemp,'backup.enc'),'encrypted fictional upload',{mode:0o600});const reopened=await new Workspace(workspace.directory).init(),names=await readdir(workspace.directory);assert.equal(names.includes(metadataTemp),false);assert.equal(names.includes(restoreTemp),false);assert.deepEqual(await readFile(join(workspace.directory,'workspace.enc')),manifest);assert.equal(reopened.data.glossary[0].target,'fictional target');});
 function sealedWorkspace(data,key){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv);return Buffer.concat([Buffer.from('TOCR1'),iv,cipher.update(Buffer.from(JSON.stringify(data))),cipher.final(),cipher.getAuthTag()]);}
 test('large job Buffers are stored as authenticated sidecar objects and rehydrate compatibly',async t=>{
  const workspace=await store(t),content=Buffer.alloc(3*1024*1024,0x5a),artifact=Buffer.alloc(256*1024,0x33).toString('base64'),job={id:'fictional-object-job',owner:'fictional-owner',status:'succeeded',createdAt:Date.now(),finishedAt:Date.now(),payload:{files:[{name:'fictional.pdf',bytes:content}]},result:{pdf:artifact,word:artifact,previews:[{name:'fictional.pdf',type:'application/pdf',data:artifact}]},questions:[]};workspace.data.jobs=[job];await workspace.save();

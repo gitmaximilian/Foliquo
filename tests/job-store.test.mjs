@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,readdir,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash,randomBytes} from 'node:crypto';
@@ -58,14 +58,17 @@ test('process exits at JobStore commit boundaries reopen as a complete old or ne
  const moduleUrl=new URL('../lib/job-store.mjs',import.meta.url).href,indexId='job-index-00000000000000000000000000000000';
  const child=`import {JobStore} from ${JSON.stringify(moduleUrl)};
 const directory=process.argv[1],key=Buffer.from(process.argv[2],'base64'),point=process.argv[3],store=await new JobStore(directory,key).init(),write=store.secure.write.bind(store.secure);
-store.secure.write=async(id,type,source)=>{const result=await write(id,type,source);if(point==='after-object'&&type==='original')process.exit(71);if(point==='after-record'&&type==='record'&&id!==${JSON.stringify(indexId)})process.exit(72);if(point==='after-index'&&id===${JSON.stringify(indexId)})process.exit(73);return result;};
+if(point==='during-plaintext-staging')await store.secure.withDecryptedObject(process.argv[4],'original',async()=>process.exit(74));
+store.secure.write=async(id,type,source)=>{if(point==='during-object-write'&&type==='original'){async function* partial(){yield Buffer.from('partial encrypted fixture');process.exit(70);}return await write(id,type,partial());}const result=await write(id,type,source);if(point==='after-object'&&type==='original')process.exit(71);if(point==='after-record'&&type==='record'&&id!==${JSON.stringify(indexId)})process.exit(72);if(point==='after-index'&&id===${JSON.stringify(indexId)})process.exit(73);return result;};
 await store.commitJob({id:'fictional-crash-job',owner:'fictional-owner',status:'succeeded',createdAt:1,finishedAt:2,payload:{files:[{name:'fictional.bin',bytes:Buffer.from('new-payload')}]},result:{text:'new-state'},questions:[]});`;
- for(const [point,exitCode,expectedText,expectedBytes]of [['after-object',71,'old-state','old-payload'],['after-record',72,'old-state','old-payload'],['after-index',73,'new-state','new-payload']]){
+ for(const [point,exitCode,expectedText,expectedBytes]of [['during-object-write',70,'old-state','old-payload'],['after-object',71,'old-state','old-payload'],['after-record',72,'old-state','old-payload'],['after-index',73,'new-state','new-payload'],['during-plaintext-staging',74,'old-state','old-payload']]){
   const {directory,store}=await fixture(t),job={id:'fictional-crash-job',owner:'fictional-owner',status:'succeeded',createdAt:1,finishedAt:2,payload:{files:[{name:'fictional.bin',bytes:Buffer.from('old-payload')}]},result:{text:'old-state'},questions:[]};
-  await store.commitJob(job);const result=spawnSync(process.execPath,['--input-type=module','-e',child,directory,store.secure.key.toString('base64'),point],{encoding:'utf8'});
+  await store.commitJob(job);const objectId=store.index.jobs[0].objects[0].id,result=spawnSync(process.execPath,['--input-type=module','-e',child,directory,store.secure.key.toString('base64'),point,objectId],{encoding:'utf8'});
   assert.equal(result.status,exitCode,result.stderr||result.stdout);const reopened=await new JobStore(directory,store.secure.key).init(),loaded=await reopened.getJob(job.id);
   assert.equal(loaded.result.text,expectedText,`${point} must retain either the full committed old or full committed new record`);
   assert.equal(loaded.payload.files[0].bytes.toString(),expectedBytes,`${point} must not mix data from different record generations`);
+  if(point==='during-object-write')assert.deepEqual((await readdir(join(directory,'original'))).filter(name=>name.endsWith('.tmp')),[],'restart removes a partially written ciphertext temp');
+  if(point==='during-plaintext-staging')assert.deepEqual(await readdir(join(directory,'staging')),[],'restart removes the plaintext staging file left by abrupt process exit');
  }
 });
 
