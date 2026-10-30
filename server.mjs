@@ -222,6 +222,14 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
         return;
       }
       if(req.method==='GET' && url.pathname==='/api/jobs'){json(res,{...queue.snapshot(active.id),batches:importBatchSummaries(active.id),persistent:Boolean(workspace),storageError:persistError?'Lokales Speichern fehlgeschlagen. Ergebnisse herunterladen und freien Speicher prüfen.':null});return;}
+      if(req.method==='GET'&&url.pathname==='/api/job-summaries'){
+        const rawOffset=url.searchParams.get('offset')||'0',rawLimit=url.searchParams.get('limit')||'50';
+        if(!/^\d{1,9}$/.test(rawOffset)||!/^\d{1,3}$/.test(rawLimit))throw new Error('Ungültige Auftragsseite.');
+        const offset=Number(rawOffset),limit=Number(rawLimit);
+        if(!Number.isSafeInteger(offset)||limit<1||limit>100)throw new Error('Ungültige Auftragsseite.');
+        const page=workspace?.jobStore?workspace.jobStore.listSummariesPage({owner:active.id,offset,limit}):(()=>{const jobs=queue.jobs.filter(job=>job.owner===active.id).map(job=>({id:job.id,status:job.status,stage:job.stage||'',createdAt:job.createdAt||0,startedAt:job.startedAt||null,finishedAt:job.finishedAt||null,provider:job.provider||'chatgpt',model:job.model||'',targetLanguage:job.targetLanguage||'',names:Array.isArray(job.names)?job.names.slice(0,10):[],revision:job.review?.version||1,hasResult:Boolean(job.result),hasQuestions:Array.isArray(job.questions)&&job.questions.length>0})).sort((a,b)=>(b.finishedAt||b.createdAt||0)-(a.finishedAt||a.createdAt||0)||a.id.localeCompare(b.id));return {jobs:jobs.slice(offset,offset+limit),total:jobs.length,offset,limit,hasMore:offset+limit<jobs.length};})();
+        json(res,page);return;
+      }
       if(req.method==='POST'&&url.pathname==='/api/import-batches'){
         if(!workspace)throw new Error('Mehrere vorbereitete Aufträge benötigen einen verschlüsselten Workspace.');const input=await body(req),files=validateDocuments(input.files),meta=metadata(input.metadata),groups=input.groups,pageCounts=[];for(const file of files)pageCounts.push(file.type==='application/pdf'?(await PDFDocument.load(file.bytes)).getPageCount():1);if(pageCounts.some((count,index)=>files[index].type==='application/pdf'&&count>50))throw new Error('Maximal 50 PDF-Seiten pro Datei.');
         if(typeof input.clientId!=='string'||input.clientId.length>100||typeof input.requestId!=='string'||input.requestId.length<8||input.requestId.length>100||typeof input.model!=='string'||input.model.length>200)throw new Error('Ungültiger Stapelauftrag.');

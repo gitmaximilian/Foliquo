@@ -38,3 +38,12 @@ test('whole-collection commits reuse unchanged records and roll back staged upda
  const oldWrite=store.writeIndex.bind(store);store.writeIndex=async()=>{throw new Error('simulated batch index failure');};await assert.rejects(()=>store.commitJobs([{...changed,result:{text:'uncommitted'}}]),/batch index failure/);store.writeIndex=oldWrite;
  const reopened=await new JobStore(directory,store.secure.key).init();assert.deepEqual(reopened.listSummaries().map(item=>item.id),[first.id,second.id]);assert.equal((await reopened.getJob(first.id)).result.text,'changed fictional result');assert.equal((await reopened.getJob(second.id)).result.text,'fictional result');
 });
+
+test('job history summaries are owner-scoped, newest-first and paginated without result data',async t=>{
+ const {store}=await fixture(t),jobs=Array.from({length:5},(_,index)=>({...fictionalJob(`fictional-page-${index}`,1000+index),owner:index===4?'another-fictional-owner':'fictional-owner',createdAt:100+index}));
+ await store.commitJobs(jobs);
+ const first=store.listSummariesPage({owner:'fictional-owner',offset:0,limit:2});
+ assert.equal(first.total,4);assert.equal(first.jobs.length,2);assert.equal(first.jobs[0].id,'fictional-page-3');assert.equal(first.jobs[1].id,'fictional-page-2');assert.equal(first.hasMore,true);assert.equal(JSON.stringify(first).includes('fictional result'),false);assert.equal('owner' in first.jobs[0],false);
+ const second=store.listSummariesPage({owner:'fictional-owner',offset:2,limit:2});assert.deepEqual(second.jobs.map(job=>job.id),['fictional-page-1','fictional-page-0']);assert.equal(second.hasMore,false);
+ assert.throws(()=>store.listSummariesPage({offset:-1}),/offset/);assert.throws(()=>store.listSummariesPage({limit:101}),/page size/);
+});
