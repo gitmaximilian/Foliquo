@@ -55,3 +55,10 @@ test('history search and document-type filters run across the complete owner ind
  assert.equal(result.total,1);assert.equal(result.hasMore,false);assert.equal(result.jobs[0].id,'fictional-filter-birth');assert.ok(result.types.includes('Geburtsurkunden'));
  assert.equal(store.listSummariesPage({owner:'fictional-owner',query:'older-birth',type:'Führerscheine'}).total,0);
 });
+
+test('subset commits update loaded jobs without dropping unloaded encrypted history',async t=>{
+ const {store}=await fixture(t),older=fictionalJob('fictional-retained-history',5000),loaded=fictionalJob('fictional-loaded-open',1000);
+ await store.commitJobs([older,loaded]);loaded.status='failed';loaded.error='Fictional interruption';await store.commitSubset([loaded]);
+ assert.deepEqual(store.listSummaries().map(item=>item.id),[older.id,loaded.id]);
+ assert.equal((await store.getJob(older.id)).result.text,'fictional result');assert.equal((await store.getJob(loaded.id)).status,'failed');
+});
