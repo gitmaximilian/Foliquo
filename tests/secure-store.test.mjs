@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {copyFile,mkdir,mkdtemp,readFile,rm,symlink,writeFile} from 'node:fs/promises';
+import {copyFile,mkdir,mkdtemp,readFile,readdir,rm,symlink,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {randomBytes} from 'node:crypto';
@@ -23,4 +23,12 @@ test('secure object ids, types, tampering, and symlinks are rejected',async t=>{
  const {directory,store}=await fixture(t);await assert.rejects(()=>store.write('../private','original',Buffer.from('x')),/id/);await assert.rejects(()=>store.write(id,'unknown',Buffer.from('x')),/type/);
  await store.write(id,'record',Buffer.from('fictional record'));const path=join(directory,'record',`${id}.enc`),bytes=await readFile(path);bytes[bytes.length-1]^=1;await writeFile(path,bytes);await assert.rejects(()=>store.read(id,'record'),/authentication/);
  await rm(path);const outside=join(directory,'outside');await writeFile(outside,'not encrypted');await symlink(outside,path);await assert.rejects(()=>store.read(id,'record'),/regular file/);await assert.rejects(()=>store.remove(id,'record'),/regular file/);
+});
+
+test('interrupted object writes retain the last committed value and remove staging files',async t=>{
+ const {directory,store}=await fixture(t),old=Buffer.from('previous committed fictional result');await store.write(id,'record',old);
+ async function* interrupted(){yield Buffer.from('unfinished replacement');throw new Error('simulated source interruption');}
+ await assert.rejects(()=>store.write(id,'record',interrupted()),/simulated source interruption/);
+ assert.deepEqual(await store.read(id,'record'),old);
+ const files=await readdir(join(directory,'record'));assert.deepEqual(files,[`${id}.enc`]);
 });
