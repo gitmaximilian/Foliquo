@@ -1,14 +1,17 @@
 # Translation evaluation fixtures
 
-`cases.json` is currently an offline smoke set of three fictional text documents. Its predefined references verify a small number of facts and export behavior. It does not represent model translation quality, broad document coverage, or qualified human review.
+`cases.json` is the offline technical smoke set of three fictional text documents. `development-cases.json` is a separate 20-case synthetic development collection spanning English and Arabic text for German output across several document families. The synthetic references provide regression fixtures for expected facts and export behavior. Neither collection represents qualified human review or a measurement of complete translation quality.
 
 ## Modes and report interpretation
 
-- `npm run benchmark` runs the offline reference pipeline without provider calls.
-- `--results FILE` grades supplied results against the same fictional references.
-- `--live --model MODEL --max-cases N` explicitly starts a bounded ChatGPT run. Each selected fixture causes one model request. The script requires `N` between 1 and the fixture count before opening the provider connection. The report records the provider, model, request count, source revision, and fixture-set label.
-- `--baseline FILE` compares fact-match scores with a prior report. This detects only regressions in the listed synthetic expected values.
+- `npm run benchmark` is shorthand for `--mode technical --set smoke`; it runs the three-case deterministic export/reference pipeline without provider calls.
+- `node scripts/benchmark.mjs --mode technical --set development` runs all 20 synthetic development cases through PDF/Word generation and deterministic fact/layout checks without model calls.
+- `--mode provided-results --results FILE --set SET` grades supplied results against `smoke` or `development` fixtures.
+- `--mode live --model MODEL --max-cases N --set SET` explicitly starts a bounded ChatGPT run. Each selected fixture causes one model request. The script requires `N` between 1 and the selected fixture count before opening the provider connection. It records provider usage only when returned by the provider; unknown token counts and API costs are not inferred.
+- `--baseline FILE` adds a comparison against a prior report. It compares only synthetic expected-fact scores and flags lower scores for matching IDs.
+
+Reports include the source revision, whether the worktree was dirty, a hash of the tracked diff, fixture-set fingerprint, translation-policy and export-pipeline fingerprints, case families/languages, request fingerprints for live cases, provider/model, request count, reported usage events, and the comparison baseline. Fingerprints do not expose the source text.
 
 Reports are written to `outputs/benchmark/` by default. Do not put private customer documents or personal translations in public fixtures, supplied results, CI artifacts, or Git. Any future development and acceptance collections must be split by document family, with no source or near-duplicate crossing into a held-out set. Record factual gold-standard provenance and qualified reviewers before presenting language-quality findings.
 
-The planned minimum of 20 development and 100 independent acceptance documents has not been collected or reviewed. Live model evaluations and human translation ratings remain outstanding; the current three-case report must not be presented as a quality score.
+The 20-case development set is synthetic and has not received qualified linguistic review. The separate 100-case independent acceptance collection has not been collected or reviewed. Live model evaluations and human translation ratings remain outstanding; neither technical score report may be presented as a quality score.
