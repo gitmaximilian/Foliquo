@@ -103,6 +103,8 @@ This document tracks implementation separately from automated verification and e
 
 ### P02 follow-up: cleanup of interrupted private staging
 
+- Commit: `ef02df9` (`fix: clean private staging files after crashes`).
+
 - `JobStore.init()` now removes only UUID-named encrypted write temp files and plaintext `.plain.tmp` files from the private staging folder. `Workspace.init()` removes only the recognized `workspace.enc.tmp-<UUID>` and `.restore-staging-<mkdtemp-suffix>` artifacts left by interrupted writes or uploads. Symlinks are not followed; unrelated files are preserved. Production service startup performs this after obtaining the exclusive service lock.
 - Regression evidence: subprocesses exit during a partial encrypted object write and after decrypted staging is created; reopening preserves the previous job and deletes the stale temp. A Workspace startup test verifies stale restore/manifest staging cleanup while keeping the prior encrypted manifest byte-for-byte unchanged.
 - Verification after the change: targeted storage/workspace tests passed 40/40; full `npm test` passed 222/222; Chromium passed 5/5; offline benchmark: 3 cases, 0 regressions; acceptance passed 12/12; demo build passed and generated demo assets were restored; `node --check` and `git diff --check` passed.
