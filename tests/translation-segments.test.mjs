@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {approveTranslationSegmentRetry,beginTranslationSegment,buildTranslationPlan,completeTranslationSegment,failTranslationSegment,interruptTranslationSegment,translationPlanProgress} from '../lib/translation-segments.mjs';
+import {PDFDocument} from 'pdf-lib';
+import {approveTranslationSegmentRetry,beginTranslationSegment,buildTranslationPlan,completeTranslationSegment,failTranslationSegment,interruptTranslationSegment,markTranslationSegmentNeedsInput,resetTranslationSegmentAndDependents,translationPlanProgress,translationSegmentDocuments} from '../lib/translation-segments.mjs';
 
 test('translation plans are deterministic, page ordered and bind source, model, prompt and context',()=>{
  const documents=[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('Fictional document bytes')}],sourceBlocks=[{id:'src-one',fileIndex:0,page:1},{id:'src-two',fileIndex:0,page:6}];
@@ -13,11 +14,21 @@ test('translation plans are deterministic, page ordered and bind source, model, 
 
 test('segment request interruptions stay unknown and require explicit retry approval',()=>{
  const plan=buildTranslationPlan({documents:[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('bytes')}],pageCounts:[1],provider:'api',model:'fictional-model'}),segment=plan.segments[0];
- beginTranslationSegment(plan,segment.id,'usage-1',10);interruptTranslationSegment(plan,segment.id,20);assert.equal(segment.status,'interrupted_unknown');assert.equal(segment.attempts[0].status,'unknown');assert.deepEqual(translationPlanProgress(plan),{total:1,complete:0,pending:0,inFlight:0,unknown:1,failed:0,percent:0});
+ beginTranslationSegment(plan,segment.id,'usage-1',10);interruptTranslationSegment(plan,segment.id,20);assert.equal(segment.status,'interrupted_unknown');assert.equal(segment.attempts[0].status,'unknown');assert.deepEqual(translationPlanProgress(plan),{total:1,complete:0,pending:0,inFlight:0,needsInput:0,unknown:1,failed:0,percent:0});
  assert.throws(()=>beginTranslationSegment(plan,segment.id,'usage-2'),/bewusste Wiederholungsfreigabe/);approveTranslationSegmentRetry(plan,segment.id);beginTranslationSegment(plan,segment.id,'usage-2',30);completeTranslationSegment(plan,segment.id,{resultRef:'segment-result-1',usageId:'usage-2'},40);assert.equal(segment.status,'complete');assert.equal(translationPlanProgress(plan).percent,100);assert.throws(()=>beginTranslationSegment(plan,segment.id,'usage-3'),/nicht erneut angefragt/);
 });
 
 test('later segments wait for dependencies and known failures stay distinct from unknown requests',()=>{
  const plan=buildTranslationPlan({documents:[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('bytes')}],pageCounts:[2],provider:'api',model:'fictional-model',maxPagesPerSegment:1}),[first,second]=plan.segments;
  assert.throws(()=>beginTranslationSegment(plan,second.id,'usage-2'),/Vorgelagerte/);beginTranslationSegment(plan,first.id,'usage-1',10);failTranslationSegment(plan,first.id,'INVALID_OUTPUT',20);assert.equal(first.status,'failed');assert.equal(first.attempts[0].status,'failed');assert.equal(translationPlanProgress(plan).failed,1);assert.throws(()=>beginTranslationSegment(plan,second.id,'usage-2'),/Vorgelagerte/);
+});
+
+test('materialized PDF segments contain only their assigned source pages',async()=>{
+ const source=await PDFDocument.create();for(let page=1;page<=6;page++)source.addPage([300+page,500+page]);const bytes=Buffer.from(await source.save()),documents=[{name:'fictional.pdf',originalName:'fictional.pdf',type:'application/pdf',bytes}],plan=buildTranslationPlan({documents,pageCounts:[6],provider:'openai',model:'fictional-model',maxPagesPerSegment:2}),segment=plan.segments[1];
+ const [slice]=await translationSegmentDocuments(plan,segment.id,documents),pdf=await PDFDocument.load(slice.bytes);assert.equal(pdf.getPageCount(),2);assert.equal(pdf.getPages()[0].getWidth(),303);assert.equal(pdf.getPages()[1].getWidth(),304);assert.equal(slice.sourcePageStart,3);assert.equal(slice.sourceFileIndex,0);assert.equal(slice.originalName,'fictional.pdf');
+});
+
+test('a clarification holds later segments until its source-bound segment is rerun',()=>{
+ const plan=buildTranslationPlan({documents:[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('Fictional source')}],pageCounts:[2],provider:'openai',model:'fixture-model',maxPagesPerSegment:1}),[first,second]=plan.segments;
+ beginTranslationSegment(plan,first.id,'usage-question');markTranslationSegmentNeedsInput(plan,first.id,{resultRef:'translation-'+first.id,usageId:'usage-question'});assert.equal(first.status,'needs_input');assert.throws(()=>beginTranslationSegment(plan,second.id,'usage-second'),/Vorgelagerte/);assert.deepEqual(resetTranslationSegmentAndDependents(plan,first.id),[first.id,second.id]);beginTranslationSegment(plan,first.id,'usage-after-answer');
 });
