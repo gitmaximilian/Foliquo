@@ -26,6 +26,18 @@ test('a missing active manifest recovers instead of initializing an empty worksp
  const reopened=await new Workspace(value.directory).init();assert.equal(reopened.data.glossary[0].target,'saved translation');assert.ok(reopened.recoveredFrom);assert.ok((await readFile(join(value.directory,'workspace.enc'))).length>33);
 });
 
+test('a damaged authenticated job index restores its complete committed generation',async t=>{
+ const value=await workspace(t),now=Date.now();value.data.jobs.push({id:'fictional-index-recovery-job',owner:'fictional-owner',status:'succeeded',createdAt:now,finishedAt:now,result:{text:'Preserved fictional translation'},questions:[]});await value.save();
+ const indexPath=join(value.directory,'record','job-index-00000000000000000000000000000000.enc');await rm(indexPath);await writeFile(indexPath,Buffer.from('damaged encrypted index'));
+ const reopened=await new Workspace(value.directory).init();assert.equal(reopened.data.jobs[0].result.text,'Preserved fictional translation');assert.equal(reopened.recoveredFrom.reason,'daily');
+});
+
+test('a missing authenticated sidecar object restores the complete committed generation',async t=>{
+ const value=await workspace(t),now=Date.now();value.data.jobs.push({id:'fictional-object-recovery-job',owner:'fictional-owner',status:'succeeded',createdAt:now,finishedAt:now,payload:{files:[{name:'fictional-source.bin',bytes:Buffer.from('FICTIONAL SOURCE BYTES')}]},result:{text:'Preserved fictional translation'},questions:[]});await value.save();
+ const object=value.jobStore.index.jobs[0].objects[0],objectPath=join(value.directory,object.type,`${object.id}.enc`);await rm(objectPath);
+ const reopened=await new Workspace(value.directory).init();assert.equal(reopened.data.jobs[0].result.text,'Preserved fictional translation');assert.equal(reopened.data.jobs[0].payload.files[0].bytes.toString(),'FICTIONAL SOURCE BYTES');assert.ok(reopened.recoveredFrom);
+});
+
 test('a missing or invalid local workspace key is recovered from the encrypted point',async t=>{
  for(const damage of ['missing','invalid']){
   const value=await workspace(t);value.put('glossary',{name:`Fictional ${damage} key`,source:'fictional source',target:'preserved target'});await value.save();const keyPath=join(value.directory,'workspace.key');await rm(keyPath);if(damage==='invalid')await writeFile(keyPath,Buffer.from('wrong key'));
