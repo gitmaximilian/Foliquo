@@ -15,6 +15,18 @@ test('daily and forced recovery points contain only encrypted committed files an
  assert.ok(forced.every(Boolean));assert.equal((await value.recoveryPoints.list()).length,7);assert.equal(await value.createRecoveryPoint({reason:'daily'}),null,'daily snapshots are limited to one per 24 hours');
 });
 
+test('an ENOSPC during recovery-manifest writing removes only the incomplete point',async t=>{
+ const value=await workspace(t);value.put('glossary',{name:'Fictional preserved recovery',source:'fictional source',target:'saved value'});await value.save();const before=await value.recoveryPoints.list(),writeFile=value.recoveryPoints.writeFile;
+ value.recoveryPoints.writeFile=async(path,bytes,options)=>{await writeFile(path,bytes.subarray(0,Math.min(bytes.length,12)),options);const error=new Error('injected full disk');error.code='ENOSPC';throw error;};
+ await assert.rejects(()=>value.createRecoveryPoint({reason:'manual'}),{code:'ENOSPC'});assert.deepEqual(await value.recoveryPoints.list(),before);assert.equal((await readdir(value.recoveryPoints.directory)).some(name=>name.startsWith('.pending-')),false);
+});
+
+test('a committed save remains available and reports an ENOSPC recovery-point failure',async t=>{
+ const value=await workspace(t),writeFile=value.recoveryPoints.writeFile;value.recoveryPoints.writeFile=async(path,bytes,options)=>{await writeFile(path,bytes.subarray(0,Math.min(bytes.length,12)),options);const error=new Error('injected full disk');error.code='ENOSPC';throw error;};
+ value.put('glossary',{name:'Fictional saved despite checkpoint failure',source:'fictional source',target:'committed value'});await value.save();assert.equal(value.library().recovery.errorCode,'ENOSPC');
+ const reopened=await new Workspace(value.directory).init();assert.equal(reopened.data.glossary[0].target,'committed value');
+});
+
 test('a corrupt active manifest recovers the latest authenticated workspace generation',async t=>{
  const value=await workspace(t);value.put('glossary',{name:'Fictional recovery term',source:'fictional recovery source',target:'saved target'});await value.save();await value.createRecoveryPoint({reason:'manual'});
  value.put('glossary',{name:'Fictional recovery term',source:'fictional recovery source',target:'newer unsaved state'});await value.save();await rm(join(value.directory,'workspace.enc'));await writeFile(join(value.directory,'workspace.enc'),Buffer.from('corrupted active manifest'));
