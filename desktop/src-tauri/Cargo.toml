@@ -1,6 +1,6 @@
 [package]
 name = "foliquo-desktop"
-version = "0.11.10"
+version = "0.11.11"
 description = "Foliquo desktop window"
 authors = ["Maximilian Auer"]
 edition = "2021"

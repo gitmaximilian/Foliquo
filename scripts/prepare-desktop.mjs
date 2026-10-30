@@ -25,7 +25,9 @@ await mkdir(office,{recursive:true});
 if(process.platform==='darwin'){
  const source='/Applications/LibreOffice.app';
  await stat(join(source,'Contents/MacOS/soffice'));
- await cp(source,join(office,'LibreOffice.app'),{recursive:true,dereference:true});
+ // Keep LibreOffice's relative framework symlinks intact so its upstream
+ // code signature remains valid and the copied bundle does not duplicate data.
+ await cp(source,join(office,'LibreOffice.app'),{recursive:true,verbatimSymlinks:true});
 }else if(process.platform==='win32'){
  const source=join(process.env.ProgramFiles||'C:\\Program Files','LibreOffice');
  await stat(join(source,'program/soffice.exe'));
