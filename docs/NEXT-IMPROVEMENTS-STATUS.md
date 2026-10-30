@@ -95,6 +95,8 @@ This document tracks implementation separately from automated verification and e
 
 ### P02 follow-up: process-exit transaction recovery
 
+- Commit: `de37c58` (`test: verify job store recovery at process exit points`).
+
 - A subprocess regression now exits immediately after the sidecar object write, after the replacement record write, and after atomic index publication. Each fixture is reopened by a new JobStore instance. The first two states retain the complete previous job; the post-index state contains the complete new job. The test compares both text and binary payload to ensure generations are never mixed.
 - Verification: targeted subprocess test passed; full `npm test` passed 221/221. This models process termination at durable commit boundaries; it is not a power-loss/filesystem durability test and does not simulate a kill during an individual file write.
 - Remaining: test a kill during partial secure-object writes and cleanup/recovery of stale staging files; exercise ENOSPC, permissions, and migrations on supported platforms.
