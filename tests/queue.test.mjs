@@ -1,10 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {TranslationQueue} from '../lib/queue.mjs';
+import {TranslationQueue,boundedJobCache} from '../lib/queue.mjs';
 const payload={files:[{name:'sample.pdf',bytes:Buffer.from('%PDF-')}],metadata:{targetLanguage:'Deutsch'},model:'test'};
 const turn=()=>new Promise(resolve=>setImmediate(resolve));
 const add=(queue,name='one',owner='owner')=>queue.add({owner,clientId:'browser',requestId:name,payload});
 async function settle(queue){for(let i=0;i<30&&queue.busy;i++)await turn();}
+test('bounded job cache evicts only reloadable terminal entries by age and byte budget',()=>{
+ const jobs=[1,2,3].map(index=>({id:`terminal-${index}`,status:'succeeded',finishedAt:index,result:{text:`fictional-${index}`},resultBytes:60}));
+ const active={id:'active',status:'running',payload:{files:[{bytes:{length:50}}]},resultBytes:0};
+ const retained=boundedJobCache([...jobs,active],{maxEntries:2,maxBytes:120});
+ assert.deepEqual(retained.map(job=>job.id),['terminal-3','active']);assert.equal(jobs.every(job=>job.status==='succeeded'&&job.result.text.startsWith('fictional-')),true);assert.equal(retained.includes(active),true);
+});
 test('FIFO serializes execution, preserves snapshots and avoids duplicate submissions',async()=>{
  const order=[],releases=[];let active=0,max=0;
  const q=new TranslationQueue(async p=>{active++;max=Math.max(active,max);order.push(p.metadata.targetLanguage);await new Promise(resolve=>releases.push(resolve));active--;return {text:'OK',pdf:'PDF'};});
