@@ -83,6 +83,7 @@ test('HTTP queue accepts background work, isolates results and serves completed 
  let state=await fetch(`${origin}/api/jobs`,{headers}).then(r=>r.json());assert.equal(state.jobs.length,2);assert.equal(state.jobs[1].status,'queued');
  assert.equal((await fetch(`${origin}/api/jobs`,{headers:other}).then(r=>r.json())).jobs.length,0);
  const history=await fetch(`${origin}/api/job-summaries?offset=0&limit=1`,{headers}).then(r=>r.json());assert.equal(history.total,2);assert.deepEqual(history.jobs.map(job=>job.id),[second.id]);assert.equal(history.hasMore,true);assert.equal(JSON.stringify(history).includes('Testübersetzung'),false);
+ const matched=await fetch(`${origin}/api/job-summaries?query=sample.pdf`,{headers}).then(r=>r.json());assert.equal(matched.total,2);assert.equal((await fetch(`${origin}/api/job-summaries?query=missing`,{headers}).then(r=>r.json())).total,0);
  assert.equal((await fetch(`${origin}/api/job-summaries?offset=0&limit=1`,{headers:other}).then(r=>r.json())).total,0);assert.equal((await fetch(`${origin}/api/job-summaries?limit=101`,{headers})).status,400);
  assert.equal((await fetch(`${origin}/api/jobs/${id}/result`,{headers:other})).status,400);
  assert.equal((await fetch(`${origin}/api/jobs/${id}/cancel`,{method:'POST',headers:{...headers,'X-TranslateOCR-Csrf':'wrong'},body:'{}'})).status,403);

@@ -47,3 +47,11 @@ test('job history summaries are owner-scoped, newest-first and paginated without
  const second=store.listSummariesPage({owner:'fictional-owner',offset:2,limit:2});assert.deepEqual(second.jobs.map(job=>job.id),['fictional-page-1','fictional-page-0']);assert.equal(second.hasMore,false);
  assert.throws(()=>store.listSummariesPage({offset:-1}),/offset/);assert.throws(()=>store.listSummariesPage({limit:101}),/page size/);
 });
+
+test('history search and document-type filters run across the complete owner index before paging',async t=>{
+ const {store}=await fixture(t),records=[fictionalJob('fictional-filter-1'),fictionalJob('fictional-filter-2'),{...fictionalJob('fictional-filter-birth',5000),createdAt:4000,names:['older-birth-record.pdf'],detected:{sourceLanguage:'English',documentType:'Birth certificate'}}];
+ await store.commitJobs(records);
+ const result=store.listSummariesPage({owner:'fictional-owner',offset:0,limit:1,query:'OLDER-BIRTH',type:'Geburtsurkunden'});
+ assert.equal(result.total,1);assert.equal(result.hasMore,false);assert.equal(result.jobs[0].id,'fictional-filter-birth');assert.ok(result.types.includes('Geburtsurkunden'));
+ assert.equal(store.listSummariesPage({owner:'fictional-owner',query:'older-birth',type:'Führerscheine'}).total,0);
+});
