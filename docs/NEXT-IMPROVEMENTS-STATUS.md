@@ -86,7 +86,7 @@ This document tracks implementation separately from automated verification and e
 
 ### P02 follow-up: very large result-sidecar restart and export
 
-- Core fix commit: `3814fca` (`fix: validate large archived exports in chunks`). The HTTP restart regression is included in the current uncommitted integration-test change and will be recorded after its commit.
+- Core fix commit: `3814fca` (`fix: validate large archived exports in chunks`). HTTP restart regression commit: `bce019a` (`test: verify large archived PDF download after restart`).
 
 - The first >160 MiB acceptance run exposed a stack overflow in one-shot Base64 RegExp validation for archived PDF/Word strings. `lib/job-store.mjs` now validates Base64 in bounded 64 KiB chunks while preserving padding rules, then decodes it incrementally into the authenticated object store.
 - Expanded `npm run test:storage` with a 161 MiB binary fixture stored in the `result.pdf` sidecar. It initializes a fresh JobStore from disk, retrieves the owner-scoped object, streams decrypted bytes to an export file, and verifies its SHA-256 digest. This complements the 100-job, 1,100 MiB source-object restart/export case. A separate integration regression covers a valid 161 MiB PDF through server/workspace restart and HTTP download.
