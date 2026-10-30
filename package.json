@@ -13,7 +13,7 @@
   },
   "scripts": {
     "start": "node bin/foliquo.mjs",
-    "test": "node --test --test-force-exit tests/*.test.mjs",
+    "test": "node --test --test-force-exit --test-concurrency=1 tests/*.test.mjs",
     "test:browser": "playwright test",
     "test:storage": "node scripts/storage-scale.mjs",
     "test:backup:scale": "node scripts/backup-scale.mjs",

@@ -22,6 +22,13 @@ test('an ENOSPC during recovery-manifest writing removes only the incomplete poi
  await assert.rejects(()=>value.createRecoveryPoint({reason:'manual'}),{code:'ENOSPC'});assert.deepEqual(await value.recoveryPoints.list(),before);assert.equal((await readdir(value.recoveryPoints.directory)).some(name=>name.startsWith('.pending-')),false);
 });
 
+test('EACCES while preparing a restore leaves the active generation untouched and permits a later retry',async t=>{
+ const value=await workspace(t);value.put('glossary',{name:'Fictional permission recovery',source:'fictional source',target:'committed target'});await value.save();const indexPath=join(value.directory,'record','job-index-00000000000000000000000000000000.enc'),indexBefore=await readFile(indexPath),manifestPath=join(value.directory,'workspace.enc');await rm(manifestPath);await writeFile(manifestPath,Buffer.from('damaged active manifest'));
+ const originalWriter=value.recoveryPoints.writeFile;value.recoveryPoints.writeFile=async(path,...args)=>{if(path.includes('.recovery-restore-state.tmp-'))throw Object.assign(new Error('injected denied restore marker'),{code:'EACCES'});return originalWriter(path,...args);};
+ assert.equal(await value.recoveryPoints.restoreLatest(),null);assert.equal((await readFile(manifestPath)).toString(),'damaged active manifest');assert.deepEqual(await readFile(indexPath),indexBefore);assert.equal((await readdir(value.directory)).some(name=>name==='.recovery-restore.pending'),false);assert.equal((await readdir(value.directory)).some(name=>name.startsWith('.recovery-restore-')),false);
+ value.recoveryPoints.writeFile=originalWriter;assert.ok(await value.recoveryPoints.restoreLatest());const reopened=await new Workspace(value.directory).init();assert.equal(reopened.data.glossary[0].target,'committed target');
+});
+
 test('a committed save remains available and reports an ENOSPC recovery-point failure',async t=>{
  const value=await workspace(t),writeFile=value.recoveryPoints.writeFile;value.recoveryPoints.writeFile=async(path,bytes,options)=>{await writeFile(path,bytes.subarray(0,Math.min(bytes.length,12)),options);const error=new Error('injected full disk');error.code='ENOSPC';throw error;};
  value.put('glossary',{name:'Fictional saved despite checkpoint failure',source:'fictional source',target:'committed value'});await value.save();assert.equal(value.library().recovery.errorCode,'ENOSPC');
