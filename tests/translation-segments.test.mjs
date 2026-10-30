@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {approveTranslationSegmentRetry,beginTranslationSegment,buildTranslationPlan,completeTranslationSegment,interruptTranslationSegment,translationPlanProgress} from '../lib/translation-segments.mjs';
 
 test('translation plans are deterministic, page ordered and bind source, model, prompt and context',()=>{
  const documents=[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('Fictional document bytes')}],sourceBlocks=[{id:'src-one',fileIndex:0,page:1},{id:'src-two',fileIndex:0,page:6}];
  const options={documents,pageCounts:[11],sourceBlocks,provider:'openai',model:'fictional-model',contextVersion:'context-v2',maxPagesPerSegment:5};
  const plan=buildTranslationPlan(options),again=buildTranslationPlan(options);assert.deepEqual(plan.segments.map(segment=>segment.id),again.segments.map(segment=>segment.id));assert.deepEqual(plan.segments.map(segment=>segment.pageRange),[[1,5],[6,10],[11,11]]);assert.deepEqual(plan.segments[0].sourceBlockIds,['src-one']);assert.deepEqual(plan.segments[1].sourceBlockIds,['src-two']);assert.deepEqual(plan.segments[1].dependencies,[plan.segments[0].id]);
+ const digest=value=>createHash('sha256').update(value).digest('hex'),documentId=`doc-${digest(documents[0].bytes).slice(0,20)}-0`;assert.equal(plan.segments[0].sourcePageIds[0],`page-${digest(`${documentId}:1`).slice(0,24)}`);
  assert.notEqual(plan.segments[0].fingerprint,buildTranslationPlan({...options,contextVersion:'context-v3'}).segments[0].fingerprint);assert.equal(JSON.stringify(plan).includes('Fictional document bytes'),false);
 });
 
