@@ -29,6 +29,11 @@ test('Limits bound pending work and results expire without exposing payloads',as
 test('Memory pressure never expires or removes a successful result before retention',async()=>{
  const q=new TranslationQueue(async()=>({pdf:'fictional-result'}));const job=add(q);await settle(q);job.resultBytes=161*1024*1024;assert.equal(q.trimMemory(),false);assert.equal(job.status,'succeeded');assert.equal(job.result.pdf,'fictional-result');assert.equal(job.finishedAt>0,true);
 });
+test('job count alone never removes retained terminal records',()=>{
+ const now=Date.now(),q=new TranslationQueue(async()=>({}),{now:()=>now,retentionMs:30*86400000});
+ q.jobs=Array.from({length:1001},(_,index)=>({id:`fictional-${index}`,status:'succeeded',finishedAt:now,createdAt:now,result:{text:'retained fictional result'},resultBytes:64}));
+ q.cleanup();assert.equal(q.jobs.length,1001);assert.ok(q.jobs.every(job=>job.status==='succeeded'&&job.result?.text==='retained fictional result'));
+});
 test('durable checkpoints are awaited before execution and surfaced in job status',async()=>{
  let writes=0;const q=new TranslationQueue(async(payload,signal,stage,save)=>{assert.equal(writes,1,'the running job must be saved before model work starts');payload.checkpoints={translation:{phase:'translation',status:'complete',finishedAt:Date.now()}};await save();return {pdf:'ok'};},{onCheckpoint:async()=>{await new Promise(resolve=>setImmediate(resolve));writes++;}});const job=add(q);await settle(q);assert.equal(job.status,'succeeded');assert.equal(writes,2);assert.equal(job.lastCheckpoint.phase,'translation');assert.equal(q.snapshot('owner').jobs[0].checkpoint.status,'complete');
 });
