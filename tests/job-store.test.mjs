@@ -81,6 +81,12 @@ test('whole-collection commits reuse unchanged records and roll back staged upda
  const reopened=await new JobStore(directory,store.secure.key).init();assert.deepEqual(reopened.listSummaries().map(item=>item.id),[first.id,second.id]);assert.equal((await reopened.getJob(first.id)).result.text,'changed fictional result');assert.equal((await reopened.getJob(second.id)).result.text,'fictional result');
 });
 
+test('streaming job replacement rolls back staged records when the source stream fails',async t=>{
+ const {directory,store}=await fixture(t),now=Date.now(),existing={...fictionalJob('fictional-stream-existing'),createdAt:now,finishedAt:now};await store.commitJobs([existing]);const before=structuredClone(store.index),recordsBefore=(await readdir(join(directory,'record'))).sort();
+ const incoming=(async function*(){yield {...fictionalJob('fictional-stream-new'),createdAt:now,finishedAt:now,result:{text:'staged fictional result',pdf:'RkFLRQ=='}};throw new Error('fictional archive stream failed');})();
+ await assert.rejects(()=>store.commitJobs(incoming,{replace:true,deferCleanup:true}),/fictional archive stream failed/);assert.deepEqual(store.index,before);assert.deepEqual((await readdir(join(directory,'record'))).sort(),recordsBefore);assert.equal((await store.getJob(existing.id)).result.text,'fictional result');assert.equal(await store.getJob('fictional-stream-new'),null);
+});
+
 test('job history summaries are owner-scoped, newest-first and paginated without result data',async t=>{
  const {store}=await fixture(t),jobs=Array.from({length:5},(_,index)=>({...fictionalJob(`fictional-page-${index}`,1000+index),owner:index===4?'another-fictional-owner':'fictional-owner',createdAt:100+index}));
  await store.commitJobs(jobs);

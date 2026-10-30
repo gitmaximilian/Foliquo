@@ -44,7 +44,7 @@ test('backup download streams to the native save destination when available',asy
   const bytes=Buffer.from(saved.chunks);
   expect(saved.options).toHaveLength(1);
   expect(saved.options[0].suggestedName).toBe('foliquo-backup.enc');
-  expect(bytes.subarray(0,9).toString()).toBe('TOCRBACK1');
+  expect(bytes.subarray(0,9).toString()).toBe('TOCRBACK2');
   expect(bytes.length).toBeGreaterThan(40);
   expect(saved.password).toBe('');
   expect(pageErrors).toEqual([]);
@@ -62,7 +62,7 @@ test('backup download retains the Blob download fallback without a native picker
   const path=await download.path();
   const bytes=await readFile(path);
   expect(download.suggestedFilename()).toBe('foliquo-backup.enc');
-  expect(bytes.subarray(0,9).toString()).toBe('TOCRBACK1');
+  expect(bytes.subarray(0,9).toString()).toBe('TOCRBACK2');
   expect(bytes.length).toBeGreaterThan(40);
   expect(pageErrors).toEqual([]);
  }finally{await closeIsolatedWorkspace(isolated);}
