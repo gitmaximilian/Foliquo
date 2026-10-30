@@ -109,3 +109,11 @@ This document tracks implementation separately from automated verification and e
 - Regression evidence: subprocesses exit during a partial encrypted object write and after decrypted staging is created; reopening preserves the previous job and deletes the stale temp. A Workspace startup test verifies stale restore/manifest staging cleanup while keeping the prior encrypted manifest byte-for-byte unchanged.
 - Verification after the change: targeted storage/workspace tests passed 40/40; full `npm test` passed 222/222; Chromium passed 5/5; offline benchmark: 3 cases, 0 regressions; acceptance passed 12/12; demo build passed and generated demo assets were restored; `node --check` and `git diff --check` passed.
 - Remaining: verify cleanup on Windows and macOS upgrades, actual ENOSPC/permissions, power-loss directory durability, and streaming large backup restore.
+
+### P02 follow-up: injected secure-write failures
+
+- Implementation: `SecureStore` accepts an internal file-open function for deterministic failure injection. Production defaults to Node's normal `open()` implementation. This allows tests to trigger `ENOSPC` during ciphertext output and `EACCES` while opening a replacement temp file without depending on the host filesystem or permissions.
+- Regression evidence: both failures preserve the previously committed encrypted object and leave no temporary write file. The ENOSPC case fails after the new temp file has been created and the header written, exercising cleanup during the write itself.
+- Verification: `node --check lib/secure-store.mjs`; `node --test tests/secure-store.test.mjs` passed 5/5; `npm test` passed 223/223; `git diff --check` passed.
+- Data impact: temporary directories, random test keys, and fictional bytes only.
+- Limits: these are deterministic injected filesystem errors, not a physical full-volume test. Cross-platform behavior, especially Windows handle cleanup and directory durability, remains to be verified.

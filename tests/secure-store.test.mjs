@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {copyFile,mkdir,mkdtemp,readFile,readdir,rm,symlink,writeFile} from 'node:fs/promises';
+import {copyFile,mkdir,mkdtemp,open,readFile,readdir,rm,symlink,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {randomBytes} from 'node:crypto';
@@ -31,6 +31,13 @@ test('interrupted object writes retain the last committed value and remove stagi
  await assert.rejects(()=>store.write(id,'record',interrupted()),/simulated source interruption/);
  assert.deepEqual(await store.read(id,'record'),old);
  const files=await readdir(join(directory,'record'));assert.deepEqual(files,[`${id}.enc`]);
+});
+
+test('ENOSPC during ciphertext write and EACCES opening a temp preserve the committed object',async t=>{
+ const {directory,key,store}=await fixture(t),previous=Buffer.from('previous fictional committed value');await store.write(id,'record',previous);
+ const enospcOpen=async(...args)=>{const handle=await open(...args);let writes=0;return new Proxy(handle,{get(target,property){if(property==='writeFile')return async(...writeArgs)=>{if(++writes===2)throw Object.assign(new Error('simulated full disk'),{code:'ENOSPC'});return target.writeFile(...writeArgs);};const value=Reflect.get(target,property,target);return typeof value==='function'?value.bind(target):value;}});};
+ const fullDisk=new SecureStore(directory,key,{openFile:enospcOpen});await assert.rejects(()=>fullDisk.write(id,'record',Buffer.alloc(1024*1024,0x5a)),{code:'ENOSPC'});assert.deepEqual(await store.read(id,'record'),previous);assert.deepEqual((await readdir(join(directory,'record'))).sort(),[`${id}.enc`]);
+ const deniedOpen=async()=>{throw Object.assign(new Error('simulated denied write'),{code:'EACCES'});},denied=new SecureStore(directory,key,{openFile:deniedOpen});await assert.rejects(()=>denied.write(id,'record',Buffer.from('replacement')),{code:'EACCES'});assert.deepEqual(await store.read(id,'record'),previous);assert.deepEqual((await readdir(join(directory,'record'))).sort(),[`${id}.enc`]);
 });
 
 test('large object decryption is staged, authenticated before use, and cleaned afterward',async t=>{
