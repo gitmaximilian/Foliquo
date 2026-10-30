@@ -42,3 +42,11 @@ test('job context is immutable, versioned, and excludes reference source content
  assert.equal(resumed.dossierFacts[0].value,'Alex Example');assert.deepEqual(resumed.learningExamples[0].rules,original.learningExamples[0].rules);
  assert.doesNotMatch(JSON.stringify(resumed),/PRIVATE ORIGINAL NAME|PRIVATE FINISHED TRANSLATION|PRIVATE BINARY SOURCE/);
 });
+
+test('unknown document type freezes eligible glossary candidates and selects only after analysis',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-context-glossary-')),workspace=await new Workspace(directory).init();t.after(async()=>{await workspace.tail;await rm(directory,{recursive:true,force:true});});
+ workspace.put('glossary',{name:'Fictional type A',source:'Fictional authority',target:'Amt A',sourceLanguage:'Englisch',targetLanguage:'Deutsch',documentType:'fictional-type-a'});workspace.put('glossary',{name:'Fictional type B',source:'Fictional authority',target:'Amt B',sourceLanguage:'Englisch',targetLanguage:'Deutsch',documentType:'fictional-type-b'});
+ const snapshot=createContextLibrarySnapshot(workspace,{sourceLanguage:'Englisch',targetLanguage:'Deutsch'},'fictional-job','local-owner',{now:222222});assert.equal(snapshot.base.glossaryCandidates.length,2);
+ const typeA=resolveContextSnapshot(snapshot,{jobId:'fictional-job',sourceLanguage:'Englisch',targetLanguage:'Deutsch',documentType:'fictional-type-a'}),typeB=resolveContextSnapshot(snapshot,{jobId:'fictional-job',sourceLanguage:'Englisch',targetLanguage:'Deutsch',documentType:'fictional-type-b'});
+ assert.deepEqual(typeA.terms.map(term=>term.target),['Amt A']);assert.deepEqual(typeB.terms.map(term=>term.target),['Amt B']);assert.equal('glossaryCandidates'in typeA,false);assert.doesNotMatch(JSON.stringify(typeA),/Amt B/u);assert.doesNotMatch(JSON.stringify(typeB),/Amt A/u);
+});
