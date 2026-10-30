@@ -47,7 +47,7 @@ test('an interrupted job is marked uncertain and is never replayed automatically
  const provider={id:'openai',selected:'openai',status:()=>({connected:true,planEnabled:true}),models:async()=>[{id:'fictional-model',name:'Fictional model'}],respond:async()=>{calls++;return 'never automatically sent';}},server=createApp({connection:{status:()=>({connected:true,planEnabled:true})},workspace,provider,port});await new Promise((resolve,reject)=>server.once('error',reject).listen(port,'127.0.0.1',resolve));
  t.after(async()=>{await new Promise(resolve=>server.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});});
  const cookie=`urkundenklar=${sessionId}`,jobs=await fetch(origin+'/api/jobs',{headers:{cookie}}).then(response=>response.json()),usageView=await fetch(origin+'/api/usage?provider=openai',{headers:{cookie}}).then(response=>response.json()),job=jobs.jobs.find(item=>item.id===jobId);
- assert.equal(job.status,'failed');assert.equal(job.interrupted,true);assert.equal(job.checkpoint.phase,'translation');assert.equal(job.checkpoint.status,'interrupted');assert.match(job.error,/erneut Verbrauch/);assert.equal(usageView.summary.totals.unknownRequests,1);assert.equal(calls,0);
+ assert.equal(job.status,'failed');assert.equal(job.interrupted,true);assert.equal(job.checkpoint.phase,'translation');assert.equal(job.checkpoint.status,'interrupted');assert.match(job.error,/erneut Verbrauch/);assert.equal(usageView.summary.totals.unknownRequests,1);assert.equal(calls,0);await workspace.tail;assert.equal((await workspace.jobStore.getJob(jobId)).status,'failed');
 });
 
 test('the local API budget stops a known-cost request before provider work starts',async t=>{
