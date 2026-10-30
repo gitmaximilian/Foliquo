@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {randomBytes} from 'node:crypto';
+import {createHash,randomBytes} from 'node:crypto';
 import {JobStore} from '../lib/job-store.mjs';
 
 const fictionalJob=(id,finishedAt=1000)=>({id,owner:'fictional-owner',status:'succeeded',stage:'done',createdAt:100,finishedAt,provider:'chatgpt',model:'fictional-model',targetLanguage:'Deutsch',names:['fictional.pdf'],result:{text:'fictional result',pdf:'FAKE'},questions:[],review:{version:1}});
@@ -14,6 +14,15 @@ test('job records commit atomically and the library index exposes bounded summar
  const summaries=store.listSummaries({owner:'fictional-owner'});assert.equal(summaries.length,1);assert.equal(summaries[0].hasResult,true);assert.equal(JSON.stringify(summaries).includes('fictional result'),false);assert.equal(JSON.stringify(summaries).includes('FAKE'),false);
  const reopened=await new JobStore(directory,store.secure.key).init(),loaded=await reopened.getJob(first.id);assert.equal(loaded.result.text,'fictional result');loaded.result.text='revised fictional result';loaded.review.version=2;await reopened.commitJob(loaded);
  const afterRestart=await new JobStore(directory,store.secure.key).init();assert.equal((await afterRestart.getJob(first.id)).review.version,2);assert.equal(await afterRestart.deleteJob(first.id),true);assert.deepEqual(afterRestart.listSummaries(),[]);assert.equal(await afterRestart.deleteJob(first.id),false);
+});
+
+test('large archived jobs verify a compact record digest without JSON-stringifying hydrated payloads',async t=>{
+ const {directory,store}=await fixture(t),bytes=Buffer.alloc(256*1024,0x5a),job={...fictionalJob('fictional-large-record'),payload:{files:[{name:'fictional-large.pdf',bytes}]}};store.cacheBytes=8*1024*1024;await store.commitJob(job);
+ const entry=store.index.jobs[0];assert.match(entry.recordFingerprint,/^[a-f0-9]{64}$/);const persisted=await store.secure.read(entry.recordId,'record');assert.equal(createHash('sha256').update(persisted).digest('hex'),entry.recordFingerprint);
+ const originalStringify=JSON.stringify;JSON.stringify=function(value,...args){if(value?.id===job.id&&value.payload?.files?.[0]?.bytes?.data?.length===bytes.length)throw new Error('whole archived job was serialized');return originalStringify.call(this,value,...args);};
+ let loaded;try{store.dropCache(job.id);loaded=await store.getJob(job.id);}finally{JSON.stringify=originalStringify;}
+ assert.equal(loaded.payload.files[0].bytes.data.length,bytes.length);assert.ok(store.cache.has(job.id),'the heap-weighted cache estimate permits this bounded record');
+ const digest=entry.recordFingerprint;entry.recordFingerprint='0'.repeat(64);store.dropCache(job.id);await assert.rejects(()=>store.getJob(job.id),/Encrypted job record is invalid/);entry.recordFingerprint=digest;
 });
 
 test('legacy migration verifies every record before publishing its index and prunes only expired terminal jobs',async t=>{
