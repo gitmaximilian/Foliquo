@@ -29,3 +29,12 @@ test('failed index commits keep the previous record and do not expose a partial 
  await assert.rejects(()=>store.commitJob(changed),/manifest write failure/);store.writeIndex=oldWrite;
  const reopened=await new JobStore(directory,store.secure.key).init();assert.equal((await reopened.getJob(job.id)).result.text,'fictional result');assert.equal(reopened.index.jobs[0].recordId,oldRecordId);
 });
+
+test('whole-collection commits reuse unchanged records and roll back staged updates on index failure',async t=>{
+ const {directory,store}=await fixture(t),first=fictionalJob('fictional-job-0005'),second=fictionalJob('fictional-job-0006');
+ await store.commitJobs([first,second]);const before=store.index.jobs.map(entry=>({id:entry.id,recordId:entry.recordId}));
+ const changed={...first,result:{...first.result,text:'changed fictional result'}};await store.commitJobs([changed,second]);
+ const after=store.index.jobs;assert.notEqual(after.find(entry=>entry.id===first.id).recordId,before.find(entry=>entry.id===first.id).recordId);assert.equal(after.find(entry=>entry.id===second.id).recordId,before.find(entry=>entry.id===second.id).recordId);
+ const oldWrite=store.writeIndex.bind(store);store.writeIndex=async()=>{throw new Error('simulated batch index failure');};await assert.rejects(()=>store.commitJobs([{...changed,result:{text:'uncommitted'}}]),/batch index failure/);store.writeIndex=oldWrite;
+ const reopened=await new JobStore(directory,store.secure.key).init();assert.deepEqual(reopened.listSummaries().map(item=>item.id),[first.id,second.id]);assert.equal((await reopened.getJob(first.id)).result.text,'changed fictional result');assert.equal((await reopened.getJob(second.id)).result.text,'fictional result');
+});
