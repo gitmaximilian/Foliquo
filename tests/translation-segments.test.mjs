@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {approveTranslationSegmentRetry,beginTranslationSegment,buildTranslationPlan,completeTranslationSegment,interruptTranslationSegment,translationPlanProgress} from '../lib/translation-segments.mjs';
+import {approveTranslationSegmentRetry,beginTranslationSegment,buildTranslationPlan,completeTranslationSegment,failTranslationSegment,interruptTranslationSegment,translationPlanProgress} from '../lib/translation-segments.mjs';
 
 test('translation plans are deterministic, page ordered and bind source, model, prompt and context',()=>{
  const documents=[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('Fictional document bytes')}],sourceBlocks=[{id:'src-one',fileIndex:0,page:1},{id:'src-two',fileIndex:0,page:6}];
@@ -15,4 +15,9 @@ test('segment request interruptions stay unknown and require explicit retry appr
  const plan=buildTranslationPlan({documents:[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('bytes')}],pageCounts:[1],provider:'api',model:'fictional-model'}),segment=plan.segments[0];
  beginTranslationSegment(plan,segment.id,'usage-1',10);interruptTranslationSegment(plan,segment.id,20);assert.equal(segment.status,'interrupted_unknown');assert.equal(segment.attempts[0].status,'unknown');assert.deepEqual(translationPlanProgress(plan),{total:1,complete:0,pending:0,inFlight:0,unknown:1,failed:0,percent:0});
  assert.throws(()=>beginTranslationSegment(plan,segment.id,'usage-2'),/bewusste Wiederholungsfreigabe/);approveTranslationSegmentRetry(plan,segment.id);beginTranslationSegment(plan,segment.id,'usage-2',30);completeTranslationSegment(plan,segment.id,{resultRef:'segment-result-1',usageId:'usage-2'},40);assert.equal(segment.status,'complete');assert.equal(translationPlanProgress(plan).percent,100);assert.throws(()=>beginTranslationSegment(plan,segment.id,'usage-3'),/nicht erneut angefragt/);
+});
+
+test('later segments wait for dependencies and known failures stay distinct from unknown requests',()=>{
+ const plan=buildTranslationPlan({documents:[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('bytes')}],pageCounts:[2],provider:'api',model:'fictional-model',maxPagesPerSegment:1}),[first,second]=plan.segments;
+ assert.throws(()=>beginTranslationSegment(plan,second.id,'usage-2'),/Vorgelagerte/);beginTranslationSegment(plan,first.id,'usage-1',10);failTranslationSegment(plan,first.id,'INVALID_OUTPUT',20);assert.equal(first.status,'failed');assert.equal(first.attempts[0].status,'failed');assert.equal(translationPlanProgress(plan).failed,1);assert.throws(()=>beginTranslationSegment(plan,second.id,'usage-2'),/Vorgelagerte/);
 });
