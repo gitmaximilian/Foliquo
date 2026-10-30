@@ -4,6 +4,7 @@ import { generateKeyPair, SignJWT, createLocalJWKSet, exportJWK } from 'jose';
 import { createAuthorization, consumeCallback, verifyIdentity, readResponseStream, ISSUER, ChatGPTConnection } from '../lib/chatgpt.mjs';
 import { validateDocuments, createTranslationPDF, translationRequest } from '../lib/documents.mjs';
 import { createApp } from '../server.mjs';
+import { Workspace } from '../lib/workspace.mjs';
 import { PDFDocument } from 'pdf-lib';
 import { mkdtemp, stat, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -91,4 +92,18 @@ test('HTTP queue accepts background work, isolates results and serves completed 
  for(let i=0;i<1200;i++){state=await fetch(`${origin}/api/jobs`,{headers}).then(r=>r.json());if(state.jobs[0].status==='succeeded')break;await new Promise(resolve=>setTimeout(resolve,50));}
  assert.equal(state.jobs[0].status,'succeeded');assert.equal(state.jobs[1].status,'cancelled');assert.equal(state.jobs[0].progress,100);
  const result=await fetch(`${origin}/api/jobs/${id}/result`,{headers}).then(r=>r.json());assert.equal(result.text,'Testübersetzung');assert.equal(Buffer.from(result.pdf,'base64').subarray(0,5).toString(),'%PDF-');
+});
+
+test('lazy job history loads an archived result on demand and keeps it out of queue polling',async t=>{
+ const port=14320,dir=await mkdtemp(join(tmpdir(),'foliquo-lazy-http-')),workspace=await new Workspace(dir,{lazyJobs:true}).init(),origin=`http://127.0.0.1:${port}`;
+ const app=createApp({connection:{data:{hostId:'host'},status:()=>({connected:false})},port,workspace});await new Promise(resolve=>app.listen(port,'127.0.0.1',resolve));
+ t.after(async()=>{await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(dir,{recursive:true,force:true});});
+ const home=await fetch(origin),cookie=home.headers.get('set-cookie').split(';')[0],owner=decodeURIComponent(cookie.split('=')[1]);
+ const pdf=await PDFDocument.create();pdf.addPage();const pdfBytes=Buffer.from(await pdf.save()),job={id:'12345678-1234-4234-8234-123456789abc',owner,status:'succeeded',stage:'done',createdAt:Date.now()-1000,finishedAt:Date.now()-500,names:['fictional-archive.pdf'],targetLanguage:'Deutsch',detected:{documentType:'Fictional document'},result:{text:'Archived fictional translation',pdf:pdfBytes.toString('base64'),word:'RkFLRQ==',previews:[]},questions:[],payload:{files:[]}};
+ await workspace.jobStore.commitJob(job);
+ const headers={cookie},poll=await fetch(`${origin}/api/jobs`,{headers}).then(r=>r.json());assert.equal(poll.jobs.some(item=>item.id===job.id),false);
+ const history=await fetch(`${origin}/api/job-summaries`,{headers}).then(r=>r.json());assert.equal(history.jobs[0].id,job.id);assert.equal(JSON.stringify(history).includes('Archived fictional translation'),false);
+ const result=await fetch(`${origin}/api/jobs/${job.id}/result`,{headers});assert.equal(result.status,200);assert.equal((await result.json()).text,'Archived fictional translation');
+ const after=await fetch(`${origin}/api/jobs`,{headers}).then(r=>r.json());assert.equal(after.jobs.some(item=>item.id===job.id),false);
+ const otherHome=await fetch(origin),otherCookie=otherHome.headers.get('set-cookie').split(';')[0];assert.equal((await fetch(`${origin}/api/jobs/${job.id}/result`,{headers:{cookie:otherCookie}})).status,400);
 });

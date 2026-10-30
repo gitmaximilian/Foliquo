@@ -62,3 +62,16 @@ test('subset commits update loaded jobs without dropping unloaded encrypted hist
  assert.deepEqual(store.listSummaries().map(item=>item.id),[older.id,loaded.id]);
  assert.equal((await store.getJob(older.id)).result.text,'fictional result');assert.equal((await store.getJob(loaded.id)).status,'failed');
 });
+
+test('status loading reads only requested encrypted job records',async t=>{
+ const {store}=await fixture(t),queued=fictionalJob('fictional-queued');queued.status='queued';const complete=fictionalJob('fictional-complete');
+ await store.commitJobs([queued,complete]);const loaded=await store.loadByStatuses(['queued']);
+ assert.deepEqual(loaded.map(job=>job.id),[queued.id]);assert.equal(store.listSummaries().length,2);
+});
+
+test('failed-job summaries retain only the metadata needed for safe retry actions',async t=>{
+ const {store}=await fixture(t),failed=fictionalJob('fictional-retryable');failed.status='failed';failed.payload={files:[{name:'fictional.pdf'}]};failed.interrupted=true;failed.retryAfterAt=123456;failed.budgetConsentRequired=true;
+ await store.commitJob(failed);const [summary]=store.listSummaries();
+ assert.equal(summary.canRetry,true);assert.equal(summary.interrupted,true);assert.equal(summary.retryAfterAt,123456);assert.equal(summary.budgetConsentRequired,true);
+ assert.equal(JSON.stringify(summary).includes('payload'),false);assert.equal(JSON.stringify(summary).includes('fictional result'),false);
+});
