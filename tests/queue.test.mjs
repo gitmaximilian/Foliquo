@@ -26,6 +26,9 @@ test('Progress and remaining time are estimates and do not report completion ear
 test('Limits bound pending work and results expire without exposing payloads',async()=>{
  let now=1000;const q=new TranslationQueue(async()=>({pdf:'ok'}),{now:()=>now,maxPending:1});q.pause();const a=add(q);assert.throws(()=>add(q,'two'));q.resume();await settle(q);const serialized=JSON.stringify(q.snapshot('owner'));assert.equal(serialized.includes('%PDF-'),false);assert.equal(serialized.includes('"payload"'),false);now+=3600001;q.cleanup();assert.equal(a.status,'expired');assert.equal(a.result,null);
 });
+test('Memory pressure never expires or removes a successful result before retention',async()=>{
+ const q=new TranslationQueue(async()=>({pdf:'fictional-result'}));const job=add(q);await settle(q);job.resultBytes=161*1024*1024;assert.equal(q.trimMemory(),false);assert.equal(job.status,'succeeded');assert.equal(job.result.pdf,'fictional-result');assert.equal(job.finishedAt>0,true);
+});
 test('durable checkpoints are awaited before execution and surfaced in job status',async()=>{
  let writes=0;const q=new TranslationQueue(async(payload,signal,stage,save)=>{assert.equal(writes,1,'the running job must be saved before model work starts');payload.checkpoints={translation:{phase:'translation',status:'complete',finishedAt:Date.now()}};await save();return {pdf:'ok'};},{onCheckpoint:async()=>{await new Promise(resolve=>setImmediate(resolve));writes++;}});const job=add(q);await settle(q);assert.equal(job.status,'succeeded');assert.equal(writes,2);assert.equal(job.lastCheckpoint.phase,'translation');assert.equal(q.snapshot('owner').jobs[0].checkpoint.status,'complete');
 });

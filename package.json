@@ -14,6 +14,7 @@
   "scripts": {
     "start": "node bin/foliquo.mjs",
     "test": "node --test --test-force-exit tests/*.test.mjs",
+    "test:browser": "playwright test",
     "benchmark": "node scripts/benchmark.mjs",
     "demo:build": "node scripts/build-demo.mjs",
     "acceptance": "node scripts/acceptance.mjs",
@@ -43,6 +44,7 @@
     "foliquo": "bin/foliquo.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@tauri-apps/cli": "2.12.4"
   }
 }
