@@ -5,6 +5,11 @@ import {unzipSync,strFromU8} from 'fflate';
 import {normalizeDates,normalizeTranslation,parseFinalTranslation,translationInstructions} from '../lib/translation-policy.mjs';
 import {applyReview,reviewSnapshot,finalReview} from '../lib/reviews.mjs';
 import {createApp} from '../server.mjs';
+test('review snapshot exposes the compact source inventory without exposing original files',()=>{
+ const inventory={schema:1,items:[{id:'page-1',page:1,coverageStatus:'unreviewed'}],summary:{total:1,reviewed:0,mapped:0,open:1,percent:0,label:'zugeordnete/geprüfte Quellbereiche'}};
+ const job={id:'job',status:'succeeded',result:{text:'Fictional translation',pdf:'cGRm',word:'ZG9jeA==',sourceInventory:inventory,previews:[{name:'private.pdf',data:'cHJpdmF0ZQ=='}]}};
+ assert.deepEqual(reviewSnapshot(job).sourceInventory,inventory);assert.equal(JSON.stringify(reviewSnapshot(job)).includes('private.pdf'),false);
+});
 test('Dates use dots everywhere and German terminology applies without altering other target languages',()=>{
  assert.equal(normalizeDates('7.3.1998; 07 03 1998; 1998-03-07; 7/3/1998'),'07.03.1998; 07.03.1998; 07.03.1998; 07.03.1998');
  assert.equal(normalizeTranslation('Kennzeichen: unversehrt'),'Merkmale: keine besonderen Merkmale');assert.equal(normalizeTranslation('Kennzeichen: unversehrt','Englisch'),'Kennzeichen: unversehrt');
