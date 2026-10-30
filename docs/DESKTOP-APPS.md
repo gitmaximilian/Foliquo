@@ -14,6 +14,8 @@ The Windows installer is a regular unsigned per-user installer. Windows SmartScr
 
 The separate MSIX is an unsigned Store-intake candidate, not an end-user installer. Its manifest identity is provisional; its Name and Publisher must exactly match the app identity assigned in Partner Center before submission. The candidate is not Store-certified or Store-signed and is not suitable for direct side-loading.
 
+Each desktop build also emits `BUILD-REPORT.txt` and `BUILD-REPORT.json`. The report records the build target, the platform that actually ran signature verification, per-artifact operating-system signature evidence, macOS Gatekeeper and notarization results where applicable, the separate Tauri updater-signature presence, and package checksums. Statuses such as `unsigned`, `invalid`, `mixed`, `signed-but-rejected`, and `unverified` describe different outcomes; `unverified` is not evidence that an artifact is unsigned. The updater signature does not substitute for Authenticode or Apple code signing and notarization. A report from one build must not be used to imply the status of artifacts from another platform.
+
 ## Install
 
 ### Windows
