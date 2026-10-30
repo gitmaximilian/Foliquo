@@ -32,3 +32,12 @@ test('interrupted object writes retain the last committed value and remove stagi
  assert.deepEqual(await store.read(id,'record'),old);
  const files=await readdir(join(directory,'record'));assert.deepEqual(files,[`${id}.enc`]);
 });
+
+test('large object decryption is staged, authenticated before use, and cleaned afterward',async t=>{
+ const {directory,store}=await fixture(t),source=randomBytes(2*1024*1024+37);async function* chunks(){for(let offset=0;offset<source.length;offset+=32771)yield source.subarray(offset,offset+32771);}
+ await store.write(id,'export',chunks());let observed;
+ const returned=await store.withDecryptedObject(id,'export',async path=>{observed=path;assert.deepEqual(await readFile(path),source);return 'consumed';});
+ assert.equal(returned,'consumed');await assert.rejects(()=>readFile(observed),{code:'ENOENT'});
+ const sealed=await readFile(join(directory,'export',`${id}.enc`));sealed[sealed.length-1]^=1;await writeFile(join(directory,'export',`${id}.enc`),sealed);let called=false;
+ await assert.rejects(()=>store.withDecryptedObject(id,'export',async()=>{called=true;}),/authentication/);assert.equal(called,false);
+});
