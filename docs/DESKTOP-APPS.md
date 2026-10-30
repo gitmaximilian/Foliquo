@@ -50,4 +50,4 @@ Windows and macOS apps check for updates when Foliquo starts and periodically wh
 
 Versions v0.11.8 and newer can update to v0.11.11 from inside Foliquo. Users of earlier versions must first install v0.11.8 manually because it introduced the updater. Updates preserve the private workspace. Use the release’s `SHA256SUMS` file to verify direct downloads. Windows and macOS packages remain unsigned and do not imply Microsoft Store, Mac App Store, or Flathub approval.
 
-The latest source and build workflow are on the [`codex/native-desktop` branch](https://github.com/gitmaximilian/Foliquo/tree/codex/native-desktop). Each build report records the source commit, target platform, and unsigned status. The packages include the required upstream license and notice files; see [third-party notices](THIRD-PARTY.md).
+The latest source and build workflow are on the [`main` branch](https://github.com/gitmaximilian/Foliquo/tree/main). Each platform build publishes a report alongside its checksums. The packages include the required upstream license and notice files; see [third-party notices](THIRD-PARTY.md).

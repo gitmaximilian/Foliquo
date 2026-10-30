@@ -20,7 +20,7 @@ ChatGPT sign-in uses the account authorization flow. OpenAI, Claude, and DeepSee
 
 ## Free delivery
 
-Browser and CLI releases remain available for Windows, macOS, and Linux. Free native desktop previews are built by the GitHub Actions workflow for macOS Apple Silicon/Intel, Windows x64, and Linux x64. They bundle Node.js and LibreOffice. The macOS apps are unsigned, Windows installers may show SmartScreen, and Linux is distributed as a Flatpak bundle. Preview downloads are retained for 30 days; see the [desktop setup guide](docs/DESKTOP-PREVIEW.md).
+Browser and CLI releases remain available for Windows, macOS, and Linux. Native desktop apps for macOS Apple Silicon/Intel, Windows x64, and Linux x64 are available as direct downloads. They bundle Node.js and LibreOffice. The macOS apps are unsigned, Windows installers may show SmartScreen, and Linux is distributed as a Flatpak bundle. See the [desktop setup guide](docs/DESKTOP-APPS.md) for current packages and installation details.
 
 The app's update check is read-only and sends no workspace content to GitHub.
 
