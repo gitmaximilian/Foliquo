@@ -16,7 +16,10 @@ test('reference trace renders safely in English, German, and Arabic',async({page
  const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
  try{
   await page.goto(origin,{waitUntil:'networkidle'});
-  for(const locale of ['en','de','ar']){
+  await page.locator('#intro-skip').click();
+  await page.evaluate(()=>{reviewJobId='fictional-job';view('review',{historyMode:'none'});});
+  for(const [locale,width] of [['en',375],['de',1024],['ar',1440]]){
+   await page.setViewportSize({width,height:900});
    await page.evaluate(value=>window.TOCRI18n.setLocale(value),locale);
    await page.evaluate(()=>window.renderWorkflow({jobId:'fictional-job',version:1,busy:false,hasQuestions:false,protectedFields:[],checks:[],regions:[],fields:[],references:[{id:'fictional-reference',name:'Fictional sample',documentType:'Fictional licence',targetLanguage:'German',structure:'two-column table',matchedLineCount:2,translation:'PRIVATE-FICTIONAL-TRANSLATION-MUST-NOT-RENDER',matches:['PRIVATE-FICTIONAL-MATCH-MUST-NOT-RENDER']}] }));
    const panel=page.locator('#used-references');
@@ -24,6 +27,7 @@ test('reference trace renders safely in English, German, and Arabic',async({page
    await expect(panel).toContainText('2');
    await expect(panel).not.toContainText('PRIVATE-FICTIONAL');
    await expect(panel).toContainText(locale==='en'?'Literal matches detected: 2':locale==='de'?'Wörtliche Übereinstimmungen erkannt: 2':'تم اكتشاف تطابقات حرفية: 2');
+   await expect(page.locator('html')).toHaveAttribute('dir',locale==='ar'?'rtl':'ltr');
   }
   expect(pageErrors).toEqual([]);
  }finally{
