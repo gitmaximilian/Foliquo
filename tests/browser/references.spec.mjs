@@ -18,6 +18,10 @@ test('reference trace renders safely in English, German, and Arabic',async({page
   await page.goto(origin,{waitUntil:'networkidle'});
   await page.locator('#intro-skip').click();
   await page.evaluate(()=>{reviewJobId='fictional-job';view('review',{historyMode:'none'});});
+  await page.evaluate(()=>view('workspace',{historyMode:'none'}));
+  const order=await page.evaluate(()=>{const learning=document.querySelector('.learning-collection'),dossiers=document.querySelector('.dossier-collection');return Boolean(learning.compareDocumentPosition(dossiers)&Node.DOCUMENT_POSITION_FOLLOWING);});
+  expect(order).toBeTruthy();
+  await page.evaluate(()=>{reviewJobId='fictional-job';view('review',{historyMode:'none'});});
   for(const [locale,width] of [['en',375],['de',1024],['ar',1440]]){
    await page.setViewportSize({width,height:900});
    await page.evaluate(value=>window.TOCRI18n.setLocale(value),locale);
