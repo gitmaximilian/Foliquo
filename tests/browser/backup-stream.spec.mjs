@@ -29,6 +29,8 @@ test('backup download streams to the native save destination when available',asy
  const isolated=await openIsolatedWorkspace(page);
  const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
  try{
+  await expect(page.locator('#storage-recovery-info')).toContainText(/same disk/i);
+  await expect(page.locator('#storage-recovery-info')).toContainText(/external backup/i);
   await page.evaluate(()=>{
    window.__backupChunks=[];
    window.__backupPickerCalls=[];
