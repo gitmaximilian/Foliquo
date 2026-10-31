@@ -34,6 +34,14 @@ test('the local API records source extraction and translation usage without retu
  assert.equal(response.status,200);assert.equal(totals.requests,2);assert.equal(totals.completeRequests,2);assert.equal(totals.inputTokens,200);assert.equal(totals.outputTokens,40);assert.equal(data.summary.operationsByProvider.find(item=>item.operation==='source_extraction').requests,1);assert.equal(data.summary.operationsByProvider.find(item=>item.operation==='translation').requests,1);assert.equal(JSON.stringify(data).includes('Alex Example'),false);assert.equal(data.chatgptRemaining.available,false);
 });
 
+test('usage can be filtered by period, provider, and individual job while retaining safe job choices',async t=>{
+ const app=await start(t,fixtureProvider()),now=Date.now(),{mergeUsageRequest}=await import('../lib/usage.mjs');
+ for(const [jobId,offset,input] of [['fictional-job-a',1000,100],['fictional-job-b',2000,300]]){const entry=newUsageRequest({provider:'openai',model:'fictional-model',operation:'translation',jobId},now-offset);app.workspace.data.usage.push(entry);mergeUsageRequest(app.workspace.data.usage,entry.id,{inputTokens:input,outputTokens:20},{complete:true},now-offset+50);}
+ await app.workspace.save();
+ const all=await app.get('/api/usage?days=30&provider=openai').then(response=>response.json());assert.deepEqual(all.jobs.map(job=>job.jobId),['fictional-job-a','fictional-job-b']);assert.equal(all.jobs[0].requests,1);assert.equal(JSON.stringify(all).includes('responseId'),false);
+ const selected=await app.get('/api/usage?days=7&provider=openai&jobId=fictional-job-a').then(response=>response.json());assert.equal(selected.summary.totals.requests,1);assert.equal(selected.summary.totals.inputTokens,100);assert.equal(selected.jobs.length,2,'filter choices remain available when one job is selected');
+});
+
 test('a server-reported ChatGPT plan limit is recorded as Foliquo-scoped and leaves usage unknown',async t=>{
  const provider={id:'chatgpt',selected:'chatgpt',status:()=>({connected:true,planEnabled:true}),models:async()=>[{id:'fictional-model',name:'Fictional model'}],respond:async()=>{const error=new Error('limited');error.code='subscription_sharing_usage_limit_exceeded';error.pauseQueue=true;throw error;}};
  const app=await start(t,provider),file={name:'fictional-source.txt',type:'text/plain',data:Buffer.from('Fictional source document.').toString('base64')};

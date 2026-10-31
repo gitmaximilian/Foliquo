@@ -228,6 +228,7 @@ h3{font-size:16px;line-height:24px;letter-spacing:normal;font-weight:650}
 .provider-usage{display:grid;gap:6px;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--color-surface)}
 .provider-usage h3{margin:0;font-size:13px;font-weight:600}
 .provider-usage p{margin:0;color:var(--ink);font-size:12px;line-height:1.55}
+.provider-usage-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.provider-usage-filters label{display:grid;gap:3px;color:var(--muted);font-size:11px}.provider-usage-filters select{min-width:0;margin:0;padding:6px;font-size:12px}
 .provider-usage small{color:var(--muted);font-size:11px;line-height:1.5}
 .provider-usage-records{border-top:1px solid var(--line);padding-top:7px}
 .provider-usage-records>summary{color:var(--muted);cursor:pointer;font-size:11px}
