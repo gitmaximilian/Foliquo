@@ -24,6 +24,6 @@ test('local expert review form safely collects ratings offline and exports its r
   for(const input of await page.locator('input[type="radio"][value="4"]').all())await input.check();
   const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Download local ratings JSON'}).click();const download=await downloadPromise;await download.saveAs(join(directory,'ratings.json'));
   const ratings=JSON.parse(await readFile(join(directory,'ratings.json'),'utf8'));
-  expect(ratings.qualificationSelfAttested).toBe(true);expect(ratings.independenceSelfAttested).toBe(true);expect(ratings.fixtureSetVersion).toBe('review-fixture-v1');expect(ratings.cases).toHaveLength(1);expect(ratings.cases[0].caseCode).toBe('R-001');expect(ratings.cases[0].ratings.meaning).toBe(4);expect(ratings.cases[0].ratings.criticalFactErrors).toBe(0);expect(ratings.cases[0].ratings.reworkMinutes).toBe(0);expect(ratings.cases[0].fixtureId).toBeUndefined();
+  expect(ratings.qualificationSelfAttested).toBe(true);expect(ratings.independenceSelfAttested).toBe(true);expect(ratings.fixtureSetVersion).toBe('review-fixture-v1');expect(ratings.cases).toHaveLength(1);expect(ratings.cases[0].caseCode).toBe('R-001');expect(ratings.cases[0].fixtureId).toBe('fictional-01');expect(ratings.cases[0].ratings.meaning).toBe(4);expect(ratings.cases[0].ratings.criticalFactErrors).toBe(0);expect(ratings.cases[0].ratings.reworkMinutes).toBe(0);
  }finally{await rm(directory,{recursive:true,force:true});}
 });

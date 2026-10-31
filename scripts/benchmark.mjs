@@ -4,6 +4,7 @@ import {resolve,join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {gradeTranslation,regressions,summarizeTechnicalResults} from '../lib/benchmark.mjs';
 import {createBenchmarkReviewForm} from '../lib/benchmark-review-form.mjs';
+import {summarizeHumanReview,validateHumanReview} from '../lib/benchmark-human-review.mjs';
 import {createTranslationPDF,translationRequest,parseTranslation} from '../lib/documents.mjs';
 import {createTranslationWord} from '../lib/word.mjs';
 import {auditArtifacts} from '../lib/preflight.mjs';
@@ -26,10 +27,12 @@ if(!Array.isArray(fixtures)||!fixtures.length||fixtures.some(item=>!item||typeof
 const requestedMode=arg('--mode');
 if(requestedMode&&!['technical','provided-results','live'].includes(requestedMode))throw new Error('--mode muss technical, provided-results oder live sein.');
 const mode=requestedMode||(args.includes('--live')?'live':arg('--results')?'provided-results':'technical');
-const reviewForm=args.includes('--review-form'),includeSourceText=args.includes('--include-source-text');
+const reviewForm=args.includes('--review-form'),includeSourceText=args.includes('--include-source-text'),humanRatingsPath=arg('--human-ratings');
 if(reviewForm&&mode!=='provided-results')throw new Error('--review-form ist nur für bereitgestellte, menschlich zu prüfende Ergebnisse verfügbar.');
 if(reviewForm&&!includeSourceText)throw new Error('--review-form enthält Quelltext. Verwende die Option --include-source-text ausdrücklich, um das lokale Formular zu erzeugen.');
 if(includeSourceText&&!reviewForm)throw new Error('--include-source-text gilt nur zusammen mit --review-form.');
+if(humanRatingsPath&&mode!=='provided-results')throw new Error('--human-ratings ist nur mit --mode provided-results zulässig.');
+if(humanRatingsPath&&reviewForm)throw new Error('--human-ratings kann nicht gleichzeitig mit --review-form verwendet werden.');
 if(args.includes('--live')&&mode!=='live'||arg('--results')&&mode!=='provided-results')throw new Error('--mode widerspricht --live oder --results.');
 if(mode==='live'&&arg('--results'))throw new Error('Live-Modus kann nicht mit --results verwendet werden.');
 if(mode==='provided-results'&&!arg('--results'))throw new Error('provided-results benötigt --results FILE.');
@@ -80,6 +83,9 @@ for(const candidate of candidates){
 }
 const missingCandidates=selectedFixtures.filter(fixture=>!candidateIds.has(fixture.id)).map(fixture=>fixture.id);
 if(missingCandidates.length)throw new Error(`Benchmark-Ergebnis fehlt für ${missingCandidates.length} ausgewählte Fälle: ${missingCandidates.join(', ')}`);
+const currentFixtureVersion=customFixturePath?customFixtureVersion:fixtureSets[fixtureSet].label;
+let humanEvaluation={status:'pending',reviewedCaseCount:0,interpretation:'No qualified human ratings supplied.'};
+if(humanRatingsPath){const ratings=JSON.parse(await readFile(resolve(humanRatingsPath),'utf8')),validated=validateHumanReview(selectedFixtures,currentFixtureVersion,ratings);humanEvaluation=summarizeHumanReview(selectedFixtures,validated);}
 const results=[];
 for(const fixture of selectedFixtures){
  const candidate=candidates.find(result=>result?.id===fixture.id);
@@ -102,13 +108,14 @@ const regressionsFound=regressions(results,baselineResults);
 const usageReports=results.flatMap(result=>(result.usage||[]).filter(item=>item.tokens).map(item=>({fixtureId:result.id,...item.tokens,complete:item.complete,responseId:item.responseId})));
 const report={
  mode,createdAt:new Date().toISOString(),sourceRevision,workingTreeDirty,trackedDiffFingerprint,provider,modelId,
- fixtureSet:customFixturePath?customFixtureVersion:fixtureSets[fixtureSet].label,fixtureSetVersion:customFixturePath?customFixtureVersion:fixtureSet,fixtureCount:results.length,
+ fixtureSet:currentFixtureVersion,fixtureSetVersion:customFixturePath?customFixtureVersion:fixtureSet,fixtureCount:results.length,
  maxCases:mode==='live'?maxCases:null,requestCount:mode==='live'?results.length:0,
  configuration:{targetLanguages:[...new Set(selectedFixtures.map(item=>item.targetLanguage||'Deutsch'))],exportFont:'Aptos',exportFontSizePt:11,sourcePagesPresent:false,sourcePageAppendix:'not-tested; text-only benchmark fixtures'},
  fingerprints:{fixtureSetSha256:fingerprint(fixtureBytes),translationPolicySha256:fingerprint(await readFile(new URL('../lib/translation-policy.mjs',import.meta.url))),exportPipelineSha256:fingerprint(Buffer.concat(await Promise.all(['../lib/documents.mjs','../lib/word.mjs','../lib/preflight.mjs'].map(path=>readFile(new URL(path,import.meta.url))))))},
  usage:{reportedEvents:usageReports.length,events:usageReports,apiCost:null,note:mode==='live'?'Tokenangaben werden nur aus tatsächlichen Anbieterereignissen übernommen. API-Kosten sind hier nicht anwendbar; unbekannte Verbrauchswerte bleiben unbekannt.':'Keine Live-Anbieteranfragen; kein Modellverbrauch.'},
  comparison:baselineReport?{baselineRevision:baselineReport.sourceRevision||null,baselineWorkingTreeDirty:baselineReport.workingTreeDirty??null,baselineTrackedDiffFingerprint:baselineReport.trackedDiffFingerprint||null,baselineFixtureSet:baselineReport.fixtureSet||null,matchedCases:results.filter(result=>baselineResults.some(old=>old.id===result.id)).length,metric:'expected-fact score, special-region F1 and export issue count; not a human translation-quality comparison',regressions:regressionsFound}:null,
  technicalSummary:summarizeTechnicalResults(results),
+ humanEvaluation,
  note:mode==='technical'?'Deterministischer Referenz-, erkannter Sonderbereich- und Export-Prüftest mit fiktiven Fällen; keine gemessene KI-Qualität.':mode==='live'?'Begrenzter Modelllauf auf fiktiven Fixtures; vergleicht Referenzangaben, erkannte Sonderbereiche und Export-Prüfhinweise, nicht vollständige Sprachqualität.':'Auswertung bereitgestellter Ergebnisse gegen fiktive Referenzen und Exportindikatoren; fachliche Prüfung bleibt erforderlich.',
  results,regressions:regressionsFound,
 };
