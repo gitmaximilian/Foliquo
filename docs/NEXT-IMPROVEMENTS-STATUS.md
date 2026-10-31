@@ -354,3 +354,7 @@ This document tracks implementation separately from automated verification and e
 - These are local macOS/arm64 synthetic profiles. They add volume and RSS evidence, but do not establish Windows/Linux filesystem, crash/power-loss, permissions, or native desktop behavior. No app source or package version changed in these profiles.
 - The archived-PDF HTTP profile served a 161 MiB artifact byte-for-byte with digest verification and measured 65.53 MiB peak RSS increase, below its 192 MiB budget on macOS arm64.
 - The existing GitHub CI matrix now schedules storage-scale, 1,000-record memory, 161 MiB HTTP PDF, recovery and 260 MiB backup/restore profiles on Ubuntu, Windows and macOS. Those remote platform results are pending a CI run; local macOS results do not establish them.
+### P14 packaging verification after streaming changes, 31 October 2026
+
+- Built the Community macOS arm64 archive from the current branch using the pinned official Node 24.22.1 distribution. Its official Node archive checksum verified; the Foliquo archive manifest verified 3,383 files, the bundled runtime reported v24.22.1, and packaged `sharp` plus server imports passed. Archive SHA-256: `40d1d1c51977826b22d5dc92a5c5d5a7e5575d6affebb9d192c5296f83387ba6` (152 MiB).
+- The archive is still version 0.11.11, which is already public. It is a packaging check, not a user update; no release, tag, website update or public asset was published. P14 release signing and Windows/Linux/native installer validation remain open.
