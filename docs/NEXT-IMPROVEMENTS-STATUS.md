@@ -305,3 +305,9 @@ This document tracks implementation separately from automated verification and e
 
 - Commit `d5dc5cd` checks the real usage/settings dialog at 375, 1024 and 1440 CSS pixels in the same keyboard flow. It asserts no document-level horizontal overflow and that the dialog stays within the viewport.
 - Focused Chromium/Firefox/WebKit run passed 3/3. This covers those viewport sizes for this dialog only; it does not establish whole-app responsive conformance or replace zoom/assistive-technology reviews.
+
+
+### P05/P13 follow-up: localized usage and limit information
+
+- Commit `0024811` checks the API token/cost/budget summary and ChatGPT limit/unknown-quota summary in Arabic RTL as well as the existing English and German paths. Focused Chromium/Firefox/WebKit coverage passed 3/3.
+- This is automated string/rendering coverage using fictional records. It is not a translation quality review by an Arabic-speaking specialist.
