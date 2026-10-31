@@ -130,7 +130,8 @@ function renderQueue(){
  updateQueueButton();if(typeof renderDocuments==='function'&&document.querySelector('#documents-view')&&!document.querySelector('#documents-view').hidden)renderDocuments();
 }
 window.addEventListener('translateocr-locale',()=>{updateQueueLiveAnnouncement(true);renderFeaturedJob();});
-async function jobResult(job){if(queueResultCache.has(job.id))return queueResultCache.get(job.id);const result=await localRequest(`/api/jobs/${job.id}/result`).then(r=>r.json());queueResultCache.set(job.id,result);while(queueResultCache.size>4)queueResultCache.delete(queueResultCache.keys().next().value);return result;}
+async function jobResult(job){if(queueResultCache.has(job.id))return queueResultCache.get(job.id);const result=await localRequest(`/api/jobs/${job.id}/result?metadata=1`).then(r=>r.json());queueResultCache.set(job.id,result);while(queueResultCache.size>4)queueResultCache.delete(queueResultCache.keys().next().value);return result;}
+async function jobSourceFiles(jobId){const {files:manifest}=await localRequest(`/api/jobs/${jobId}/source/manifest`).then(r=>r.json());return Promise.all(manifest.map(async item=>{const response=await localRequest(`/api/jobs/${jobId}/source/${item.index}`);return new File([await response.blob()],item.name,{type:item.type});}));}
 async function queueAction(action,job,launcher=document.activeElement){
  try{
   if(action==='remove'&&!confirm('Diesen Auftrag mit Dokumenten, Chat und Fassungen dauerhaft löschen?'))return;
@@ -146,8 +147,8 @@ async function queueAction(action,job,launcher=document.activeElement){
    if((files.length||$('#translation').value.trim())&&!confirm('Die aktuelle Auswahl und der bearbeitbare Entwurf werden durch dieses Ergebnis ersetzt. Fortfahren?'))return;
    const result=await jobResult(job);example=false;$('#target-language').value=job.targetLanguage;window.syncLanguageSelectors?.();draftTargetLanguage=job.targetLanguage;detectedDocument=result.detected||null;window.syncTranslateContext?.();convertedPreviews.clear();
    const snapshot=queueSnapshots.get(job.id);
-   files=snapshot?[...snapshot]:result.previews.map(f=>{const raw=atob(f.data),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));return new File([bytes],f.type==='application/pdf'?f.name.replace(/\.[^.]+$/,'')+'.pdf':f.name,{type:f.type});});
-   for(const f of result.previews||[])convertedPreviews.set(f.name,f);renderFiles();view('studio');openEditor(launcher);$('#translation').value=result.text;$('#draft-tag').textContent='Übersetzung abgeschlossen';document.querySelectorAll('.review-checks input').forEach(el=>el.checked=false);cachedPDF={fingerprint:pdfFingerprint(),data:result.pdf};cachedWord={fingerprint:pdfFingerprint(),data:result.word};return;
+   files=snapshot?[...snapshot]:await jobSourceFiles(job.id);
+   renderFiles();view('studio');openEditor(launcher);$('#translation').value=result.text;$('#draft-tag').textContent='Übersetzung abgeschlossen';document.querySelectorAll('.review-checks input').forEach(el=>el.checked=false);cachedPDF=null;cachedWord=null;return;
   }
   await localRequest(`/api/jobs/${job.id}/${action}`,{});if(action==='remove'){queueSnapshots.delete(job.id);queueResultCache.delete(job.id);}await pollQueue();if(action==='remove')await window.refreshDocumentHistory?.({removeId:job.id});
  }catch(error){toast(error.message);}
