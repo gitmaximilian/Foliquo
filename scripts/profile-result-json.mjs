@@ -11,6 +11,7 @@ import {createApp} from '../server.mjs';
 import {Workspace} from '../lib/workspace.mjs';
 
 const worker=process.argv.includes('--worker');
+const reviewPreview=process.argv.includes('--review-preview');
 if(worker){
  if(typeof globalThis.gc!=='function')throw new Error('Run with --expose-gc.');
  const directory=process.env.FOLIQUO_PROFILE_DIR,port=Number(process.env.FOLIQUO_PROFILE_PORT),owner='fictional-result-json-profile-session';
@@ -43,17 +44,20 @@ if(worker){
   let ready=false;for(let attempt=0;attempt<120;attempt++){if(child.exitCode!==null)throw new Error(`Profile server exited early: ${stderr}`);try{const response=await fetch(`${origin}/api/session`,{headers:{cookie},signal:AbortSignal.timeout(500)});if(response.status===200){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,50));}assert.ok(ready,'Profile server did not start in time.');
   for(let attempt=0;attempt<100&&baselineRss===0;attempt++)await new Promise(resolve=>setTimeout(resolve,10));
   assert.ok(baselineRss>0,'Could not read the profile server RSS.');peakRss=baselineRss;
-  const response=await fetch(`${origin}/api/jobs/12345678-1234-4234-8234-123456789abf/result?metadata=1`,{headers:{cookie}});
-  assert.equal(response.status,200,await response.clone().text());assert.equal(response.headers.get('transfer-encoding'),'chunked');assert.equal(response.headers.get('content-length'),null);
-  const hash=createHash('sha256');let bytes=0,first=Buffer.alloc(0),last=Buffer.alloc(0);
-  for await(const chunk of Readable.fromWeb(response.body)){bytes+=chunk.length;hash.update(chunk);if(first.length<16)first=Buffer.concat([first,chunk]).subarray(0,16);last=Buffer.concat([last,chunk]).subarray(-suffix.length);}
-  assert.equal(bytes,prefix.length+textBytes+suffix.length,'The streamed response must preserve the complete JSON shape.');
-  assert.equal(first.subarray(0,prefix.length).toString(),prefix.toString());assert.equal(last.toString(),suffix.toString());
-  assert.equal(hash.digest('hex'),expectedHash,'The streamed result JSON must preserve the exact large text.');
+  const path=reviewPreview?'/api/jobs/12345678-1234-4234-8234-123456789abf/review?preview=1&stream=1':'/api/jobs/12345678-1234-4234-8234-123456789abf/result?metadata=1';
+  const response=await fetch(`${origin}${path}`,{headers:{cookie}});
+  assert.equal(response.status,200);assert.equal(response.headers.get('transfer-encoding'),'chunked');assert.equal(response.headers.get('content-length'),null);
+  const hash=createHash('sha256'),marker=Buffer.from(reviewPreview?'"result":{"text":"':'"text":"');let bytes=0,first=Buffer.alloc(0),last=Buffer.alloc(0),scanCarry=Buffer.alloc(0),foundText=false,textFinished=false,streamedTextBytes=0;
+  for await(const chunk of Readable.fromWeb(response.body)){
+   bytes+=chunk.length;if(!reviewPreview)hash.update(chunk);if(first.length<16)first=Buffer.concat([first,chunk]).subarray(0,16);last=Buffer.concat([last,chunk]).subarray(-(reviewPreview?64:suffix.length));
+   if(reviewPreview&&!textFinished){let content=chunk;if(!foundText){content=Buffer.concat([scanCarry,chunk]);const markerIndex=content.indexOf(marker);if(markerIndex<0){scanCarry=content.subarray(Math.max(0,content.length-marker.length+1));continue;}foundText=true;content=content.subarray(markerIndex+marker.length);scanCarry=Buffer.alloc(0);}const closingQuote=content.indexOf(0x22);if(closingQuote>=0){streamedTextBytes+=closingQuote;textFinished=true;}else streamedTextBytes+=content.length;}
+  }
+  if(reviewPreview){assert.ok(first.subarray(0,Math.min(first.length,16)).toString().startsWith('{'));assert.ok(last.includes(Buffer.from('}')),'The streamed review response must close its JSON object.');assert.equal(streamedTextBytes,textBytes,'The streamed nested review text must preserve every UTF-8 byte.');}
+  else{assert.equal(bytes,prefix.length+textBytes+suffix.length,'The streamed response must preserve the complete JSON shape.');assert.equal(first.subarray(0,prefix.length).toString(),prefix.toString());assert.equal(last.toString(),suffix.toString());assert.equal(hash.digest('hex'),expectedHash,'The streamed result JSON must preserve the exact large text.');}
   await new Promise(resolve=>setTimeout(resolve,40));child.kill();await childExit;
   const peakDeltaBytes=peakRss-baselineRss;
   assert.ok(peakDeltaBytes<=peakDeltaBudget,`Large result JSON retrieval added ${(peakDeltaBytes/1024/1024).toFixed(2)} MiB peak RSS; budget is ${(peakDeltaBudget/1024/1024).toFixed(2)} MiB.`);
-  console.log(JSON.stringify({mode:'large-archived-result-json-peak-rss',textBytes,baselineRss,peakRss,peakDeltaBytes,peakDeltaMiB:Number((peakDeltaBytes/1024/1024).toFixed(2)),peakDeltaBudgetBytes:peakDeltaBudget,responseBytes:bytes,digestVerified:true}));
+  console.log(JSON.stringify({mode:reviewPreview?'large-archived-review-preview-peak-rss':'large-archived-result-json-peak-rss',textBytes,baselineRss,peakRss,peakDeltaBytes,peakDeltaMiB:Number((peakDeltaBytes/1024/1024).toFixed(2)),peakDeltaBudgetBytes:peakDeltaBudget,responseBytes:bytes,textLengthVerified:reviewPreview?streamedTextBytes===textBytes:undefined,digestVerified:!reviewPreview}));
  }finally{
   if(child&&child.exitCode===null){child.kill();await childExit?.catch(()=>{});}
   await workspace?.tail?.catch(()=>{});await rm(directory,{recursive:true,force:true});
