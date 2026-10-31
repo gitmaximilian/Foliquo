@@ -311,3 +311,9 @@ This document tracks implementation separately from automated verification and e
 
 - Commit `0024811` checks the API token/cost/budget summary and ChatGPT limit/unknown-quota summary in Arabic RTL as well as the existing English and German paths. Focused Chromium/Firefox/WebKit coverage passed 3/3.
 - This is automated string/rendering coverage using fictional records. It is not a translation quality review by an Arabic-speaking specialist.
+
+### P02 follow-up: streaming compatibility bundle fallback (2026-10-31)
+
+- `server.mjs` now writes PDF/Word ZIP bundles incrementally for the legacy in-memory result route and for lazy-archive fallback results. Base64 artifacts are decoded in bounded chunks and ZIP output observes stream backpressure; the archived-sidecar fast path remains streamed directly from authenticated encrypted objects.
+- The HTTP integration case forces the archived-sidecar lookup to report unavailable, verifies that the compatibility path returns a valid ZIP containing both artifacts, and also checks the normal sidecar bundle byte-for-byte. `node --test tests/integration.test.mjs`: 17/17; full `npm test`: 307/307; `npm run benchmark`: 3 offline cases, 0 regressions, 0 provider requests; `npm run acceptance`: 12/12; `node --check server.mjs` and `git diff --check` passed.
+- This removes full ZIP materialization and avoids separately decoding both Base64 strings into complete Buffers. Legacy `GET /result` still returns JSON and inherently materializes its response; incomplete-PDF repair and the cross-platform storage validation remain open. No package, version, tag, or public release changed.
