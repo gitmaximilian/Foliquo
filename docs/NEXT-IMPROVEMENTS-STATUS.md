@@ -358,3 +358,8 @@ This document tracks implementation separately from automated verification and e
 
 - Built the Community macOS arm64 archive from the current branch using the pinned official Node 24.22.1 distribution. Its official Node archive checksum verified; the Foliquo archive manifest verified 3,383 files, the bundled runtime reported v24.22.1, and packaged `sharp` plus server imports passed. Archive SHA-256: `40d1d1c51977826b22d5dc92a5c5d5a7e5575d6affebb9d192c5296f83387ba6` (152 MiB).
 - The archive is still version 0.11.11, which is already public. It is a packaging check, not a user update; no release, tag, website update or public asset was published. P14 release signing and Windows/Linux/native installer validation remain open.
+### P14 live site verification, 31 October 2026
+
+- Read the public Foliquo project page in Yab. It shows desktop v0.11.11 and links Windows, macOS Apple Silicon, Intel macOS and Linux packages, plus the browser/CLI v0.11.11 stable release. The Apple Silicon DMG is labeled 607 MiB; this is 34.4% below the 925 MiB planning baseline and below the 694 MiB target. The 460 MiB ZIP is also identified as the recommended Apple Silicon download.
+- The live page identifies Foliquo Community as the free local edition under PolyForm Noncommercial 1.0.0 and links the license. It explicitly states desktop apps are unsigned and warns about Windows SmartScreen/macOS Gatekeeper. WinGet is not presented as available.
+- Source: [Foliquo project page](https://maximilianauer.at/projects/foliquo/), checked 31 October 2026. This verifies the current public page only; the actual installation, signing, human study and WinGet moderator/acceptance gates remain separate.
