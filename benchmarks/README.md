@@ -15,3 +15,27 @@ Reports include the source revision, whether the worktree was dirty, a hash of t
 Reports are written to `outputs/benchmark/` by default. Do not put private customer documents or personal translations in public fixtures, supplied results, CI artifacts, or Git. Any future development and acceptance collections must be split by document family, with no source or near-duplicate crossing into a held-out set. Record factual gold-standard provenance and qualified reviewers before presenting language-quality findings.
 
 The 20-case development set is synthetic and has not received qualified linguistic review. The separate 100-case independent acceptance collection has not been collected or reviewed. Live model evaluations and human translation ratings remain outstanding; neither technical score report may be presented as a quality score.
+
+## Private acceptance corpus
+
+Keep a real acceptance corpus in a private local file outside Git. The validator and benchmark never upload it. Use a stable version label for every frozen set. The planned 100-case matrix is exactly:
+
+| Source → target | Cases |
+|---|---:|
+| Arabic → German | 35 |
+| English → German | 25 |
+| German → English | 10 |
+| German → Arabic | 10 |
+| French, Turkish, Spanish, Italian → German | 5 each |
+
+Cover driving licences, civil records, identity documents, education records, forms, letters and long tables. Difficulty labels are `easy`, `medium`, or `hard`. Each JSON fixture needs `id`, `sourceLanguage`, `targetLanguage`, `documentType`, `difficulty`, text `source`, and `expected` fields: `names`, `dates`, `numbers`, `content`, `regions`, `pageCount`, `sourceBlocks`, `questions`, `terminology`, and `structure`. Use empty arrays for categories with no expected entries. Each source block has an `id`, a `kind` (`paragraph`, `heading`, `table`, `stamp`, `handwriting`, `signature`, or `other`) and a boolean `critical` field. Each case also needs `goldStandard.provenance`, `goldStandard.reviewMethod`, and a `goldStandard.reviewers` list with pseudonymous `code`, `qualification`, and ISO `reviewDate` fields. Reviewer statements are recorded as submitted and are not independently verified by the tool.
+
+Audit the private file without printing source text or case IDs:
+
+```sh
+npm run benchmark:acceptance:validate -- --fixtures /private/path/acceptance.json --version acceptance-v1
+```
+
+The audit checks the planned counts/families, required metadata, exact source overlap with the checked-in smoke/development fixtures, and possible near-duplicates. The latter uses normalized five-word shingles with Jaccard similarity ≥ 0.85 and is only a screening heuristic; inspect flagged cases independently. A passing audit does not prove that the corpus is representative, reviewers are qualified, or gold labels are correct.
+
+To prepare a local text-only human review packet from frozen candidate results, use `--fixtures`, `--fixture-set-version`, `--mode provided-results`, `--results`, `--review-form`, and the separate `--include-source-text` opt-in. The HTML file contains source and candidate text, stays in the ignored local output directory, works offline, and exports ratings locally. Do not commit or upload it. PDF/image source inspection and rendered PDF/DOCX review require separate materials; the form does not include them and does not turn ratings into a quality claim.
