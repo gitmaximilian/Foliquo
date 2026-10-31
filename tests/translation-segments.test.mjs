@@ -26,7 +26,7 @@ test('later segments wait for dependencies and known failures stay distinct from
 
 test('materialized PDF segments contain only their assigned source pages',async()=>{
  const source=await PDFDocument.create();for(let page=1;page<=6;page++)source.addPage([300+page,500+page]);const bytes=Buffer.from(await source.save()),documents=[{name:'fictional.pdf',originalName:'fictional.pdf',type:'application/pdf',bytes}],plan=buildTranslationPlan({documents,pageCounts:[6],provider:'openai',model:'fictional-model',maxPagesPerSegment:2}),segment=plan.segments[1];
- const [slice]=await translationSegmentDocuments(plan,segment.id,documents),pdf=await PDFDocument.load(slice.bytes);assert.equal(pdf.getPageCount(),2);assert.equal(pdf.getPages()[0].getWidth(),303);assert.equal(pdf.getPages()[1].getWidth(),304);assert.equal(slice.sourcePageStart,3);assert.equal(slice.sourceFileIndex,0);assert.equal(slice.originalName,'fictional.pdf');
+ const [slice]=await translationSegmentDocuments(plan,segment.id,documents),[retrySlice]=await translationSegmentDocuments(plan,segment.id,documents),pdf=await PDFDocument.load(slice.bytes);assert.deepEqual(retrySlice.bytes,slice.bytes,'materialized request bytes stay stable so an interrupted retry reuses its checkpoint');assert.equal(pdf.getPageCount(),2);assert.equal(pdf.getPages()[0].getWidth(),303);assert.equal(pdf.getPages()[1].getWidth(),304);assert.equal(slice.sourcePageStart,3);assert.equal(slice.sourceFileIndex,0);assert.equal(slice.originalName,'fictional.pdf');
 });
 
 test('a clarification holds later segments until its source-bound segment is rerun',()=>{
