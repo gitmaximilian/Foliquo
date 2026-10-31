@@ -18,7 +18,7 @@ test('structured document editor changes table layout, supports undo and saves a
   await page.locator('#jobs-open').click();const review=page.locator(`#queue-list .queue-row[data-job-id="${id}"] [data-queue-action="review"]`);await expect(review).toBeVisible({timeout:25000});await review.click();
   const anchoredBlock=workspace.data.jobs.find(job=>job.id===id).result.document.blocks[0];anchoredBlock.sourceBlockIds=['fictional-source-anchor'];
   await expect(page.locator('#review-edit-open')).toBeVisible();await page.locator('#review-edit-open').click();await expect(page.locator('#direct-edit-dialog')).toBeVisible();
-  await page.getByRole('button',{name:'Structure',exact:true}).click();await expect(page.locator('#structured-editor')).toBeVisible();await page.locator('.structured-block').first().getByRole('button',{name:'Move down'}).click();
+  await page.getByRole('button',{name:'Structure',exact:true}).click();await expect(page.locator('#structured-editor')).toBeVisible();const moveDown=page.locator('.structured-block').first().getByRole('button',{name:'Move down'});await moveDown.focus();await page.keyboard.press('Enter');
   expect(await page.evaluate(()=>window.directEditPayload().document.blocks[1].sourceBlockIds)).toContain('fictional-source-anchor');
   const firstWidth=page.getByRole('spinbutton',{name:'Column width 1 as a percentage'}).first();await firstWidth.fill('25');await firstWidth.press('Tab');
   await page.getByRole('button',{name:'Add table row'}).first().click();await page.locator('#document-undo').click();await page.locator('#document-redo').click();
