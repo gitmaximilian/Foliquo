@@ -11,6 +11,15 @@ test('bounded job cache evicts only reloadable terminal entries by age and byte 
  const retained=boundedJobCache([...jobs,active],{maxEntries:2,maxBytes:120});
  assert.deepEqual(retained.map(job=>job.id),['terminal-3','active']);assert.equal(jobs.every(job=>job.status==='succeeded'&&job.result.text.startsWith('fictional-')),true);assert.equal(retained.includes(active),true);
 });
+test('bounded job cache stays within count and byte limits under a large synthetic history',()=>{
+ const now=Date.now(),history=Array.from({length:1200},(_,index)=>({id:`terminal-${index}`,status:'succeeded',finishedAt:now-index,resultBytes:1024,payload:{files:[{bytes:Buffer.alloc(1024)}]}})),active=Array.from({length:8},(_,index)=>({id:`active-${index}`,status:index===0?'running':'awaiting_answers',review:{busy:index===1},payload:{files:[{bytes:Buffer.alloc(512)}]}}));
+ const retained=boundedJobCache([...history,...active],{maxEntries:40,maxBytes:64*1024}),terminal=retained.filter(job=>job.status==='succeeded'),retainedBytes=retained.reduce((sum,job)=>sum+(job.payload?.files||[]).reduce((total,file)=>total+(file.bytes?.length||0),0)+(job.resultBytes||0)+(job.reviewBytes||0),0);
+ assert.equal(terminal.length,30,'terminal cache selection respects byte budget after retaining all active work');assert.ok(retainedBytes<=64*1024);assert.deepEqual(new Set(active.map(job=>job.id)),new Set(retained.filter(job=>job.status!=='succeeded').map(job=>job.id)));assert.equal(history.length,1200,'trimming never mutates the encrypted history source');assert.equal(history[0].payload.files[0].bytes.length,1024);
+});
+test('queue stress keeps FIFO order, single-provider concurrency and exactly-once terminal results',async()=>{
+ const order=[];let active=0,maximum=0;const queue=new TranslationQueue(async payload=>{active++;maximum=Math.max(maximum,active);await Promise.resolve();order.push(payload.metadata.targetLanguage);active--;return {text:`Fictional ${payload.metadata.targetLanguage}`};},{maxPending:100});queue.pause();const jobs=Array.from({length:100},(_,index)=>queue.add({owner:'stress-owner',clientId:'stress-client',requestId:`stress-${index}`,payload:{files:[],metadata:{targetLanguage:`Lang-${index}`}}}));queue.resume();
+ for(let attempt=0;attempt<3000&&queue.busy;attempt++)await turn();assert.equal(queue.busy,false,'all admitted fixture jobs settle');assert.equal(maximum,1);assert.deepEqual(order,Array.from({length:100},(_,index)=>`Lang-${index}`));assert.equal(new Set(jobs.map(job=>job.id)).size,100);assert.ok(jobs.every(job=>job.status==='succeeded'&&job.result.text===`Fictional ${job.targetLanguage}`));assert.equal(queue.snapshot('other-owner').jobs.length,0);
+});
 test('FIFO serializes execution, preserves snapshots and avoids duplicate submissions',async()=>{
  const order=[],releases=[];let active=0,max=0;
  const q=new TranslationQueue(async p=>{active++;max=Math.max(active,max);order.push(p.metadata.targetLanguage);await new Promise(resolve=>releases.push(resolve));active--;return {text:'OK',pdf:'PDF'};});
