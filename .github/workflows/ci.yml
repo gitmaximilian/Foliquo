@@ -63,6 +63,11 @@ jobs:
           npm run test:recovery:profile
           npm run test:backup:scale
           npm run test:backup:legacy-profile
+      - name: Measure near-cap single-job legacy restore memory
+        run: npm run test:backup:legacy-profile
+        env:
+          FOLIQUO_LEGACY_BACKUP_PROFILE_MIB: '255'
+          FOLIQUO_LEGACY_BACKUP_PROFILE_JOBS: '1'
       - name: Verify atomic storage on a full filesystem volume
         run: npm run test:storage:full-volume
       - run: npm run benchmark
