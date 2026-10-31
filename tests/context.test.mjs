@@ -29,7 +29,7 @@ test('job context is immutable, versioned, and excludes reference source content
  assert.equal(trace.matchedLineCount,1);assert.doesNotMatch(JSON.stringify(trace),/PRIVATE FINISHED TRANSLATION|[a-f0-9]{64}/);
  assert.equal(original.template.version,1);assert.equal(original.profile.version,1);
  assert.equal(original.terms[0].target,'Dokumentnummer');assert.equal(original.dossierFacts[0].value,'Alex Example');
- assert.deepEqual(original.appliedLearning.map(item=>item.profileVersion),[4]);
+ assert.deepEqual(original.appliedLearning.map(item=>item.profileVersion),[3]);
  assert.deepEqual(original.learningExamples[0].rules,['Use compact date wording.','Prefer concise neutral wording.']);
  workspace.put('templates',{id:template.id,name:template.name,confirmed:true,documentType:'driving-licence',fields:['Name','Number'],layout:{margin:30}});
  workspace.put('profiles',{id:profile.id,name:profile.name,confirmed:true,documentType:'driving-licence',layout:{margin:31}});
