@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {TranslationQueue,boundedJobCache} from '../lib/queue.mjs';
+
+test('recovered queue jobs without hydrated file arrays do not break memory accounting',()=>{const queue=new TranslationQueue(async()=>({}));queue.jobs=[{status:'failed',payload:{metadata:{jobId:'fictional-recovered-job'}}}];assert.equal(queue.memory,0);assert.equal(queue.trimMemory(),true);});
 const payload={files:[{name:'sample.pdf',bytes:Buffer.from('%PDF-')}],metadata:{targetLanguage:'Deutsch'},model:'test'};
 const turn=()=>new Promise(resolve=>setImmediate(resolve));
 const add=(queue,name='one',owner='owner')=>queue.add({owner,clientId:'browser',requestId:name,payload});

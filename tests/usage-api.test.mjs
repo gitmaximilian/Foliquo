@@ -40,6 +40,8 @@ test('usage can be filtered by period, provider, and individual job while retain
  await app.workspace.save();
  const all=await app.get('/api/usage?days=30&provider=openai').then(response=>response.json());assert.deepEqual(all.jobs.map(job=>job.jobId),['fictional-job-a','fictional-job-b']);assert.equal(all.jobs[0].requests,1);assert.equal(JSON.stringify(all).includes('responseId'),false);
  const selected=await app.get('/api/usage?days=7&provider=openai&jobId=fictional-job-a').then(response=>response.json());assert.equal(selected.summary.totals.requests,1);assert.equal(selected.summary.totals.inputTokens,100);assert.equal(selected.jobs.length,2,'filter choices remain available when one job is selected');
+ const range=await app.get(`/api/usage?provider=openai&fromMs=${now-1500}&toMs=${now-500}`).then(response=>response.json());assert.deepEqual(range.jobs.map(job=>job.jobId),['fictional-job-a']);assert.equal(range.summary.fromMs,now-1500);assert.equal(range.summary.toMs,now-500);
+ const invalid=await app.get(`/api/usage?fromMs=${now}&toMs=${now-1}`);assert.equal(invalid.status,400);
 });
 
 test('a server-reported ChatGPT plan limit is recorded as Foliquo-scoped and leaves usage unknown',async t=>{

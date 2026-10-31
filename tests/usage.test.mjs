@@ -46,6 +46,12 @@ test('usage summaries omit arbitrary payload data and retention caps old records
  const rows=Array.from({length:5},(_,i)=>newUsageRequest({provider:'chatgpt',model:'m',operation:'translation'},now-i*86400000));assert.equal(pruneUsage(rows,{now,retentionDays:2,maxEntries:1}).length,1);
 });
 
+test('usage summaries apply half-open custom date ranges and reject unsafe bounds by leaving them unapplied',()=>{
+ const entries=[-1000,0,999,1000].map((offset,index)=>newUsageRequest({provider:'chatgpt',model:'fictional-model',operation:'translation',jobId:`fictional-range-${index}`},10_000+offset));
+ const bounded=usageSummary(entries,{fromMs:10_000,toMs:11_000,now:50_000});assert.deepEqual(bounded.jobs.map(job=>job.jobId),['fictional-range-2','fictional-range-1']);assert.equal(bounded.fromMs,10_000);assert.equal(bounded.toMs,11_000);
+ const invalid=usageSummary(entries,{fromMs:11_000,toMs:10_000,now:50_000});assert.equal(invalid.totals.requests,4,'invalid bounds are ignored by the summary helper; the HTTP route rejects them');
+});
+
 test('usage reservation estimates survive retention normalization and provider response ids deduplicate',()=>{
  const now=Date.UTC(2026,9,29),first=newUsageRequest({provider:'openai',model:'gpt-6.1-sol',operation:'translation',accountScope:'a'.repeat(16)},now),second=newUsageRequest({provider:'openai',model:'gpt-6.1-sol',operation:'translation',accountScope:'a'.repeat(16)},now+1);
  first.preflightCostEstimate={low:.001,high:.002};const entries=pruneUsage([first,second],{now:now+2});assert.deepEqual(entries[0].preflightCostEstimate,{low:.001,high:.002});
