@@ -20,6 +20,13 @@ test('CSV export protects formula cells and restores values on reimport',()=>{
  const parsed=parseGlossaryCSV(exported);assert.equal(parsed.errors.length,0);assert.equal(parsed.rows[0].entry.source,entry.source);assert.equal(parsed.rows[0].entry.note,entry.note);
 });
 
+test('CSV round-trips multiple allowed variants as a quoted multiline field',()=>{
+ const entry={source:'fictional title',target:'primary title',allowedVariants:['licensed title','title, permitted','عنوان معتمد'],scope:'global',targetLanguage:'Deutsch'};
+ const exported=exportGlossaryCSV([entry]),parsed=parseGlossaryCSV(exported);
+ assert.equal(parsed.errors.length,0);assert.deepEqual(parsed.rows[0].entry.allowedVariants,entry.allowedVariants);
+ assert.ok(exported.includes('"licensed title\ntitle, permitted\nعنوان معتمد"'));
+});
+
 test('CSV import distinguishes exact duplicates from conflicting targets without overwriting',()=>{
  const parsed=parseGlossaryCSV('source,target\n"fictional source",existing target\n"new source",new target\n');
  const result=compareGlossaryImport(parsed,[{source:'fictional source',target:'existing target'}]);

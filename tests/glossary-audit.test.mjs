@@ -13,3 +13,12 @@ test('glossary whole-word matching avoids substrings and Arabic word-form checks
  const checks=glossaryAuditChecks('Courthouse and وزارة الداخلية',terms,['courthouse; وزارة الداخلية']);
  assert.equal(checks.length,1);assert.equal(checks[0].id,'glossary-arabic');assert.equal(checks[0].severity,'review');assert.equal(checks[0].consistent,null);assert.match(checks[0].issue,/nicht automatisch bewertet/u);
 });
+
+test('approved target variants satisfy glossary checks while unapproved Arabic morphology remains uncertain',()=>{
+ const [german]=glossaryAuditChecks('Amt der Fiktion', [{id:'variants',source:'Fictional Authority',target:'Fiktive Behörde',allowedVariants:['Behörde fiktiv','Amt der Fiktion']}], ['Fictional Authority']);
+ assert.equal(german.present,true);assert.equal(german.matchedVariant,'Amt der Fiktion');assert.equal(german.consistent,true);
+ const [arabicVariant]=glossaryAuditChecks('وزارة الشؤون الداخلية', [{id:'ar-variants',source:'وزارة الداخلية',target:'الوزارة الداخلية',allowedVariants:['وزارة الشؤون الداخلية']}], ['وزارة الداخلية']);
+ assert.equal(arabicVariant.present,true);assert.equal(arabicVariant.consistent,true);
+ const [arabicMiss]=glossaryAuditChecks('بإدارة الوزارة', [{id:'ar-miss',source:'وزارة الداخلية',target:'الوزارة الداخلية',allowedVariants:['وزارة الشؤون الداخلية']}], ['وزارة الداخلية']);
+ assert.equal(arabicMiss.present,false);assert.equal(arabicMiss.consistent,null);assert.equal(arabicMiss.severity,'review');
+});

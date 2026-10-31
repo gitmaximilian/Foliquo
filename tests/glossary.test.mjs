@@ -45,3 +45,9 @@ test('case-sensitive terms keep distinct source spelling while ordinary phrases 
  ],{targetLanguage:'Deutsch'});
  assert.equal(selected.terms.length,2);assert.deepEqual(selected.terms.map(item=>item.target),['upper target','lower target']);
 });
+
+test('glossary terms keep bounded, normalized and deduplicated allowed variants',()=>{
+ const variants=Array.from({length:24},(_,index)=>`fictional variant ${index+1}`),entry=term('fictional source','primary target',{allowedVariants:[...variants,'FICTIONAL VARIANT 1','',42]});
+ assert.equal(entry.allowedVariants.length,20);assert.equal(entry.allowedVariants[0],variants[0]);
+ const selected=selectGlossary([entry],{targetLanguage:'Deutsch'});assert.deepEqual(selected.terms[0].allowedVariants,variants.slice(0,20));
+});
