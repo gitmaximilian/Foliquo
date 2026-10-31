@@ -25,6 +25,6 @@ test('finalized learning includes the generated Word layout after explicit prefl
   const started=await call(`/api/jobs/${created.data.id}/learn`,{method:'POST',body:{action:'start',version,provider:'fixture',model:'fixture-model',confirmed:true}});assert.equal(started.status,202);
   let entry;for(let attempt=0;attempt<300;attempt++){entry=workspace.data.learning.find(item=>item.originJobId===created.data.id);if(entry?.status==='pending_review'&&entry.analysis?.localInventory)break;if(entry?.status==='interrupted')assert.fail(entry.lastError);await new Promise(resolve=>setTimeout(resolve,100));}
   assert.equal(entry?.status,'pending_review');const generated=entry.sources.find(source=>/^Foliquo-Finished-Translation-v\d+\.docx$/i.test(source.name));assert.ok(generated);assert.ok(entry.analysis.localInventory.docx.paragraphCount>0);assert.ok(requests.length>0);
-  const requestText=JSON.stringify(requests[0]);assert.match(requestText,/Foliquo-Finished-Translation-v/);assert.match(requestText,/authoritative finished layout sample/);
+  const requestText=JSON.stringify(requests[0]);assert.match(requestText,/Foliquo-Finished-Translation-v/);assert.match(requestText,/authoritative target layout/);assert.match(requestText,/finishedTranslationDocx/);
  }finally{await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true,maxRetries:8,retryDelay:100});}
 });
