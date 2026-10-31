@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PDFDocument,StandardFonts} from 'pdf-lib';
+import {PDFDocument,StandardFonts,degrees} from 'pdf-lib';
 import {createCanvas} from '@napi-rs/canvas';
 import {applySourceInventoryDecision,buildSourceInventory,extractEmbeddedSourceBlocks,sourceCoverage} from '../lib/source-inventory.mjs';
+import {locationsOnOriginal} from '../lib/source-geometry.mjs';
+import {correctScan} from '../lib/scans.mjs';
 import {extractLocalOcrSourceBlocks} from '../lib/learning-analysis.mjs';
 import {documentFromLegacyText} from '../lib/document-adapter.mjs';
 import {acceptRevision,rememberVersion} from '../lib/revisions.mjs';
@@ -30,6 +32,22 @@ test('embedded source PDF text is extracted locally with normalized source coord
  const pdf=await PDFDocument.create(),page=pdf.addPage([600,800]),font=await pdf.embedFont(StandardFonts.Helvetica);page.drawText('Fictional source paragraph',{x:72,y:700,size:14,font});const blocks=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}]);
  assert.equal(blocks.length,1);assert.equal(blocks[0].sourceText,'Fictional source paragraph');assert.equal(blocks[0].kind,'heading');assert.equal(blocks[0].extractionMethod,'embedded-text');assert.equal(blocks[0].fileIndex,0);assert.equal(blocks[0].page,1);assert.equal(blocks[0].box.length,4);assert.ok(blocks[0].box.every(value=>value>=0&&value<=1));
  const limited=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}],{maxPages:0});assert.equal(limited.truncated,true);assert.equal(limited.length,0);
+});
+
+test('embedded text geometry survives intrinsic rotation plus corrected crop, rotation, and page reorder',async()=>{
+ const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica);
+ for(const angle of [0,90,180,270]){const page=pdf.addPage([600,800]);page.drawText(`SYNTHETIC-PAGE-${angle}`,{x:170,y:320,size:18,font});page.setRotation(degrees(angle));}
+ const originalBytes=Buffer.from(await pdf.save()),pageOrder=[4,2,1,3],crops=Object.fromEntries([1,2,3,4].map(page=>[page,[.05,.05,.9,.9]]));
+ const original=await extractEmbeddedSourceBlocks([{name:'original.pdf',type:'application/pdf',bytes:originalBytes}]),expected=new Map(original.map(item=>[item.sourceText,item]));
+ for(const rotation of [0,90,180,270]){
+  const corrected=await correctScan({name:'fictional.pdf',type:'application/pdf',bytes:originalBytes},{pageOrder,rotation,crops});
+  const working=await extractEmbeddedSourceBlocks([{name:'corrected.pdf',type:'application/pdf',bytes:corrected.bytes}]);
+  const mapped=locationsOnOriginal(working,[{fileIndex:0,pageOrder,rotation,crops}],['application/pdf']),fixtures=mapped.filter(value=>value.sourceText.startsWith('SYNTHETIC-PAGE-'));assert.equal(fixtures.length,4);
+  for(const item of fixtures){
+   const reference=expected.get(item.sourceText);assert.ok(reference,`original source block for ${item.sourceText}`);assert.equal(item.page,reference.page);
+   for(let axis=0;axis<4;axis++)assert.ok(Math.abs(item.box[axis]-reference.box[axis])<.002,`correction ${rotation}° ${item.sourceText} axis ${axis}: ${item.box} vs ${reference.box}`);
+  }
+ }
 });
 
 test('local OCR adds an explicitly uncertain page-level source block with unknown geometry',async()=>{

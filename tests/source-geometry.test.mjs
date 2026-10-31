@@ -4,7 +4,7 @@ import {locationsOnOriginal} from '../lib/source-geometry.mjs';
 
 test('source locations invert corrected PDF page order, rotation and per-page crop',()=>{
  const [mapped]=locationsOnOriginal([{id:'fictional-field',fileIndex:0,page:1,box:[.2,.3,.2,.1]}],[{fileIndex:0,pageOrder:[2,1],rotation:90,crops:{1:[.1,.2,.5,.4]}}],['application/pdf']);
- assert.equal(mapped.page,2);assert.deepEqual(mapped.box,[.25,.44,.05,.08]);
+ assert.equal(mapped.page,2);assert.deepEqual(mapped.box,[.4,.28,.05,.08]);
 });
 
 test('unknown boxes stay unknown while page order is restored; image crop and rotation are inverted',()=>{
