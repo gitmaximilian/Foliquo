@@ -42,6 +42,15 @@ test('embedded source PDF text is extracted locally with normalized source coord
  const limited=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}],{maxPages:0});assert.equal(limited.truncated,true);assert.equal(limited.length,0);
 });
 
+test('embedded PDF extraction groups wrapped paragraph lines but keeps headings and tables as separate blocks',async()=>{
+ const pdf=await PDFDocument.create(),page=pdf.addPage([600,800]),font=await pdf.embedFont(StandardFonts.Helvetica);
+ page.drawText('Fictional paragraph line one',{x:60,y:700,size:11,font});page.drawText('continues on the next visual line',{x:60,y:686,size:11,font});page.drawText('and ends on a third line',{x:60,y:672,size:11,font});
+ page.drawText('FICTIONAL CERTIFICATE',{x:60,y:620,size:20,font});
+ page.drawText('Field A',{x:60,y:570,size:11,font});page.drawText('Value A',{x:260,y:570,size:11,font});page.drawText('Field B',{x:60,y:550,size:11,font});page.drawText('Value B',{x:260,y:550,size:11,font});
+ const blocks=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}]);
+ assert.equal(blocks.length,6);assert.deepEqual(blocks.map(block=>block.kind),['paragraph','paragraph','paragraph','heading','table','table']);assert.deepEqual(blocks.slice(0,3).map(block=>block.sourceText),['Fictional paragraph line one','continues on the next visual line','and ends on a third line']);assert.equal(new Set(blocks.slice(0,3).map(block=>block.sourceGroup.id)).size,1);assert.ok(blocks.slice(0,3).every(block=>block.sourceGroup.kind==='paragraph'&&block.sourceGroup.lineCount===3));assert.deepEqual(blocks.slice(0,3).map(block=>block.sourceGroup.lineIndex),[1,2,3]);assert.equal(blocks[3].sourceText,'FICTIONAL CERTIFICATE');assert.match(blocks[4].sourceText,/Field A.*Value A/u);assert.match(blocks[5].sourceText,/Field B.*Value B/u);assert.ok(blocks.every(block=>block.extractionMethod==='embedded-text'));
+});
+
 test('embedded text geometry survives intrinsic rotation plus corrected crop, rotation, and page reorder',async()=>{
  const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica);
  for(const angle of [0,90,180,270]){const page=pdf.addPage([600,800]);page.drawText(`SYNTHETIC-PAGE-${angle}`,{x:170,y:320,size:18,font});page.setRotation(degrees(angle));}
@@ -86,6 +95,13 @@ test('manual source decisions survive a deterministic inventory rebuild',()=>{
  applySourceInventoryDecision(job,{version:1,sourceId:item.id,action:'map',targetNodeIds:[document.blocks[0].id]},review);
  const rebuilt=buildSourceInventory({files,pageCounts:[1],sourceBlocks,document,previousInventory:job.result.sourceInventory});const mapped=rebuilt.items.find(value=>value.id===item.id);
  assert.equal(mapped.coverageStatus,'mapped');assert.deepEqual(mapped.targetNodeIds,[document.blocks[0].id]);assert.equal(mapped.review.decision,'map');assert.deepEqual(document.blocks[0].sourceBlockIds,[item.id]);
+});
+
+test('embedded text grouping preserves pre-group inventory IDs and review decisions',async()=>{
+ const pdf=await PDFDocument.create(),page=pdf.addPage([600,800]),font=await pdf.embedFont(StandardFonts.Helvetica);page.drawText('Fictional first line',{x:60,y:700,size:11,font});page.drawText('Fictional second line',{x:60,y:686,size:11,font});const bytes=Buffer.from(await pdf.save()),file={name:'fictional.pdf',type:'application/pdf',data:bytes.toString('base64')},rows=await extractEmbeddedSourceBlocks([{type:file.type,bytes}]),document=documentFromLegacyText('Translated first line\nTranslated second line');
+ const oldStyle=rows.map((row,index)=>{const {sourceGroup,...withoutGroup}=row;return {...withoutGroup,label:`Textzeile ${rows.length-index}`};}),legacy=buildSourceInventory({files:[file],pageCounts:[1],sourceBlocks:oldStyle,document}),legacyLines=legacy.items.filter(item=>item.extractionMethod==='embedded-text'),review={version:1,busy:false,proposal:null,hasQuestions:false,finalizedVersion:1},job={finishedAt:1,result:{document,sourceInventory:legacy,checks:[]}};
+ applySourceInventoryDecision(job,{version:1,sourceId:legacyLines[1].id,action:'map',targetNodeIds:[document.blocks[1].id]},review);
+ const rebuilt=buildSourceInventory({files:[file],pageCounts:[1],sourceBlocks:rows,document,previousInventory:legacy});const preserved=rebuilt.items.find(item=>item.sourceText==='Fictional second line');assert.equal(preserved.id,legacyLines[1].id);assert.equal(preserved.review.version,2);assert.deepEqual(preserved.targetNodeIds,[document.blocks[1].id]);assert.ok(preserved.sourceGroup);
 });
 
 test('revision restore recovers the matching source map and document nodes',async()=>{
