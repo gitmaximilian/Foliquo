@@ -571,3 +571,9 @@ This document tracks implementation separately from automated verification and e
 - Updated 64 MiB/16-job profile: buffer additional peak RSS 374.37 MiB; streamed 135.34 MiB (239.03 MiB lower). Content SHA-256 matched and provider requests were zero.
 - Verification: full `npm test` 340/340; browser matrix 45/45 across Chromium, Firefox, WebKit; offline benchmark 3 cases / 0 regressions / 0 provider requests; acceptance 12/12; demo build passed and tracked generated fixtures were restored; `git diff --check` passed. Cross-platform CI for this follow-up is pending.
 - Remaining physical durability, cross-platform near-cap and genuine full-volume evidence, external install/signing approvals and human evaluation gates are unchanged. No version, package, tag or public release changed.
+
+### P02 cross-platform CI after chunked large-text fingerprints, 31 October 2026
+
+- Current implementation head `71e04dd` passed the complete Ubuntu, Windows and macOS CI matrix in run [41191206484](https://github.com/gitmaximilian/Foliquo/actions/runs/41191206484). Windows and Ubuntu passed on the first attempt. The first macOS attempt reported asynchronous activity after the slow 50-page segmented-runtime test; the focused test passed locally, and the failed macOS job's full rerun passed the Node suite, storage and recovery profiles, APFS full-volume test, benchmark, demo build and acceptance.
+- The successful rerun provides a clean current-platform result, while the initial timing-sensitive test warning remains a flaky-test observation for follow-up. No code change was made for that warning because the focused test passed locally and in the full rerun.
+- Cross-platform 255 MiB RSS and genuine Windows/Linux full-volume, physical power-loss, external signing, installer acceptance, and human-evidence gates remain open. No package, version, tag or public release changed.
