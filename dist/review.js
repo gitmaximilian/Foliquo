@@ -38,8 +38,9 @@ function renderLearningOffer(snapshot){
  $('#learning-offer-copy').hidden=state!=='offered';
  $('#learning-offer-status').textContent=state==='analyzing'?'Die vollständige Musteranalyse läuft. Bereits abgeschlossene Abschnitte werden lokal gesichert.':state==='pending_review'?'Analyse abgeschlossen. Prüfe die erkannten Regeln im Bereich Anlernen, bevor du sie aktivierst.':state==='interrupted'?'Die Analyse wurde unterbrochen. Gesicherte Abschnitte bleiben erhalten; du kannst sie im Bereich Anlernen fortsetzen.':state==='active'?'Dieses Muster ist freigegeben und kann bei passenden neuen Aufträgen helfen.':'';
  if(state==='preflight'){
-  const p=offer.preflight||{};const provider=({chatgpt:'ChatGPT-Konto',openai:'OpenAI API',anthropic:'Anthropic API',deepseek:'DeepSeek API'})[offer.provider]||offer.provider;
-  $('#learning-preflight-summary').textContent=`${offer.pages} Seiten · etwa ${offer.requests} Modellanfragen · ${provider} · ${offer.model}`;
+  const p=offer.preflight||{},locale=window.TOCRI18n?.getLocale?.()||'de',providers={de:{chatgpt:'ChatGPT-Konto',openai:'OpenAI API',anthropic:'Anthropic API',deepseek:'DeepSeek API'},en:{chatgpt:'ChatGPT account',openai:'OpenAI API',anthropic:'Anthropic API',deepseek:'DeepSeek API'},ar:{chatgpt:'حساب ChatGPT',openai:'واجهة OpenAI API',anthropic:'واجهة Anthropic API',deepseek:'واجهة DeepSeek API'}};const provider=providers[locale]?.[offer.provider]||offer.provider;
+  const layoutLine=locale==='ar'?`يشمل تخطيط ملف Word النهائي (${p.finishedTranslationPages||0} صفحة)`:(locale==='en'?`Includes finished Word layout (${p.finishedTranslationPages||0} pages)`:`Enthält Layout der fertigen Word-Datei (${p.finishedTranslationPages||0} Seiten)`),pageLine=locale==='ar'?`${p.sourcePages||0} صفحة أصلية + ${p.finishedTranslationPages||0} صفحة نهائية · نحو ${offer.requests} طلبات نموذج`:(locale==='en'?`${p.sourcePages||0} source pages + ${p.finishedTranslationPages||0} finished pages · about ${offer.requests} model requests`:`${p.sourcePages||0} Originalseiten + ${p.finishedTranslationPages||0} fertige Seiten · etwa ${offer.requests} Modellanfragen`);
+  $('#learning-preflight-summary').textContent=`${pageLine} · ${provider} · ${offer.model} · ${layoutLine}`;
   $('#learning-preflight-content').textContent=p.content||'';$('#learning-preflight-standard').textContent=p.standard||'';
  }
 }
