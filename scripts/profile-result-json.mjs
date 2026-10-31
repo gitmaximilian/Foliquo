@@ -12,6 +12,7 @@ import {Workspace} from '../lib/workspace.mjs';
 
 const worker=process.argv.includes('--worker');
 const reviewPreview=process.argv.includes('--review-preview');
+const fullResult=process.argv.includes('--full-result');
 if(worker){
  if(typeof globalThis.gc!=='function')throw new Error('Run with --expose-gc.');
  const directory=process.env.FOLIQUO_PROFILE_DIR,port=Number(process.env.FOLIQUO_PROFILE_PORT),owner='fictional-result-json-profile-session';
@@ -29,7 +30,7 @@ if(worker){
 }else{
  if(typeof globalThis.gc!=='function')throw new Error('Run with --expose-gc.');
  const directory=await mkdtemp(join(tmpdir(),'foliquo-result-json-profile-')),port=30000+Math.floor(Math.random()*20000),owner='fictional-result-json-profile-session',textBytes=161*1024*1024,peakDeltaBudget=2*textBytes+96*1024*1024;
- const prefix=Buffer.from('{"text":"'),suffix=Buffer.from('\",\"previewTransport\":\"source-stream\"}');
+ const prefix=Buffer.from('{"text":"'),suffix=Buffer.from(fullResult?'"}':'\",\"previewTransport\":\"source-stream\"}');
  let child,childExit,workspace,peakRss=0,stderr='';
  try{
   workspace=await new Workspace(directory,{lazyJobs:true}).init();
@@ -44,7 +45,7 @@ if(worker){
   let ready=false;for(let attempt=0;attempt<120;attempt++){if(child.exitCode!==null)throw new Error(`Profile server exited early: ${stderr}`);try{const response=await fetch(`${origin}/api/session`,{headers:{cookie},signal:AbortSignal.timeout(500)});if(response.status===200){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,50));}assert.ok(ready,'Profile server did not start in time.');
   for(let attempt=0;attempt<100&&baselineRss===0;attempt++)await new Promise(resolve=>setTimeout(resolve,10));
   assert.ok(baselineRss>0,'Could not read the profile server RSS.');peakRss=baselineRss;
-  const path=reviewPreview?'/api/jobs/12345678-1234-4234-8234-123456789abf/review?preview=1&stream=1':'/api/jobs/12345678-1234-4234-8234-123456789abf/result?metadata=1';
+  const path=reviewPreview?'/api/jobs/12345678-1234-4234-8234-123456789abf/review?preview=1&stream=1':fullResult?'/api/jobs/12345678-1234-4234-8234-123456789abf/result':'/api/jobs/12345678-1234-4234-8234-123456789abf/result?metadata=1';
   const response=await fetch(`${origin}${path}`,{headers:{cookie}});
   assert.equal(response.status,200);assert.equal(response.headers.get('transfer-encoding'),'chunked');assert.equal(response.headers.get('content-length'),null);
   const hash=createHash('sha256'),marker=Buffer.from(reviewPreview?'"result":{"text":"':'"text":"');let bytes=0,first=Buffer.alloc(0),last=Buffer.alloc(0),scanCarry=Buffer.alloc(0),foundText=false,textFinished=false,streamedTextBytes=0;
@@ -57,7 +58,7 @@ if(worker){
   await new Promise(resolve=>setTimeout(resolve,40));child.kill();await childExit;
   const peakDeltaBytes=peakRss-baselineRss;
   assert.ok(peakDeltaBytes<=peakDeltaBudget,`Large result JSON retrieval added ${(peakDeltaBytes/1024/1024).toFixed(2)} MiB peak RSS; budget is ${(peakDeltaBudget/1024/1024).toFixed(2)} MiB.`);
-  console.log(JSON.stringify({mode:reviewPreview?'large-archived-review-preview-peak-rss':'large-archived-result-json-peak-rss',textBytes,baselineRss,peakRss,peakDeltaBytes,peakDeltaMiB:Number((peakDeltaBytes/1024/1024).toFixed(2)),peakDeltaBudgetBytes:peakDeltaBudget,responseBytes:bytes,textLengthVerified:reviewPreview?streamedTextBytes===textBytes:undefined,digestVerified:!reviewPreview}));
+  console.log(JSON.stringify({mode:reviewPreview?'large-archived-review-preview-peak-rss':fullResult?'large-archived-full-result-peak-rss':'large-archived-result-json-peak-rss',textBytes,baselineRss,peakRss,peakDeltaBytes,peakDeltaMiB:Number((peakDeltaBytes/1024/1024).toFixed(2)),peakDeltaBudgetBytes:peakDeltaBudget,responseBytes:bytes,textLengthVerified:reviewPreview?streamedTextBytes===textBytes:undefined,digestVerified:!reviewPreview}));
  }finally{
   if(child&&child.exitCode===null){child.kill();await childExit?.catch(()=>{});}
   await workspace?.tail?.catch(()=>{});await rm(directory,{recursive:true,force:true});
