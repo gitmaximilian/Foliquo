@@ -13,6 +13,19 @@ test('translation plans are deterministic, page ordered and bind source, model, 
  assert.notEqual(plan.segments[0].fingerprint,buildTranslationPlan({...options,contextVersion:'context-v3'}).segments[0].fingerprint);assert.equal(JSON.stringify(plan).includes('Fictional document bytes'),false);
 });
 
+test('translation section boundaries adapt to source-field density and invalidate with inventory changes',()=>{
+ const documents=[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('fictional-pdf-content')}],blocks=Array.from({length:45},(_,index)=>({id:`field-${index+1}`,fileIndex:0,page:index<30?1:2,kind:'field',label:`Fictional field ${index+1}`,sourceText:`Value ${index+1}`}));
+ const dense=buildTranslationPlan({documents,pageCounts:[4],sourceBlocks:blocks,provider:'openai',model:'fictional-model',targetBlocksPerSegment:20});
+ const sparse=buildTranslationPlan({documents,pageCounts:[4],sourceBlocks:[],provider:'openai',model:'fictional-model',targetBlocksPerSegment:20});
+ assert.deepEqual(dense.segments.map(segment=>segment.pageRange),[[1,1],[2,4]]);
+ assert.deepEqual(dense.segments.map(segment=>segment.sourceBlockIds.length),[30,15]);
+ assert.deepEqual(sparse.segments.map(segment=>segment.pageRange),[[1,4]]);
+ assert.notEqual(dense.sourceFingerprint,sparse.sourceFingerprint);
+ const revised=blocks.map((block,index)=>index===0?{...block,sourceText:'Corrected fictional value'}:block);
+ assert.notEqual(dense.sourceFingerprint,buildTranslationPlan({documents,pageCounts:[4],sourceBlocks:revised,provider:'openai',model:'fictional-model',targetBlocksPerSegment:20}).sourceFingerprint);
+ assert.throws(()=>buildTranslationPlan({documents,pageCounts:[4],sourceBlocks:[],provider:'openai',model:'fictional-model',targetBlocksPerSegment:0}),/Abschnittsgrenzen/);
+});
+
 test('segment request interruptions stay unknown and require explicit retry approval',()=>{
  const plan=buildTranslationPlan({documents:[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('bytes')}],pageCounts:[1],provider:'api',model:'fictional-model'}),segment=plan.segments[0];
  beginTranslationSegment(plan,segment.id,'usage-1',10);interruptTranslationSegment(plan,segment.id,20);assert.equal(segment.status,'interrupted_unknown');assert.equal(segment.attempts[0].status,'unknown');assert.deepEqual(translationPlanProgress(plan),{total:1,complete:0,pending:0,inFlight:0,needsInput:0,unknown:1,failed:0,percent:0});
