@@ -15,6 +15,13 @@ test('explicit feedback deterministically ranks matching samples and private job
  assert.equal(JSON.stringify(snapshot).includes('private-helpful'),false);assert.equal(snapshot.learning[0].learningUsage.versions['1'].events,undefined);assert.deepEqual(snapshot.learning[0].learningUsage.versions['1'].ruleEvents[Object.keys(snapshot.learning[0].learningUsage.versions['1'].ruleEvents)[0]],{explicitHelpful:4,explicitRejected:0});
 });
 
+test('learning feedback stays attached to the approved profile version after administrative edits',()=>{
+ const entries=['plain-a','plain-b','plain-c','reviewed'].map(id=>({...sample('Driving licence','German',id),version:id==='reviewed'?9:1,rules:[`Fictional preference for ${id}.`],createdAt:1,updatedAt:1}));
+ const reviewed=entries.find(entry=>entry.id==='reviewed'),ruleText=reviewed.rules[0],ruleId=`rule-${createHash('sha256').update(`${reviewed.id}\0${3}\0style\0${0}\0${ruleText}`).digest('hex').slice(0,24)}`;
+ reviewed.analysis={profileVersion:3,sourceLanguage:'English'};reviewed.learningUsage={versions:{'3':{eligibleUses:4,explicitHelpful:4,explicitRejected:0,ruleEvents:{[ruleId]:{eligibleUses:4,explicitHelpful:4,explicitRejected:0}}}}};
+ const context=learningContext(entries,{documentType:'Führerschein',targetLanguage:'Deutsch',sourceLanguage:'Englisch',asOf:1000});assert.ok(context.learningExamples.some(entry=>entry.id==='reviewed'));assert.equal(context.appliedLearning.find(entry=>entry.id==='reviewed').profileVersion,3);assert.equal(context.appliedLearning.find(entry=>entry.id==='reviewed').ruleRefs[0].id,ruleId);
+});
+
 test('conflicting approved learned terminology is withheld and a higher-priority glossary wins without a question',()=>{
  const entries=['first','second'].map((id,index)=>({...sample('Driving licence','German',id),version:1,analysis:{profileVersion:1,sourceLanguage:'English',terminology:[{id:`term-${id}`,source:'fictional source term',target:`target ${index+1}`,approved:true}]}}));
  const learned=learningContext(entries,{documentType:'Führerschein',sourceLanguage:'Englisch',targetLanguage:'Deutsch'});
