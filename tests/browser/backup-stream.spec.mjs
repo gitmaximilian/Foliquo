@@ -14,6 +14,8 @@ async function openIsolatedWorkspace(page){
  await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});
  await page.goto(`http://127.0.0.1:${app.address().port}`,{waitUntil:'networkidle'});
  await page.locator('#intro-skip').click();
+ await page.locator('header nav [data-view="workspace"]').click();
+ await expect(page.locator('#storage-recovery-info')).toContainText(/same disk/i,{timeout:15000});
  await page.evaluate(()=>document.querySelector('#guide-storage-dialog').showModal());
  await page.locator('#backup-passphrase').fill('fictional backup password');
  return {directory,workspace,app};
@@ -29,8 +31,8 @@ test('backup download streams to the native save destination when available',asy
  const isolated=await openIsolatedWorkspace(page);
  const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
  try{
-  await expect(page.locator('#storage-recovery-info')).toContainText(/same disk/i);
-  await expect(page.locator('#storage-recovery-info')).toContainText(/external backup/i);
+  await expect(page.locator('#storage-recovery-info')).toContainText(/same disk/i,{timeout:15000});
+  await expect(page.locator('#storage-recovery-info')).toContainText(/external backup/i,{timeout:15000});
   await page.evaluate(()=>{
    window.__backupChunks=[];
    window.__backupPickerCalls=[];

@@ -53,14 +53,14 @@ function renderReview(snapshot){
  let glossaryInfo=$('#review-glossary-info');if(!glossaryInfo){glossaryInfo=document.createElement('details');glossaryInfo.id='review-glossary-info';glossaryInfo.className='review-style-indicator';$('#review-style-indicator').after(glossaryInfo);}const terms=snapshot.result?.context?.terms||[],decisions=snapshot.result?.context?.glossaryConflictDecisions||[];glossaryInfo.hidden=!terms.length&&!decisions.length;glossaryInfo.replaceChildren();if(terms.length||decisions.length){const summary=document.createElement('summary');summary.textContent=`Glossar im Auftrag · ${terms.length} Begriffe`;glossaryInfo.append(summary);const list=document.createElement('ul');for(const term of terms){const item=document.createElement('li');item.textContent=`${term.source} → ${term.target}`;list.append(item);}for(const decision of decisions){const item=document.createElement('li');item.textContent=`Konfliktentscheidung: ${decision.source} → ${decision.target}`;list.append(item);}glossaryInfo.append(list);}
  if(snapshot.result){
   $('#review-preview-note').textContent=reviewCopy(snapshot.result.context?.layout?.includeOriginals===false?'PDF ohne Originalanhang · Word mit derselben bearbeitbaren Übersetzung':'PDF mit Originalseiten · Word mit derselben bearbeitbaren Übersetzung');$('#review-names').textContent=snapshot.names.join(' · ');$('#review-text').textContent=snapshot.result.text;
-  if(reviewPreviewVersion!==snapshot.version){void setReviewPDF(snapshot.result.pdf);reviewPreviewVersion=snapshot.version;}queueResultCache.delete(reviewJobId);
+ if(reviewPreviewVersion!==snapshot.version){reviewPreviewVersion=snapshot.version;if(snapshot.previewTransport==='download-stream')void loadReviewPDF(snapshot.jobId,snapshot.version);else void setReviewPDF(snapshot.result.pdf);}queueResultCache.delete(reviewJobId);
  }
  if(typeof renderInspector==='function')renderInspector(snapshot);if(typeof renderStudio==='function')renderStudio(snapshot);if(typeof renderWorkflow==='function')renderWorkflow(snapshot);
  renderReviewControls();
 }
 async function loadReview(preview=false){
  if(!reviewJobId||reviewUnavailable)return;const id=reviewJobId;if(reviewLoading){reviewTimer=setTimeout(()=>loadReview(preview),500);return;}reviewLoading=true;
- try{let snapshot=await localRequest(`/api/jobs/${id}/review${preview?'?preview=1':''}`).then(r=>r.json());if(id!==reviewJobId)return;if(!snapshot.result&&reviewPreviewVersion!==snapshot.version)snapshot=await localRequest(`/api/jobs/${id}/review?preview=1`).then(r=>r.json());if(id!==reviewJobId)return;renderReview(snapshot);}
+ try{let snapshot=await localRequest(`/api/jobs/${id}/review${preview?'?preview=1&stream=1':''}`).then(r=>r.json());if(id!==reviewJobId)return;if(!snapshot.result&&reviewPreviewVersion!==snapshot.version)snapshot=await localRequest(`/api/jobs/${id}/review?preview=1&stream=1`).then(r=>r.json());if(id!==reviewJobId)return;renderReview(snapshot);}
  catch(error){if(id===reviewJobId){$('#review-error').textContent=error.message;if(error.status===401||/Auftrag nicht gefunden|nicht mehr verfügbar/.test(error.message)){reviewUnavailable=true;rememberReview(null);renderReviewControls();view('studio',{historyMode:'replace'});}for(const button of document.querySelectorAll('.review-final button'))button.disabled=true;}}
  finally{reviewLoading=false;if(id===reviewJobId&&!reviewUnavailable){clearTimeout(reviewTimer);reviewTimer=setTimeout(()=>loadReview(),reviewData?.busy?1500:3500);}}
 }
@@ -98,13 +98,14 @@ async function downloadFinal(format){
 }
 $('#review-final-pdf').onclick=()=>downloadFinal('pdf');$('#review-final-word').onclick=()=>downloadFinal('word');$('#review-final-both').onclick=()=>downloadFinal('bundle');
 
+async function loadReviewPDF(id,version){try{const response=await localRequest(`/api/jobs/${id}/download/pdf`),bytes=new Uint8Array(await response.arrayBuffer());if(id!==reviewJobId||reviewData?.version!==version)return;await setReviewPDF(bytes);}catch(error){if(id===reviewJobId&&reviewData?.version===version){$('#review-page-label').textContent='Vorschau nicht verfügbar';$('#review-preview-error').textContent=error.message||'Die PDF-Vorschau konnte nicht geladen werden. Die Textvorschau steht weiterhin zur Verfügung.';}}}
 let reviewPDFViewer=null;
 let pdfRenderer=null,pdfLoading=null,pdfDocument=null,pdfRenderTask=null,pdfPageIndex=1,pdfGeneration=0;
 function localizeReviewPageControls(){if(!pdfDocument)return;const values={page:pdfPageIndex,total:pdfDocument.numPages};$('#review-page-label').textContent=reviewCopy('Seite {page} von {total}',values);$('#review-page-canvas canvas')?.setAttribute('aria-label',reviewCopy('PDF-Seite {page} von {total}',values));}
-async function setReviewPDF(base64){
+async function setReviewPDF(value){
  const generation=++pdfGeneration;$('#review-preview-error').textContent='';$('#review-page-label').textContent='Vorschau wird geladen …';$('#review-page-canvas').replaceChildren();pdfRenderTask?.cancel();if(pdfLoading)void pdfLoading.destroy();pdfDocument=null;
  try{pdfRenderer=pdfRenderer||await import('/vendor/pdfjs/pdf.mjs');pdfRenderer.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/pdf.worker.mjs';if(generation!==pdfGeneration)return;
-  pdfLoading=pdfRenderer.getDocument({data:Uint8Array.from(atob(base64),c=>c.charCodeAt(0)),standardFontDataUrl:'/vendor/pdfjs/standard_fonts/',cMapUrl:'/vendor/pdfjs/cmaps/',cMapPacked:true,wasmUrl:'/vendor/pdfjs/wasm/',isEvalSupported:false});
+  const data=typeof value==='string'?Uint8Array.from(atob(value),c=>c.charCodeAt(0)):value;pdfLoading=pdfRenderer.getDocument({data,standardFontDataUrl:'/vendor/pdfjs/standard_fonts/',cMapUrl:'/vendor/pdfjs/cmaps/',cMapPacked:true,wasmUrl:'/vendor/pdfjs/wasm/',isEvalSupported:false});
   const doc=await pdfLoading.promise;if(generation!==pdfGeneration)return;pdfDocument=doc;pdfPageIndex=1;await renderReviewPDFPage();
  }catch(error){if(generation===pdfGeneration){$('#review-page-label').textContent='Vorschau nicht verfügbar';$('#review-preview-error').textContent='Die PDF-Vorschau konnte nicht geladen werden. Die Textvorschau steht weiterhin zur Verfügung.';}}
 }

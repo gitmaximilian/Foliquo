@@ -87,7 +87,7 @@
   async function setMode(next) {
     initialize();
     if (next === 'structure') {
-      if (!model) { const jobId = reviewJobId, version = reviewData.version; const response = await localRequest(`/api/jobs/${jobId}/review?preview=1&document=1`).then(result => result.json()); if (reviewJobId !== jobId || reviewData.version !== version) throw new Error('Die Fassung wurde inzwischen geändert.'); model = clone(response.document); }
+      if (!model) { const jobId = reviewJobId, version = reviewData.version; const response = await localRequest(`/api/jobs/${jobId}/review?preview=1&document=1&stream=1`).then(result => result.json()); if (reviewJobId !== jobId || reviewData.version !== version) throw new Error('Die Fassung wurde inzwischen geändert.'); model = clone(response.document); }
       else if (mode === 'text' && $('#direct-text').value !== asText(model)) { model = fromText($('#direct-text').value, model); undo = []; redo = []; }
       render();
     } else if (mode === 'structure' && model) $('#direct-text').value = asText(model);
