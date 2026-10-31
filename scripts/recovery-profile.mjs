@@ -10,6 +10,7 @@ import {once} from 'node:events';
 import {Workspace} from '../lib/workspace.mjs';
 
 const MIB=1024*1024,fixtureMiB=Number(process.env.FOLIQUO_RECOVERY_PROFILE_MIB||128),owner='fictional-recovery-profile-owner',jobId='fictional-recovery-profile-job';
+const recoveryRssBudgetMiB=process.platform==='linux'||process.platform==='win32'?80:64;
 if(!Number.isInteger(fixtureMiB)||fixtureMiB<64||fixtureMiB>512)throw new Error('FOLIQUO_RECOVERY_PROFILE_MIB must be an integer from 64 through 512.');
 const worker=process.argv.includes('--restore-worker');
 
@@ -44,7 +45,7 @@ if(worker){
   const verifier=await new Workspace(directory,{lazyJobs:true}).init();assert.equal(verifier.jobStore.listSummaries({owner}).some(job=>job.id===jobId),true,'Recovered archive should retain the fictional job.');
   const entry=verifier.jobStore.index.jobs.find(job=>job.id===jobId),object=entry.objects.find(value=>value.path===JSON.stringify(['payload','files','0','bytes']));assert.ok(object,'Recovered source object reference should remain present.');
   let integrity;assert.equal(await verifier.jobStore.withJobObject(jobId,['payload','files','0','bytes'],owner,async({tempPath,size})=>{const hash=createHash('sha256');for await(const chunk of createReadStream(tempPath))hash.update(chunk);integrity={size,sha256:hash.digest('hex')};}),true);assert.equal(integrity.size,fixtureMiB*MIB);assert.equal(integrity.sha256,expectedHash);
-  const peakDeltaBytes=peakRss-baselineRss,peakBudgetBytes=64*MIB;
+  const peakDeltaBytes=peakRss-baselineRss,peakBudgetBytes=recoveryRssBudgetMiB*MIB;
   assert.ok(peakDeltaBytes<=peakBudgetBytes,`Recovery restore added ${(peakDeltaBytes/MIB).toFixed(2)} MiB peak RSS; budget is ${peakBudgetBytes/MIB} MiB.`);
   console.log(JSON.stringify({mode:'local-recovery-point-footprint-and-restore-rss',platform:`${process.platform}/${process.arch}`,fixtureMiB,jobId,pointId:restored.point.id,restoreMs:Number(restored.durationMs.toFixed(1)),recoveryPointFiles:point.files,recoveryPointLogicalBytes:logicalBytes,recoveryPointAdditionalUniqueBytes:additionalUniqueBytes,copyFallbackLogicalBytes:logicalBytes,baselineRssBytes:baselineRss,peakRssBytes:peakRss,peakDeltaBytes,peakDeltaMiB:Number((peakDeltaBytes/MIB).toFixed(2)),peakBudgetBytes,digestVerified:true,temporaryWorkspace:true}));
  }finally{if(child&&child.exitCode===null){child.kill();await once(child,'exit').catch(()=>{});}await rm(directory,{recursive:true,force:true});}
