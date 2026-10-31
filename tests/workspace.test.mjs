@@ -125,7 +125,7 @@ test('Explicit workspace templates, profiles, glossary and examples reach transl
  const w=await store(t);
  const tpl=w.put('templates',{name:'Licence',confirmed:true,documentType:'Licence',fields:['Number'],formFields:[{label:'Document number',sourceLabel:'Number',kind:'number',required:true}],layout:{margin:23}});
  const profile=w.put('profiles',{name:'Personal page layout',confirmed:true,documentType:'Licence',layout:{margin:27}});
- w.put('glossary',{name:'number',source:'licence no',target:'Dokumentnummer'});
+ w.put('glossary',{name:'number',source:'licence no',target:'Dokumentnummer',allowedVariants:['Lizenznummer']});
  const selected=w.put('examples',{name:'selected licence example',documentType:'Licence',templateId:tpl.id,translation:'APPROVED EXAMPLE',sourceText:'licence',approved:true});
  w.put('examples',{name:'unselected private example',documentType:'Licence',templateId:tpl.id,translation:'UNSELECTED PRIVATE EXAMPLE',sourceText:'licence',approved:true});
  const calls=[];
@@ -149,6 +149,7 @@ test('Explicit workspace templates, profiles, glossary and examples reach transl
  assert.match(translation,/tableLikeRows/,'the selected reference contributes a structural summary');
  assert.doesNotMatch(translation,/APPROVED EXAMPLE|licence"|sourceText|UNSELECTED PRIVATE EXAMPLE/,'reference documents and their contents are not sent to the translation provider');
  assert.match(translation,/Dokumentnummer/,'the confirmed target-language glossary reaches the translation request');
+ assert.match(translation,/Lizenznummer/,'the explicitly approved glossary variant reaches the translation request');assert.match(calls[1].instructions,/target die bevorzugte Zielbezeichnung; allowedVariants/u,'the provider is told how approved variants may be used');
  assert.match(translation,/456/,'the selected dossier reaches translation as a checked reference');
  assert.equal(state.result.context.dossierId,dossier.dossier.id);
  assert.equal(state.checks.find(check=>check.kind==='dossier')?.present,false,'conflicting dossier values remain visible for human review');
