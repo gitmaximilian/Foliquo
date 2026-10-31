@@ -293,3 +293,9 @@ This document tracks implementation separately from automated verification and e
 - The same flow switches between a per-job ChatGPT filter and a per-job API filter, then verifies Arabic RTL and German localization. Chromium, Firefox and WebKit passed 3/3 focused cases; the complete browser matrix passed 39/39. `npm test` passed 307/307; benchmark 3 offline cases/0 regressions/0 requests; acceptance 12/12; demo build passed and generated fixtures were restored. Syntax and whitespace checks passed.
 - The fixture verifies local display and provider-reported limit handling only. It does not reveal a ChatGPT account quota, prove billing totals, or measure real usage; the product intentionally does not claim these values.
 - No product runtime code or package contents changed. No release, tag or public asset changed.
+
+
+### P05 follow-up: keyboard path through usage settings
+
+- Commit `0ccce1f` extends the same focused browser flow: after skipping onboarding, the user opens provider usage settings with Enter, tabs from the final available control back to the first control within the dialog, and closes with Escape. Focus returns to the launch button. The test waits for onboarding to finish saving before the next keyboard action.
+- Focused Chromium/Firefox/WebKit run passed 3/3. This is automated keyboard behavior coverage; it does not replace screen-reader, zoom, contrast, or human usability checks.
