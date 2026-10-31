@@ -5,6 +5,7 @@ import {mkdtemp, mkdir, readFile, readdir, rm, writeFile} from 'node:fs/promises
 import {existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {setTimeout as sleep} from 'node:timers/promises';
 import {promisify} from 'node:util';
 import {SecureStore} from '../lib/secure-store.mjs';
 
@@ -36,7 +37,10 @@ async function prepareWindows(){
   // service releases its handle. Retry removal here so cleanup is included in
   // the profile result instead of turning a successful ENOSPC check into a
   // spurious failure.
-  await rm(image,{force:true,maxRetries:20,retryDelay:250});
+  for(let attempt=0;;attempt++){
+   try{await rm(image,{force:true});break;}
+   catch(error){if(!['EBUSY','EPERM'].includes(error.code)||attempt>=59)throw error;await sleep(500);}
+  }
  };
  return volume;
 }
