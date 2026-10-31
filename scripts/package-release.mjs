@@ -6,7 +6,7 @@ import {join,resolve,relative,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {CURRENT_VERSION} from '../lib/version.mjs';
 export const root=fileURLToPath(new URL('..',import.meta.url));
-export const applicationInputs=['bin','lib','dist','server.mjs','package.json','package-lock.json','LICENSE','scripts/check-install.mjs','scripts/install-linux.mjs','docs/BROWSER-SETUP.md','docs/THIRD-PARTY.md'];
+export const applicationInputs=['bin','lib','dist','server.mjs','package.json','package-lock.json','LICENSE','scripts/check-install.mjs','scripts/install-linux.mjs','scripts/learning-impact.mjs','docs/BROWSER-SETUP.md','docs/THIRD-PARTY.md','docs/LEARNING-IMPACT-EVALUATION.md'];
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 export async function listFiles(directory,prefix='') {
  const files=[];
