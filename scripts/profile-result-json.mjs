@@ -9,6 +9,7 @@ import {once} from 'node:events';
 import {Readable} from 'node:stream';
 import {createApp} from '../server.mjs';
 import {Workspace} from '../lib/workspace.mjs';
+import {PDFDocument} from 'pdf-lib';
 
 const worker=process.argv.includes('--worker');
 const reviewPreview=process.argv.includes('--review-preview');
@@ -30,14 +31,16 @@ if(worker){
 }else{
  if(typeof globalThis.gc!=='function')throw new Error('Run with --expose-gc.');
  const directory=await mkdtemp(join(tmpdir(),'foliquo-result-json-profile-')),port=30000+Math.floor(Math.random()*20000),owner='fictional-result-json-profile-session',textBytes=161*1024*1024,peakDeltaBudget=2*textBytes+96*1024*1024;
- const prefix=Buffer.from('{"text":"'),suffix=Buffer.from(fullResult?'"}':'\",\"previewTransport\":\"source-stream\"}');
+ const prefix=Buffer.from('{"text":"'),suffix=Buffer.from(fullResult?'}':'\",\"previewTransport\":\"source-stream\"}');
  let child,childExit,workspace,peakRss=0,stderr='';
  try{
   workspace=await new Workspace(directory,{lazyJobs:true}).init();
   workspace.data.sessions=[[owner,{id:owner,csrf:'fictional-result-json-profile-csrf',expiresAt:Date.now()+86400000}]];
-  let text='x'.repeat(textBytes);const expectedHash=createHash('sha256').update(prefix).update(text).update(suffix).digest('hex');
-  const job={id:'12345678-1234-4234-8234-123456789abf',owner,status:'succeeded',stage:'done',createdAt:Date.now()-1000,finishedAt:Date.now()-500,names:['fictional-large-result.pdf'],result:{text},questions:[],payload:{files:[]}};
-  await workspace.jobStore.commitJob(job);job.result.text='';await workspace.save();await workspace.tail;text=null;workspace=null;
+  let text='x'.repeat(textBytes),result={text},expectedHash,expectedResponseBytes;
+  if(fullResult){const pdf=await PDFDocument.create();pdf.addPage();pdf.addPage();const pdfBytes=Buffer.concat([Buffer.from(await pdf.save()),Buffer.alloc(16*1024*1024,0x20)]),wordBytes=Buffer.alloc(8*1024*1024,0x57);result.pdf=pdfBytes.toString('base64');result.word=wordBytes.toString('base64');result.preflight={digest:createHash('sha256').update(pdfBytes).digest('hex'),translationPages:1,pageCount:2,originalPages:1};const expected=JSON.stringify(result);expectedHash=createHash('sha256').update(expected).digest('hex');expectedResponseBytes=Buffer.byteLength(expected);}
+  else expectedHash=createHash('sha256').update(prefix).update(text).update(suffix).digest('hex');
+  const job={id:'12345678-1234-4234-8234-123456789abf',owner,status:'succeeded',stage:'done',createdAt:Date.now()-1000,finishedAt:Date.now()-500,names:['fictional-large-result.pdf'],result,questions:[],payload:{files:[]}};
+  await workspace.jobStore.commitJob(job);job.result={};await workspace.save();await workspace.tail;text=null;result=null;workspace=null;
   child=spawn(process.execPath,['--expose-gc',fileURLToPath(import.meta.url),'--worker'],{stdio:['ignore','ignore','pipe','ipc'],env:{...process.env,FOLIQUO_PROFILE_DIR:directory,FOLIQUO_PROFILE_PORT:String(port)}});
   childExit=once(child,'exit');child.stderr.setEncoding('utf8');child.stderr.on('data',chunk=>stderr+=chunk);
   let baselineRss=0;child.on('message',message=>{if(message?.event==='ready')baselineRss=message.bytes;if(message?.event==='rss')peakRss=Math.max(peakRss,message.bytes);});
@@ -54,7 +57,7 @@ if(worker){
    if(reviewPreview&&!textFinished){let content=chunk;if(!foundText){content=Buffer.concat([scanCarry,chunk]);const markerIndex=content.indexOf(marker);if(markerIndex<0){scanCarry=content.subarray(Math.max(0,content.length-marker.length+1));continue;}foundText=true;content=content.subarray(markerIndex+marker.length);scanCarry=Buffer.alloc(0);}const closingQuote=content.indexOf(0x22);if(closingQuote>=0){streamedTextBytes+=closingQuote;textFinished=true;}else streamedTextBytes+=content.length;}
   }
   if(reviewPreview){assert.ok(first.subarray(0,Math.min(first.length,16)).toString().startsWith('{'));assert.ok(last.includes(Buffer.from('}')),'The streamed review response must close its JSON object.');assert.equal(streamedTextBytes,textBytes,'The streamed nested review text must preserve every UTF-8 byte.');}
-  else{assert.equal(bytes,prefix.length+textBytes+suffix.length,'The streamed response must preserve the complete JSON shape.');assert.equal(first.subarray(0,prefix.length).toString(),prefix.toString());assert.equal(last.toString(),suffix.toString());assert.equal(hash.digest('hex'),expectedHash,'The streamed result JSON must preserve the exact large text.');}
+  else{assert.equal(bytes,fullResult?expectedResponseBytes:prefix.length+textBytes+suffix.length,'The streamed response must preserve the complete JSON shape.');assert.equal(first.subarray(0,prefix.length).toString(),prefix.toString());assert.equal(last.toString(),suffix.toString());assert.equal(hash.digest('hex'),expectedHash,'The streamed result JSON must preserve the exact large response.');}
   await new Promise(resolve=>setTimeout(resolve,40));child.kill();await childExit;
   const peakDeltaBytes=peakRss-baselineRss;
   assert.ok(peakDeltaBytes<=peakDeltaBudget,`Large result JSON retrieval added ${(peakDeltaBytes/1024/1024).toFixed(2)} MiB peak RSS; budget is ${(peakDeltaBudget/1024/1024).toFixed(2)} MiB.`);
