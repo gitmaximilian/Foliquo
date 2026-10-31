@@ -23,7 +23,9 @@ test('cross-page critical value inconsistency is visible and never offers a fals
   const saved=await page.evaluate(async({id,csrf,text})=>fetch(`/api/jobs/${id}/direct`,{method:'POST',headers:{'content-type':'application/json','x-translateocr-csrf':csrf},body:JSON.stringify({version:1,text})}).then(response=>response.json()),{id:created.id,csrf:session.csrf,text:job.result.text});
   const check=saved.checks.find(item=>item.kind==='consistency');expect(check).toBeTruthy();expect(check.issue).toContain('Seiten: 1, 4');
   await page.locator('#review-tools-open').click();await expect(page.locator('#review-tools-dialog')).toBeVisible();
-  const row=page.locator('#inspect-checks .field-check').filter({hasText:'Wiederholter Wert: Name'});await expect(row).toContainText('Alex Beispiel · Alex Muster');await expect(row).toContainText('Seiten: 1, 4');await expect(row.getByRole('button',{name:'Originalstelle ansehen'})).toHaveCount(0);
+  const row=page.locator('#inspect-checks .field-check').filter({has:page.locator('input[data-check-id^="consistency-"]')});await page.evaluate(()=>window.TOCRI18n.setLocale('de'));await expect(row).toContainText('Wiederholter Wert: Name');await expect(row).toContainText('Alex Beispiel · Alex Muster');await expect(row).toContainText('Seiten: 1, 4');await expect(row.getByRole('button',{name:'Originalstelle ansehen'})).toHaveCount(0);
+  await page.evaluate(()=>window.TOCRI18n.setLocale('en'));await expect(row).toContainText('Repeated value: Name');await expect(row).toContainText('pages: 1, 4');
+  await page.evaluate(()=>window.TOCRI18n.setLocale('ar'));await expect(row).toContainText('قيمة متكررة: الاسم');await expect(row).toContainText('الصفحات: 1, 4');
   expect(errors).toEqual([]);
  }finally{await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});}
 });
