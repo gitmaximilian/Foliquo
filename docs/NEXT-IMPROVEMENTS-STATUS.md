@@ -336,4 +336,4 @@ This document tracks implementation separately from automated verification and e
 ### P10 follow-up: show OCR uncertainty and confidence in the inventory (2026-10-31)
 
 - The source-inventory cards now label local OCR observations as uncertain and show the stored confidence percentage when available. The indicator is localized in English, German and Arabic and does not change coverage status or imply OCR correctness.
-- The real learning-offer/source-inventory browser flow seeds a fictional 37% OCR observation and verifies the visible uncertainty marker. Focused Chromium/Firefox/WebKit run: 3/3. This verifies disclosure only; representative OCR quality, omission/false-alarm rates and qualified review remain open.
+- The real learning-offer/source-inventory browser flow seeds a fictional 37% OCR observation, switches English/German/Arabic, and verifies each visible uncertainty label and confidence value. Focused Chromium/Firefox/WebKit run: 3/3. This verifies disclosure only; representative OCR quality, omission/false-alarm rates and qualified review remain open.
