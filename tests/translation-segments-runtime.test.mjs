@@ -6,6 +6,20 @@ import {join} from 'node:path';
 import {PDFDocument,StandardFonts} from 'pdf-lib';
 import {Workspace} from '../lib/workspace.mjs';
 import {createApp} from '../server.mjs';
+import {beginCheckpoint,completeCheckpoint} from '../lib/checkpoints.mjs';
+import {beginTranslationSegment,buildTranslationPlan,completeTranslationSegment} from '../lib/translation-segments.mjs';
+
+test('startup recovery preserves completed translation sections and marks the in-flight request unknown',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-segment-restart-')),workspace=await new Workspace(directory).init(),documents=[{name:'fictional-two-pages.pdf',type:'application/pdf',bytes:Buffer.from('FICTIONAL DOCUMENT BYTES')}],plan=buildTranslationPlan({documents,pageCounts:[2],provider:'openai',model:'fictional-model',maxPagesPerSegment:1}),[first,second]=plan.segments,payload={metadata:{jobId:'fictional-restart-job'},checkpoints:{},translationPlan:plan};
+ beginTranslationSegment(plan,first.id,'fictional-completed-usage',10);beginCheckpoint(payload,`translation-${first.id}`,first.fingerprint,'fictional-completed-usage',10);completeCheckpoint(payload,`translation-${first.id}`,first.fingerprint,'FICTIONAL COMPLETED SECTION',20);completeTranslationSegment(plan,first.id,{resultRef:`translation-${first.id}`,usageId:'fictional-completed-usage'},20);
+ beginTranslationSegment(plan,second.id,'fictional-in-flight-usage',30);beginCheckpoint(payload,`translation-${second.id}`,second.fingerprint,'fictional-in-flight-usage',30);
+ const now=Date.now(),job={id:'fictional-restart-job',owner:'fictional-owner',status:'running',createdAt:now,payload,questions:[],events:[]};workspace.data.jobs=[job];workspace.data.usage=[{id:'fictional-completed-usage',operation:'translation',status:'complete',startedAt:now},{id:'fictional-in-flight-usage',operation:'translation',status:'in_flight',startedAt:now}];await workspace.save();
+ t.after(async()=>{await workspace.tail;await rm(directory,{recursive:true,force:true});});
+ const reopened=await new Workspace(directory).init();reopened.data.jobs=await reopened.jobStore.loadByStatuses(['running','cancelling']);createApp({workspace:reopened,connection:{data:{}},provider:{id:'openai',selected:'openai',status:()=>({connected:true,planEnabled:true}),models:async()=>[],respond:async()=>{throw new Error('The interrupted request must not be sent automatically.');}}});await reopened.tail;
+ const recovered=reopened.data.jobs.find(item=>item.id===job.id),segments=recovered.payload.translationPlan.segments,checkpoints=recovered.payload.checkpoints;
+ assert.equal(recovered.status,'failed');assert.equal(recovered.interrupted,true);assert.equal(segments[0].status,'complete');assert.equal(segments[0].resultRef,`translation-${first.id}`);assert.equal(checkpoints[`translation-${first.id}`].status,'complete');
+ assert.equal(segments[1].status,'interrupted_unknown');assert.equal(segments[1].attempts.at(-1).status,'unknown');assert.equal(segments[1].retryApproved,undefined);assert.equal(checkpoints[`translation-${second.id}`].status,'interrupted');assert.equal(checkpoints[`translation-${second.id}`].attempts.at(-1).status,'unknown');assert.equal(reopened.data.usage.find(item=>item.id==='fictional-in-flight-usage').errorCode,'PROCESS_INTERRUPTED');
+});
 
 test('large translation sends ordered page-only segments and assembles them in source order',async t=>{
  const directory=await mkdtemp(join(tmpdir(),'foliquo-segment-runtime-')),workspace=await new Workspace(directory).init(),port=19000+Math.floor(Math.random()*10000),origin=`http://127.0.0.1:${port}`,segmentFiles=[];let interruptSecond=true;const provider={id:'openai',selected:'openai',status:()=>({connected:true,planEnabled:true}),models:async()=>[{id:'fixture-model'}],respond:async request=>{
