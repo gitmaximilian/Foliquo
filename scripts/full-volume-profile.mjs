@@ -5,14 +5,13 @@ import {mkdtemp, mkdir, readFile, readdir, rm, writeFile} from 'node:fs/promises
 import {existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {setTimeout as sleep} from 'node:timers/promises';
 import {promisify} from 'node:util';
 import {SecureStore} from '../lib/secure-store.mjs';
 
 const run=promisify(execFile),id='fictional-full-volume-object-0001',MIB=1024*1024;
 const root=await mkdtemp(join(tmpdir(),'foliquo-full-volume-profile-'));
 const image=join(root,process.platform==='win32'?'bounded-test.vhd':'bounded-test.sparsebundle');
-const mount=join(root,'mount');let cleanup=async()=>{};
+const mount=join(root,'mount');let cleanup=async()=>{},windowsVhdDetached=false;
 
 async function prepareMac(){
  await mkdir(mount);
@@ -33,14 +32,14 @@ async function prepareWindows(){
  cleanup=async()=>{
   await writeFile(script,[`select vdisk file="${image}"`,'detach vdisk','exit'].join('\r\n')+'\r\n');
   await run('diskpart.exe',['/s',script]);
-  // Windows may keep the detached VHD locked briefly while the virtual disk
-  // service releases its handle. Retry removal here so cleanup is included in
-  // the profile result instead of turning a successful ENOSPC check into a
-  // spurious failure.
-  for(let attempt=0;;attempt++){
-   try{await rm(image,{force:true});break;}
-   catch(error){if(!['EBUSY','EPERM'].includes(error.code)||attempt>=59)throw error;await sleep(500);}
-  }
+  windowsVhdDetached=true;
+  // Hosted Windows runners can retain the detached image handle until the job
+  // exits. The test's security boundary is the successful DiskPart detach;
+  // delete the fictional image when the runner releases it.
+  await rm(image,{force:true}).catch(error=>{
+   if(!['EBUSY','EPERM'].includes(error.code))throw error;
+   console.log('Windows detached the isolated test volume; runner cleanup will remove its temporarily locked VHD image.');
+  });
  };
  return volume;
 }
@@ -75,5 +74,11 @@ try{
  assert.deepEqual(names,[`${id}.enc`],'failed replacement must leave no temporary ciphertext');
  console.log(JSON.stringify({mode:'genuine-full-volume-atomic-replacement',platform:`${process.platform}/${process.arch}`,volume:`isolated 192 MiB ${process.platform==='darwin'?'APFS sparsebundle':process.platform==='win32'?'NTFS VHD':'ext4 loopback image'}`,fillerFiles:filled,replaceBytes:16*MIB,error:observed,previousObjectPreserved:true,temporaryFilesRemaining:0,providerRequests:0}));
 }finally{
- try{await cleanup();}finally{await rm(root,{recursive:true,force:true});}
+ try{await cleanup();}finally{
+  if(process.platform==='win32'&&windowsVhdDetached){
+   for(const name of await readdir(root))if(name!=='bounded-test.vhd')await rm(join(root,name),{recursive:true,force:true});
+   await rm(image,{force:true}).catch(error=>{if(!['EBUSY','EPERM'].includes(error.code))throw error;});
+   if(!existsSync(image))await rm(root,{recursive:true,force:true});
+  }else await rm(root,{recursive:true,force:true});
+ }
 }
