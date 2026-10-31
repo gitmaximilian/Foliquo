@@ -27,7 +27,7 @@ if(!isMainThread){
   await workspace.save();
   parentPort.postMessage({phase:'saved',rssBytes:process.memoryUsage.rss()});
   parentPort.postMessage({phase:'verifying',start:true});
-  for(let index=0;index<jobCount;index++){const job=await workspace.jobStore.getJob(jobId(index));if(job?.result?.text.length!==jobMiB*MIB||digest(job.result.text)!==workerData.expectedHash)throw new Error(`Restored legacy backup job ${index} failed its length or digest check.`);}
+  for(let index=0;index<jobCount;index++){let length=0,hash=createHash('sha256');const info=workspace.jobStore.getObjectInfo(jobId(index),['result','text'],owner);if(!info||info.encoding!=='utf8')throw new Error(`Restored legacy backup job ${index} has no streamed text object.`);const found=await workspace.jobStore.withJobObject(jobId(index),['result','text'],owner,async({tempPath,size,encoding})=>{if(encoding!=='utf8'||size!==jobMiB*MIB)throw new Error(`Restored legacy backup job ${index} has invalid text metadata.`);for await(const chunk of createReadStream(tempPath)){length+=chunk.length;hash.update(chunk);}});if(!found||length!==jobMiB*MIB||hash.digest('hex')!==workerData.expectedHash)throw new Error(`Restored legacy backup job ${index} failed its streamed length or digest check.`);}
   parentPort.postMessage({phase:'verified',rssBytes:process.memoryUsage.rss()});parentPort.postMessage({ok:true});parentPort.close();
  }catch(error){parentPort.postMessage({ok:false,error:error.message});parentPort.close();}
 }else if(process.argv.includes('--restore-worker')){
