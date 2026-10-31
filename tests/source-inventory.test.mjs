@@ -67,10 +67,10 @@ test('embedded text geometry survives intrinsic rotation plus corrected crop, ro
  }
 });
 
-test('local OCR adds an explicitly uncertain page-level source block with unknown geometry',async()=>{
+test('local OCR adds uncertain source lines with bounded page geometry',async()=>{
  const canvas=createCanvas(1200,500),context=canvas.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,1200,500);context.fillStyle='#000';context.font='bold 76px Arial';context.fillText('FICTIONAL SOURCE TEXT',55,220);
  const pdf=await PDFDocument.create();pdf.addPage([600,300]);const page=pdf.addPage([600,300]),image=await pdf.embedPng(canvas.toBuffer('image/png'));page.drawImage(image,{x:20,y:20,width:560,height:260});const blocks=await extractLocalOcrSourceBlocks([{name:'fictional-scan.pdf',type:'application/pdf',bytes:Buffer.from(await pdf.save())}],{pageSelection:[{fileIndex:0,page:2}]});
- assert.equal(blocks.length,1);assert.match(blocks[0].sourceText,/FICTIONAL SOURCE TEXT/i);assert.equal(blocks[0].page,2);assert.equal(blocks[0].box,null);assert.equal(blocks[0].extractionMethod,'local-ocr');assert.equal(blocks[0].certainty,'uncertain');assert.ok(Number.isFinite(blocks[0].confidence));
+ assert.ok(blocks.length>=1);assert.equal(blocks.ocrIncomplete,false);assert.match(blocks.map(block=>block.sourceText).join(' '),/FICTIONAL SOURCE TEXT/i);assert.ok(blocks.every(block=>block.page===2&&Array.isArray(block.box)&&block.box.length===4&&block.box.every(value=>Number.isFinite(value)&&value>=0&&value<=1)));assert.ok(blocks.every(block=>block.extractionMethod==='local-ocr'&&block.certainty==='uncertain'&&Number.isFinite(block.confidence)));assert.ok(blocks.every(block=>block.sourceGroup?.kind==='paragraph'&&Number.isInteger(block.sourceGroup.lineIndex)));
  const inventory=buildSourceInventory({files:[{data:Buffer.from('fictional scan').toString('base64')}],pageCounts:[2],sourceBlocks:blocks,document:documentFromLegacyText('target text')});const ocr=inventory.items.find(item=>item.extractionMethod==='local-ocr');assert.equal(ocr.coverageStatus,'unreviewed');assert.equal(ocr.confidence,blocks[0].confidence);assert.equal(ocr.page,2);assert.equal(inventory.items.filter(item=>item.kind==='other'&&item.label.startsWith('Seite')).length,2);
 });
 

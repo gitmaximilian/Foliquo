@@ -636,6 +636,12 @@ This document tracks implementation separately from automated verification and e
 - Corrected head `f0d3af1` now passes the full Ubuntu, macOS and Windows CI matrix in [run 41204199420](https://github.com/gitmaximilian/Foliquo/actions/runs/41204199420), including 346 Node tests, platform setup, encrypted storage and recovery profiles, the 161 MiB JSON and PDF profiles, genuine full-volume replacement, benchmark, demo build and acceptance. Local browser coverage for archived review remains 3/3 across Chromium, Firefox and WebKit; local full suite is 346/346.
 - No version, package, tag or public release changed. Physical power-loss evidence and the remaining qualified human/corpus evaluation gates stay open; P14 remains excluded.
 
+### P10 follow-up: localized source geometry for local OCR, 31 October 2026
+
+- Local Tesseract now returns paragraph and line structure for sparse-text scans. Each OCR line becomes its own uncertain source item with a normalized page bounding box, line confidence, and stable paragraph/line grouping, so users can inspect and map the actual text region instead of one page-sized OCR block.
+- OCR inventory stays bounded to 500 lines per page, 5,000 source items per extraction, 2,000 characters per line, and 30,000 characters per page. Missing line geometry or any truncation marks OCR coverage incomplete; OCR remains explicitly uncertain and never auto-confirms translated coverage.
+- The fictional scan regression now verifies recognized text, normalized in-page boxes, confidence, grouping, and complete extraction. Focused `tests/source-inventory.test.mjs`: 13/13; the full suite had passed 346/346 immediately before adding the final bounds, and the focused suite passed again after those bounds. Independent OCR/coverage gold-corpus accuracy measurement remains outstanding. No package, version, tag, or public release changed.
+
 ### P02 follow-up: stream archived translation text in review previews, 31 October 2026
 
 - The archived `GET /api/jobs/:id/review?preview=1&stream=1` route now requests metadata with deferred translation text and streams the authenticated UTF-8 sidecar into the nested `result.text` JSON field. It preserves the existing preview shape and chunked response behavior. Requests that explicitly include a legacy document model retain the compatible hydrated path because conversion requires the complete text.
