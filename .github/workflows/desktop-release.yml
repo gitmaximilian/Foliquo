@@ -96,6 +96,7 @@ jobs:
           test -f "$updater.sig"
           ditto -c -k --sequesterRsrc --keepParent "$app" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.zip"
           hdiutil create -quiet -srcfolder "$app" -volname Foliquo -format UDZO "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.dmg"
+          node scripts/repack-dmg.mjs "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.dmg"
           cp "$updater" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.app.tar.gz"
           cp "$updater.sig" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.app.tar.gz.sig"
       - name: Collect Windows desktop installer
