@@ -10,7 +10,7 @@ if(!inputPath||args.some(value=>value==='--help')){
  if(!inputPath)process.exitCode=2;
 }else{
  const input=JSON.parse(await readFile(resolve(inputPath),'utf8'));validateLearningImpactInput(input);
- let sourceRevision=null;try{sourceRevision=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();}catch{}
+ let sourceRevision=null;try{sourceRevision=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim();}catch{}
  const report=evaluateLearningImpact(input,{sourceRevision});report.inputFingerprint=learningImpactInputFingerprint(input);
  await mkdir(dirname(outputPath),{recursive:true});await writeFile(outputPath,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({cases:report.caseCount,correctionReduction:report.correctionReduction,criticalFactRegressions:report.criticalFactRegressions,passed:report.passed,report:outputPath}));

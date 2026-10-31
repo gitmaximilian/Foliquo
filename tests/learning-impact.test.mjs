@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {evaluateLearningImpact,validateLearningImpactInput} from '../lib/learning-impact.mjs';
 
@@ -24,6 +24,6 @@ test('paired learning impact reports failed sample-size and refuses duplicate or
 test('learning impact CLI writes a local report and returns failure when study gates are unmet',async t=>{
  const directory=await mkdtemp(join(tmpdir(),'foliquo-learning-impact-'));t.after(()=>rm(directory,{recursive:true,force:true}));
  const input=join(directory,'counts.json'),output=join(directory,'report.json');await writeFile(input,JSON.stringify(study(2)));
- const result=spawnSync(process.execPath,['scripts/learning-impact.mjs','--input',input,'--output',output],{encoding:'utf8'});assert.equal(result.status,1,result.stderr);assert.match(result.stdout,/"passed":false/u);
+ const result=spawnSync(process.execPath,[resolve('scripts/learning-impact.mjs'),'--input',input,'--output',output],{cwd:directory,encoding:'utf8'});assert.equal(result.status,1,result.stderr);assert.match(result.stdout,/"passed":false/u);assert.equal(result.stderr,'');
  const report=JSON.parse(await readFile(output,'utf8'));assert.equal(report.caseCount,2);assert.equal(report.gates.minimumIndependentDocuments,false);assert.match(report.inputFingerprint,/^[a-f0-9]{64}$/u);
 });
