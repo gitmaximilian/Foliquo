@@ -186,6 +186,13 @@ This document tracks implementation separately from automated verification and e
 - Verification: benchmark CLI tests passed 5/5; the offline smoke set passed 3 cases and the synthetic development set passed 20 cases, both with zero provider requests; the full Node suite passed 312/312; `git diff --check` passed.
 - This strengthens result integrity only. It does not replace the independent 100-case acceptance set or qualified human language ratings.
 
+### P06 follow-up: grouped technical benchmark diagnostics
+
+- Reports now aggregate expected-fact counts and coverage by field, per-case expected-fact mean, special-region count-proxy F1 availability, and measured export-preflight issues overall, by document family, and by language pair. Missing structure/export measurements remain explicit as unavailable counts instead of being filled with zeroes.
+- The report labels these values synthetic technical diagnostics and explicitly says they are not human translation quality. It does not combine them into an undifferentiated quality score.
+- Verification: benchmark CLI and workflow tests passed 19/19; smoke benchmark passed 3 cases, development benchmark 20 cases, both with zero regressions and zero provider requests; `npm test` passed 313/313 on macOS arm64/Node 23.11.0; `git diff --check` passed.
+- Still outstanding: private/approved 100-case independent corpus, qualified reviewer ratings, real human rework times, representative scanned OCR and rendered-export assessments, and any explicitly authorized bounded live model evaluations.
+
 ### Current continuation checkpoint (2026-10-31)
 
 - Current branch: `codex/community-improvements`; latest implementation commit: `29a968b` (`fix: allow more time for WinGet install acceptance`), following `97b2853` (`fix: keep learning votes on profile version`), test expectation commit `85619e0`, `57519c7` (`feat: show learning feedback influence`), `bdcd753` (`feat: resolve learned terminology conflicts per job`), `ee8d856` (`feat: rank learning samples using explicit feedback`) and `0141838` (`feat: collect feedback on applied learning rules`). The P07 accessibility/localization commits before those are `ed87149` and `f3c8af8`.

@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {resolve,join} from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {gradeTranslation,regressions} from '../lib/benchmark.mjs';
+import {gradeTranslation,regressions,summarizeTechnicalResults} from '../lib/benchmark.mjs';
 import {createTranslationPDF,translationRequest,parseTranslation} from '../lib/documents.mjs';
 import {createTranslationWord} from '../lib/word.mjs';
 import {auditArtifacts} from '../lib/preflight.mjs';
@@ -99,6 +99,7 @@ const report={
  fingerprints:{fixtureSetSha256:fingerprint(fixtureBytes),translationPolicySha256:fingerprint(await readFile(new URL('../lib/translation-policy.mjs',import.meta.url))),exportPipelineSha256:fingerprint(Buffer.concat(await Promise.all(['../lib/documents.mjs','../lib/word.mjs','../lib/preflight.mjs'].map(path=>readFile(new URL(path,import.meta.url))))))},
  usage:{reportedEvents:usageReports.length,events:usageReports,apiCost:null,note:mode==='live'?'Tokenangaben werden nur aus tatsächlichen Anbieterereignissen übernommen. API-Kosten sind hier nicht anwendbar; unbekannte Verbrauchswerte bleiben unbekannt.':'Keine Live-Anbieteranfragen; kein Modellverbrauch.'},
  comparison:baselineReport?{baselineRevision:baselineReport.sourceRevision||null,baselineWorkingTreeDirty:baselineReport.workingTreeDirty??null,baselineTrackedDiffFingerprint:baselineReport.trackedDiffFingerprint||null,baselineFixtureSet:baselineReport.fixtureSet||null,matchedCases:results.filter(result=>baselineResults.some(old=>old.id===result.id)).length,metric:'expected-fact score, special-region F1 and export issue count; not a human translation-quality comparison',regressions:regressionsFound}:null,
+ technicalSummary:summarizeTechnicalResults(results),
  note:mode==='technical'?'Deterministischer Referenz-, erkannter Sonderbereich- und Export-Prüftest mit fiktiven Fällen; keine gemessene KI-Qualität.':mode==='live'?'Begrenzter Modelllauf auf fiktiven Fixtures; vergleicht Referenzangaben, erkannte Sonderbereiche und Export-Prüfhinweise, nicht vollständige Sprachqualität.':'Auswertung bereitgestellter Ergebnisse gegen fiktive Referenzen und Exportindikatoren; fachliche Prüfung bleibt erforderlich.',
  results,regressions:regressionsFound,
 };
