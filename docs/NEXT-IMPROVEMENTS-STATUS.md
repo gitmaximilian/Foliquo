@@ -522,7 +522,12 @@ This document tracks implementation separately from automated verification and e
 ### P02 evidence: local legacy backup restore memory, 31 October 2026
 
 - `npm run test:backup:legacy-profile` passed on macOS arm64 with an isolated fictional 64 MiB `TOCRBACK1` archive (67,109,431 bytes). The buffer API used 375.04 MiB additional peak RSS; streamed HTTP restore used 283.98 MiB, a 91.06 MiB reduction. Restored text length and SHA-256 matched (`9ce3fff0ffd884dff3abb32b7e80913a6d510d91d40e74cb4bcbfcb8730c0ed4`); temporary workspaces were deleted and provider requests were zero.
-- This local measurement complements the scheduled three-platform CI profile. Both restore paths still materialize the bounded legacy plaintext JSON during schema validation, and this 64 MiB fixture does not prove behavior at the 256 MiB cap. Large-cap peak-RSS, actual full-volume, physical power-loss, and cross-platform migration evidence remain open. No package, version, tag or public release changed.
+- This local measurement complements the scheduled three-platform CI profile. Both restore paths still materialize the bounded legacy plaintext JSON during schema validation, and this 64 MiB fixture does not prove behavior at the 256 MiB cap. Large-cap peak-RSS, physical power-loss, and cross-platform migration evidence remain open. The macOS full-volume profile is recorded below. No package, version, tag or public release changed.
+
+### P02/P04 evidence: genuine macOS full-volume replacement failure, 31 October 2026
+
+- `npm run test:storage:full-volume` creates and mounts a bounded 192 MiB APFS sparsebundle, writes a fictional committed object, fills the volume until the filesystem returns `ENOSPC`, then attempts a 16 MiB replacement. The local macOS arm64 run failed at the real filesystem boundary as expected; the prior encrypted object remained readable and no temporary ciphertext remained. The test detaches and deletes its isolated image/workspace in `finally` cleanup.
+- Added the profile to the macOS GitHub Actions matrix only; Windows/Linux continue to use their injected failure coverage. This does not prove behavior on Windows/Linux full volumes, during physical power loss, or across consumer-device migration. No package, version, tag or public release changed.
 
 ### P14 follow-up: verify and record compressed macOS DMG size, 31 October 2026
 
