@@ -17,6 +17,7 @@
     "test:browser": "playwright test",
     "test:storage": "node scripts/storage-scale.mjs",
     "test:backup:scale": "node scripts/backup-scale.mjs",
+    "test:backup:legacy-profile": "node --expose-gc scripts/legacy-backup-profile.mjs",
     "test:storage:memory": "node --expose-gc scripts/storage-memory.mjs",
     "test:storage:large-pdf": "node --expose-gc scripts/profile-large-pdf.mjs",
     "test:recovery:profile": "node --expose-gc scripts/recovery-profile.mjs",

@@ -60,6 +60,7 @@ jobs:
           npm run test:storage:large-pdf
           npm run test:recovery:profile
           npm run test:backup:scale
+          npm run test:backup:legacy-profile
       - run: npm run benchmark
       - run: npm run demo:build
       - run: npm run acceptance
