@@ -16,7 +16,7 @@ test('document-wide repeated names, dates and numbers flag divergent translation
  const name=checks.find(check=>check.source==='Alex Example');
  assert.equal(name.severity,'review');assert.deepEqual(name.pages,[1,4]);
  assert.deepEqual(name.values.map(value=>value.text),['Alex Beispiel','Alex Muster']);
- assert.match(name.issue,/ändert keine Werte automatisch/u);
+ assert.match(name.issue,/Seiten: 1, 4/u);assert.match(name.issue,/ändert keine Werte automatisch/u);
  const date=checks.find(check=>check.kind==='consistency'&&check.label.endsWith('Datum'));
  assert.deepEqual(date.pages,[1,5]);
 });
