@@ -3,6 +3,7 @@ import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {resolve,join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {gradeTranslation,regressions,summarizeTechnicalResults} from '../lib/benchmark.mjs';
+import {createBenchmarkReviewForm} from '../lib/benchmark-review-form.mjs';
 import {createTranslationPDF,translationRequest,parseTranslation} from '../lib/documents.mjs';
 import {createTranslationWord} from '../lib/word.mjs';
 import {auditArtifacts} from '../lib/preflight.mjs';
@@ -13,14 +14,22 @@ const fixtureSets={
  smoke:{file:'../benchmarks/cases.json',label:'offline-smoke-v1'},
  development:{file:'../benchmarks/development-cases.json',label:'synthetic-development-v1'},
 };
-const fixtureSet=arg('--set')||'smoke';
-if(!fixtureSets[fixtureSet])throw new Error(`Unbekannter Fixture-Satz „${fixtureSet}“. Verfügbar: ${Object.keys(fixtureSets).join(', ')}.`);
-const fixtureBytes=await readFile(new URL(fixtureSets[fixtureSet].file,import.meta.url));
+const customFixturePath=arg('--fixtures'),customFixtureVersion=arg('--fixture-set-version');
+if(Boolean(customFixturePath)!==Boolean(customFixtureVersion))throw new Error('--fixtures und --fixture-set-version müssen gemeinsam verwendet werden.');
+if(customFixturePath&&arg('--set'))throw new Error('--fixtures kann nicht mit --set kombiniert werden.');
+if(customFixtureVersion&&!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(customFixtureVersion))throw new Error('--fixture-set-version darf 1–64 Zeichen aus Buchstaben, Zahlen, Punkt, Unterstrich und Bindestrich enthalten.');
+const fixtureSet=customFixturePath?'custom':arg('--set')||'smoke';
+if(!customFixturePath&&!fixtureSets[fixtureSet])throw new Error(`Unbekannter Fixture-Satz „${fixtureSet}“. Verfügbar: ${Object.keys(fixtureSets).join(', ')}.`);
+const fixtureBytes=customFixturePath?await readFile(resolve(customFixturePath)):await readFile(new URL(fixtureSets[fixtureSet].file,import.meta.url));
 const fixtures=JSON.parse(fixtureBytes.toString());
-if(!Array.isArray(fixtures)||!fixtures.length||fixtures.some(item=>!item||typeof item.id!=='string'||typeof item.source!=='string'||!item.expected||typeof item.expected!=='object')||new Set(fixtures.map(item=>item.id)).size!==fixtures.length)throw new Error('Der Benchmark-Fixture-Satz ist ungültig oder enthält doppelte IDs.');
+if(!Array.isArray(fixtures)||!fixtures.length||fixtures.some(item=>!item||typeof item.id!=='string'||!item.id||typeof item.source!=='string'||!item.expected||typeof item.expected!=='object'||['names','dates','numbers','content'].some(key=>item.expected[key]!==undefined&&(!Array.isArray(item.expected[key])||item.expected[key].some(value=>typeof value!=='string')))||item.expected.regions!==undefined&&(!Number.isInteger(item.expected.regions)||item.expected.regions<0)||item.additionalInfo!==undefined&&typeof item.additionalInfo!=='string'||item.reference!==undefined&&typeof item.reference!=='string')||new Set(fixtures.map(item=>item.id)).size!==fixtures.length)throw new Error('Der Benchmark-Fixture-Satz ist ungültig oder enthält doppelte IDs.');
 const requestedMode=arg('--mode');
 if(requestedMode&&!['technical','provided-results','live'].includes(requestedMode))throw new Error('--mode muss technical, provided-results oder live sein.');
 const mode=requestedMode||(args.includes('--live')?'live':arg('--results')?'provided-results':'technical');
+const reviewForm=args.includes('--review-form'),includeSourceText=args.includes('--include-source-text');
+if(reviewForm&&mode!=='provided-results')throw new Error('--review-form ist nur für bereitgestellte, menschlich zu prüfende Ergebnisse verfügbar.');
+if(reviewForm&&!includeSourceText)throw new Error('--review-form enthält Quelltext. Verwende die Option --include-source-text ausdrücklich, um das lokale Formular zu erzeugen.');
+if(includeSourceText&&!reviewForm)throw new Error('--include-source-text gilt nur zusammen mit --review-form.');
 if(args.includes('--live')&&mode!=='live'||arg('--results')&&mode!=='provided-results')throw new Error('--mode widerspricht --live oder --results.');
 if(mode==='live'&&arg('--results'))throw new Error('Live-Modus kann nicht mit --results verwendet werden.');
 if(mode==='provided-results'&&!arg('--results'))throw new Error('provided-results benötigt --results FILE.');
@@ -34,7 +43,7 @@ if(mode==='live'){
 const baselineReport=arg('--baseline')?JSON.parse(await readFile(resolve(arg('--baseline')),'utf8')):null;
 if(baselineReport){
  const baselineMode=({ 'offline-reference-pipeline':'technical','live-model':'live' })[baselineReport.mode]||baselineReport.mode;
- if(baselineReport.fixtureSet!==fixtureSets[fixtureSet].label)throw new Error('--baseline muss denselben versionierten Fixture-Satz verwenden.');
+ if(baselineReport.fixtureSet!==(customFixturePath?customFixtureVersion:fixtureSets[fixtureSet].label))throw new Error('--baseline muss denselben versionierten Fixture-Satz verwenden.');
  if(baselineMode!==mode)throw new Error('--baseline muss denselben Auswertungsmodus verwenden.');
  if(mode==='live'&&baselineReport.maxCases!==maxCases)throw new Error('--baseline muss dieselbe Live-Fallobergrenze verwenden.');
 }
@@ -93,7 +102,7 @@ const regressionsFound=regressions(results,baselineResults);
 const usageReports=results.flatMap(result=>(result.usage||[]).filter(item=>item.tokens).map(item=>({fixtureId:result.id,...item.tokens,complete:item.complete,responseId:item.responseId})));
 const report={
  mode,createdAt:new Date().toISOString(),sourceRevision,workingTreeDirty,trackedDiffFingerprint,provider,modelId,
- fixtureSet:fixtureSets[fixtureSet].label,fixtureSetVersion:fixtureSet,fixtureCount:results.length,
+ fixtureSet:customFixturePath?customFixtureVersion:fixtureSets[fixtureSet].label,fixtureSetVersion:customFixturePath?customFixtureVersion:fixtureSet,fixtureCount:results.length,
  maxCases:mode==='live'?maxCases:null,requestCount:mode==='live'?results.length:0,
  configuration:{targetLanguages:[...new Set(selectedFixtures.map(item=>item.targetLanguage||'Deutsch'))],exportFont:'Aptos',exportFontSizePt:11,sourcePagesPresent:false,sourcePageAppendix:'not-tested; text-only benchmark fixtures'},
  fingerprints:{fixtureSetSha256:fingerprint(fixtureBytes),translationPolicySha256:fingerprint(await readFile(new URL('../lib/translation-policy.mjs',import.meta.url))),exportPipelineSha256:fingerprint(Buffer.concat(await Promise.all(['../lib/documents.mjs','../lib/word.mjs','../lib/preflight.mjs'].map(path=>readFile(new URL(path,import.meta.url))))))},
@@ -106,5 +115,6 @@ const report={
 await writeFile(join(outputDirectory,'report.json'),JSON.stringify(report,null,2));
 const escape=value=>value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 await writeFile(join(outputDirectory,'report.html'),`<!doctype html><meta charset="utf-8"><title>Foliquo Benchmark</title><style>body{font:16px system-ui;max-width:900px;margin:50px auto;padding:20px}pre{white-space:pre-wrap;background:#f5f4fa;padding:20px}</style><h1>Foliquo Benchmark</h1><p>${escape(report.note)}</p><pre>${escape(JSON.stringify(report,null,2))}</pre>`);
-console.log(JSON.stringify({mode,fixtureSet:report.fixtureSet,cases:results.length,regressions:regressionsFound.length,requests:report.requestCount,report:join(outputDirectory,'report.json')}));
+if(reviewForm)await writeFile(join(outputDirectory,'human-review-form.html'),createBenchmarkReviewForm(selectedFixtures,candidates,report.fixtureSet));
+console.log(JSON.stringify({mode,fixtureSet:report.fixtureSet,cases:results.length,regressions:regressionsFound.length,requests:report.requestCount,report:join(outputDirectory,'report.json'),reviewForm:reviewForm?join(outputDirectory,'human-review-form.html'):null}));
 if(regressionsFound.length)process.exitCode=1;

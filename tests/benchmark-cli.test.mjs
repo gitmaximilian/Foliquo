@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
@@ -43,6 +43,28 @@ test('provided-results mode rejects duplicate, unknown, and missing case IDs bef
   const run=spawnSync(process.execPath,[script,'--mode','provided-results','--results',input,'--output',output],{encoding:'utf8'});
   assert.notEqual(run.status,0);assert.match(run.stderr,cases[index].message);await assert.rejects(readFile(join(output,'report.json')));
  }
+});
+
+test('private custom fixtures require a version and the local review form needs an explicit source-text opt-in',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-benchmark-custom-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const [fixture]=JSON.parse(await readFile(new URL('../benchmarks/cases.json',import.meta.url),'utf8'));
+ const fixturePath=join(directory,'private-fixtures.json'),resultsPath=join(directory,'private-results.json');
+ const privateFixture={...fixture,id:'private-case-1',source:'<script>window.neverRun=true</script>',documentType:'fictional-certificate',sourceLanguage:'English',targetLanguage:'German'};
+ await writeFile(fixturePath,JSON.stringify([privateFixture]));await writeFile(resultsPath,JSON.stringify([{id:privateFixture.id,text:'<img src=x onerror=alert(1)> Private translation'}]));
+ const common=['--fixtures',fixturePath,'--fixture-set-version','private-acceptance-v1','--mode','provided-results','--results',resultsPath];
+ const missingOptIn=spawnSync(process.execPath,[script,...common,'--review-form','--output',join(directory,'blocked')],{encoding:'utf8'});assert.notEqual(missingOptIn.status,0);assert.match(missingOptIn.stderr,/--include-source-text ausdrücklich/);
+ const output=join(directory,'local-review'),run=spawnSync(process.execPath,[script,...common,'--review-form','--include-source-text','--output',output],{encoding:'utf8'});assert.equal(run.status,0,run.stderr);
+ const report=JSON.parse(await readFile(join(output,'report.json'),'utf8')),form=await readFile(join(output,'human-review-form.html'),'utf8');
+ assert.equal(report.fixtureSet,'private-acceptance-v1');assert.equal(report.fixtureCount,1);assert.equal(report.requestCount,0);assert.match(form,/I am qualified to assess/);assert.match(form,/independenceSelfAttested/);assert.match(form,/reworkMinutes/);assert.match(form,/Download local ratings JSON/);assert.match(form,/\\u003cscript\\u003e/);assert.match(form,/\\u003cimg/);assert.doesNotMatch(form,/<script>window\.neverRun/);assert.doesNotMatch(form,/https?:\/\//);
+});
+
+test('custom fixture versions and custom fixture selection are validated before output creation',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-benchmark-custom-invalid-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const fixturePath=join(directory,'fixtures.json'),output=join(directory,'output');await writeFile(fixturePath,JSON.stringify([{id:'one',source:'fake',expected:{}}]));
+ const missingVersion=spawnSync(process.execPath,[script,'--fixtures',fixturePath,'--output',output],{encoding:'utf8'});assert.notEqual(missingVersion.status,0);assert.match(missingVersion.stderr,/müssen gemeinsam verwendet werden/);
+ const badVersion=spawnSync(process.execPath,[script,'--fixtures',fixturePath,'--fixture-set-version','../leak','--output',output],{encoding:'utf8'});assert.notEqual(badVersion.status,0);assert.match(badVersion.stderr,/fixture-set-version darf/);
+ const mixed=spawnSync(process.execPath,[script,'--fixtures',fixturePath,'--fixture-set-version','private-v1','--set','smoke','--output',output],{encoding:'utf8'});assert.notEqual(mixed.status,0);assert.match(mixed.stderr,/kann nicht mit --set kombiniert werden/);
+ await assert.rejects(readFile(join(output,'report.json')));
 });
 
 test('live benchmark refuses to run without an explicit bounded fixture count',async t=>{
