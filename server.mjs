@@ -24,7 +24,7 @@ import {prepareDocuments} from './lib/formats.mjs';
 import {TranslationQueue,boundedJobCache} from './lib/queue.mjs';
 import {PDFDocument} from 'pdf-lib';
 import {Zip,ZipPassThrough} from 'fflate';
-import {createTranslationWord,outputBundle} from './lib/word.mjs';
+import {createTranslationWord} from './lib/word.mjs';
 import {diagnosticFor,readableError,inStep,networkFetch} from './lib/diagnostics.mjs';
 import {Workspace,layoutSettings,string} from './lib/workspace.mjs';
 import {inspectWord} from './lib/template-import.mjs';
@@ -279,12 +279,12 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
   }
   function json(res,value,status=200) { res.writeHead(status,{'Content-Type':'application/json;charset=utf-8'});res.end(JSON.stringify(value)); }
   async function streamDownload(res,source,type,filename,length){res.writeHead(200,{'Content-Type':type,'Content-Disposition':`attachment; filename="${filename}"`,...(Number.isSafeInteger(length)?{'Content-Length':length}:{}),'Cache-Control':'no-store'});await pipeline(Readable.from(source),res);}
-  async function streamBundle(res,entries){
+  async function streamBundle(res,entries,filename='foliquo-pdf-word.zip'){
     const output=new PassThrough({highWaterMark:64*1024});let pendingDrain=null;
     const archive=new Zip((error,chunk,final)=>{if(error){output.destroy(error);return;}if(chunk&&!output.write(chunk))pendingDrain=once(output,'drain');if(final)output.end();});
     const drain=async()=>{if(pendingDrain){const current=pendingDrain;pendingDrain=null;await current;}};
     const producer=(async()=>{for(const {name,source} of entries){const entry=new ZipPassThrough(name);archive.add(entry);await drain();for await(const chunk of source){entry.push(chunk);await drain();}entry.push(new Uint8Array(0),true);await drain();}archive.end();})().catch(error=>output.destroy(error));
-    res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':'attachment; filename="foliquo-pdf-word.zip"','Cache-Control':'no-store'});await pipeline(output,res);await producer;
+    res.writeHead(200,{'Content-Type':'application/zip','Content-Disposition':`attachment; filename="${filename}"`,'Cache-Control':'no-store'});await pipeline(output,res);await producer;
   }
   async function streamStoredJobObject(res,job,path,type,filename,recovered=false){if(!workspace?.jobStore)return false;await workspace.tail;const info=workspace.jobStore.getObjectInfo(job.id,path,job.owner);if(!info||!Number.isSafeInteger(info.size))return false;try{return await workspace.jobStore.withJobObject(job.id,path,job.owner,async({tempPath,size})=>{if(size!==info.size)throw new Error('Stored job object length does not match its index.');await streamDownload(res,createReadStream(tempPath),type,filename,size);});}catch(error){if(recovered||!await recoverLazyArchive(error))throw error;return streamStoredJobObject(res,job,path,type,filename,true);}}
   async function streamCompleteArchivedPdf(res,job){
@@ -536,8 +536,9 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
         if(reviewRoute[2]==='finalize'){
           if(!['pdf','word','bundle'].includes(input.format))throw new Error('Ungültiges Ausgabeformat.');
           finalReview(job,input.version);recordLearningExposure(workspace,job);const result=await ensureOriginalPages(job);const enabled=input.certification===true;let downloadable=result;if(Boolean(result.context?.certificationConfirmed)!==enabled)downloadable=await rebuild(result.text,{...result,context:{...result.context,certificationConfirmed:enabled}},true);
-          await persist();const bytes=input.format==='bundle'?outputBundle(Buffer.from(downloadable.pdf,'base64'),Buffer.from(downloadable.word,'base64')):Buffer.from(input.format==='pdf'?downloadable.pdf:downloadable.word,'base64');
-          const ext=input.format==='bundle'?'zip':input.format==='pdf'?'pdf':'docx',type=input.format==='bundle'?'application/zip':input.format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document';res.writeHead(200,{'Content-Type':type,'Content-Disposition':`attachment; filename="foliquo-final-v${input.version}.${ext}"`});res.end(bytes);return;
+          await persist();
+          if(input.format==='bundle'){await streamBundle(res,[{name:'uebersetzung.pdf',source:base64Chunks(downloadable.pdf)},{name:'uebersetzung.docx',source:base64Chunks(downloadable.word)}],`foliquo-final-v${input.version}.zip`);return;}
+          const pdf=input.format==='pdf',value=pdf?downloadable.pdf:downloadable.word,type=pdf?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',ext=pdf?'pdf':'docx';await streamDownload(res,base64Chunks(value),type,`foliquo-final-v${input.version}.${ext}`,base64ByteLength(value));return;
         }
         reviewing++;try{
         const editTask=applyReview(job,{...input,staged:Boolean(workspace)},async(current,messages)=>{const result=current.result;const files=result.previews.map(f=>({name:f.type==='application/pdf'?f.name.replace(/\.[^.]+$/,'')+'.pdf':f.name,originalName:f.name,type:f.type,bytes:Buffer.from(f.data,'base64')}));return executeTranslation({provider:current.provider||job.provider,files,model:current.model,owner:job.owner,metadata:{...result.context,certificationConfirmed:false,targetLanguage:current.targetLanguage,jobId:current.id},contextSnapshot:result.context,revision:{text:result.text,messages,inventory:result.inventory,originals:result.originalPreviews||result.previews}},AbortSignal.timeout(300000));},async update=>{if(workspace&&queue.memory+Buffer.byteLength(JSON.stringify(update))>160*1024*1024)throw new Error('Der Änderungsvorschlag übersteigt den lokalen Speicher. Bitte zuerst ältere Aufträge herunterladen und löschen.');return update;},d=>console.error('[Foliquo diagnostic]',JSON.stringify(d)));const [,snapshot]=await Promise.all([persist(),editTask]);await persist();json(res,snapshot);

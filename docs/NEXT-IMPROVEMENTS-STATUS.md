@@ -337,3 +337,8 @@ This document tracks implementation separately from automated verification and e
 
 - The source-inventory cards now label local OCR observations as uncertain and show the stored confidence percentage when available. The indicator is localized in English, German and Arabic and does not change coverage status or imply OCR correctness.
 - The real learning-offer/source-inventory browser flow seeds a fictional 37% OCR observation, switches English/German/Arabic, and verifies each visible uncertainty label and confidence value. Focused Chromium/Firefox/WebKit run: 3/3. This verifies disclosure only; representative OCR quality, omission/false-alarm rates and qualified review remain open.
+### P02 follow-up: streamed final review exports, 31 October 2026
+
+- Final review downloads now stream PDF and DOCX from bounded Base64 chunks and stream the bundle ZIP with output backpressure. This removes the extra complete PDF/Word buffers and the fully materialized ZIP from finalization. Filenames and response MIME types remain format- and version-specific.
+- Review integration checks verify ZIP contents, final filenames, DOCX MIME type, and the exported document content. Focused `tests/reviews.test.mjs`: 4/4; complete `npm test` on Node 23.11.0: 308/308; offline benchmark: 3 cases, 0 regressions, 0 provider requests; acceptance: 12/12; syntax and `git diff --check` passed.
+- This reduces avoidable export memory, but does not bound the already-loaded review result or certify peak RSS under representative large files. Legacy `/result` JSON still materializes its complete JSON/Base64 response; repair hydration, full-volume/cross-platform crash and permission tests remain open. No package version or public release changed.
