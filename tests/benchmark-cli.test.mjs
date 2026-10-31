@@ -28,6 +28,23 @@ test('provided-results mode grades supplied fictional results without provider c
  const report=JSON.parse(await readFile(join(output,'report.json'),'utf8'));assert.equal(report.mode,'provided-results');assert.equal(report.requestCount,0);assert.equal(report.results[0].score,100);assert.equal(report.results[0].usage,null);
 });
 
+test('provided-results mode rejects duplicate, unknown, and missing case IDs before writing a report',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-benchmark-invalid-results-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const fixtures=JSON.parse(await readFile(new URL('../benchmarks/cases.json',import.meta.url),'utf8'));
+ const valid=fixtures.map(fixture=>({id:fixture.id,text:fixture.reference,regions:Array(fixture.expected.regions).fill({})}));
+ const cases=[
+  {results:[...valid,valid[0]],message:/doppelte Fall-ID/},
+  {results:[...valid,{id:'not-a-fixture',text:'unknown'}],message:/unbekannte Fall-ID/},
+  {results:valid.slice(1),message:/fehlt für 1 ausgewählte Fälle/},
+ ];
+ for(let index=0;index<cases.length;index++){
+  const input=join(directory,`invalid-${index}.json`),output=join(directory,`report-${index}`);
+  await (await import('node:fs/promises')).writeFile(input,JSON.stringify(cases[index].results));
+  const run=spawnSync(process.execPath,[script,'--mode','provided-results','--results',input,'--output',output],{encoding:'utf8'});
+  assert.notEqual(run.status,0);assert.match(run.stderr,cases[index].message);await assert.rejects(readFile(join(output,'report.json')));
+ }
+});
+
 test('live benchmark refuses to run without an explicit bounded fixture count',async t=>{
  const directory=await mkdtemp(join(tmpdir(),'foliquo-benchmark-'));t.after(()=>rm(directory,{recursive:true,force:true}));
  const run=spawnSync(process.execPath,[script,'--live','--model','fictional-model','--output',directory],{encoding:'utf8'});

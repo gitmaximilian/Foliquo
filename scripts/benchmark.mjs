@@ -62,6 +62,15 @@ else if(mode==='live'){
 }else candidates=fixtures.map(fixture=>({id:fixture.id,text:fixture.reference,regions:Array(fixture.expected.regions||0).fill({})}));
 
 if(!Array.isArray(candidates))throw new Error('Benchmark-Ergebnisse müssen eine JSON-Liste sein.');
+const candidateIds=new Set();
+for(const candidate of candidates){
+ if(!candidate||typeof candidate.id!=='string'||!candidate.id)throw new Error('Jedes Benchmark-Ergebnis benötigt eine nicht leere Fall-ID.');
+ if(candidateIds.has(candidate.id))throw new Error(`Benchmark-Ergebnis enthält eine doppelte Fall-ID: ${candidate.id}`);
+ candidateIds.add(candidate.id);
+ if(!selectedFixtures.some(fixture=>fixture.id===candidate.id))throw new Error(`Benchmark-Ergebnis enthält eine unbekannte Fall-ID: ${candidate.id}`);
+}
+const missingCandidates=selectedFixtures.filter(fixture=>!candidateIds.has(fixture.id)).map(fixture=>fixture.id);
+if(missingCandidates.length)throw new Error(`Benchmark-Ergebnis fehlt für ${missingCandidates.length} ausgewählte Fälle: ${missingCandidates.join(', ')}`);
 const results=[];
 for(const fixture of selectedFixtures){
  const candidate=candidates.find(result=>result?.id===fixture.id);

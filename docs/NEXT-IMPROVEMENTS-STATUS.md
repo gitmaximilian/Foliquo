@@ -180,6 +180,12 @@ This document tracks implementation separately from automated verification and e
 - Verification: benchmark CLI tests 4/4; smoke pipeline 3 cases / 0 regressions / 0 requests; development pipeline 20 cases / 0 regressions / 0 requests; complete `npm test` 245/245; acceptance 12/12; browser 7/7; demo build passed and generated assets were restored.
 - Limits: development references are synthetic and produce deterministic expected outputs; their 100% reference match is not a model-quality score. The held-out 100-case collection, qualified linguistic ratings, OCR/image layout cases, and live model evaluation remain outstanding.
 
+### P06 follow-up: strict supplied-result case coverage
+
+- The benchmark now rejects empty, duplicate, unknown, or missing case IDs before creating artifacts. This prevents a supplied-results report from silently overlooking malformed coverage or grading duplicate cases.
+- Verification: benchmark CLI tests passed 5/5; the offline smoke set passed 3 cases and the synthetic development set passed 20 cases, both with zero provider requests; the full Node suite passed 312/312; `git diff --check` passed.
+- This strengthens result integrity only. It does not replace the independent 100-case acceptance set or qualified human language ratings.
+
 ### Current continuation checkpoint (2026-10-31)
 
 - Current branch: `codex/community-improvements`; latest implementation commit: `29a968b` (`fix: allow more time for WinGet install acceptance`), following `97b2853` (`fix: keep learning votes on profile version`), test expectation commit `85619e0`, `57519c7` (`feat: show learning feedback influence`), `bdcd753` (`feat: resolve learned terminology conflicts per job`), `ee8d856` (`feat: rank learning samples using explicit feedback`) and `0141838` (`feat: collect feedback on applied learning rules`). The P07 accessibility/localization commits before those are `ed87149` and `f3c8af8`.
