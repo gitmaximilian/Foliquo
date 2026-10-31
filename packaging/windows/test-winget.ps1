@@ -27,13 +27,32 @@ $env:FOLIQUO_PORT = '18343'
 $installerLog = Join-Path $work 'installer.log'
 $stdoutLog = Join-Path $work 'winget-install.stdout.log'
 $stderrLog = Join-Path $work 'winget-install.stderr.log'
-$installArgs = 'install --manifest "' + $manifest + '" --silent --disable-interactivity --skip-dependencies --accept-package-agreements --accept-source-agreements --log "' + $installerLog + '"'
+$installStartedAt = [DateTime]::UtcNow
+$installArgs = 'install --manifest "' + $manifest + '" --silent --disable-interactivity --skip-dependencies --accept-package-agreements --accept-source-agreements --verbose-logs --log "' + $installerLog + '"'
 $install = Start-Process $winget -ArgumentList $installArgs -PassThru -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
 if (-not $install.WaitForExit(480000)) {
   $processLog = Join-Path $work 'processes.log'
-  Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'winget|Foliquo|Setup|msiexec|AppInstaller' } | Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine | Format-List | Out-String | Set-Content $processLog
+  $allProcesses = @(Get-CimInstance Win32_Process)
+  $relatedIds = [System.Collections.Generic.HashSet[uint32]]::new()
+  [void]$relatedIds.Add([uint32]$install.Id)
+  do {
+    $added = $false
+    foreach ($candidate in $allProcesses) {
+      if ($relatedIds.Contains([uint32]$candidate.ParentProcessId) -and $relatedIds.Add([uint32]$candidate.ProcessId)) { $added = $true }
+    }
+  } while ($added)
+  $allProcesses | Where-Object { $relatedIds.Contains([uint32]$_.ProcessId) -or $_.Name -match 'winget|Foliquo|Setup|msiexec|AppInstaller|RuntimeBroker|smartscreen|consent|WerFault|backgroundTaskHost|ApplicationFrameHost' } | Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine | Format-List | Out-String | Set-Content $processLog
   Get-Content $processLog | Write-Host
   foreach ($log in @($stdoutLog,$stderrLog,$installerLog)) { if (Test-Path $log) { Get-Content $log -Tail 60 | Write-Host } }
+  $appInstallerLogs = Join-Path $env:LOCALAPPDATA 'Packages/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe/LocalState/DiagOutputDir'
+  if (Test-Path $appInstallerLogs) {
+    $index = 0
+    Get-ChildItem $appInstallerLogs -Filter '*.log' -File | Where-Object { $_.LastWriteTimeUtc -ge $installStartedAt.AddMinutes(-1) } | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 5 | ForEach-Object {
+      $index++
+      Copy-Item $_.FullName (Join-Path $work "appinstaller-$index.log") -Force
+      Get-Content $_.FullName -Tail 100 | Write-Host
+    }
+  }
   Stop-Process -Id $install.Id -Force
   throw 'WinGet installation exceeded eight minutes; inspect the attached installer diagnostics.'
 }
