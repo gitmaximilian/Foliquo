@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,readdir,rm} from 'node:fs/promises';
+import {mkdtemp,readdir,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash,randomBytes} from 'node:crypto';
@@ -44,6 +44,7 @@ test('large translation text is stored as an authenticated sidecar and metadata 
  const {directory,store}=await fixture(t),text=`${'Fictional translated paragraph. '.repeat(70000)}😀`,job={...fictionalJob('fictional-large-text'),result:{text,pdf:Buffer.from('fictional pdf').toString('base64'),word:Buffer.from('fictional word').toString('base64')}};await store.commitJob(job);
  const entry=store.index.jobs[0],textObject=entry.objects.find(object=>object.path==='["result","text"]');assert.ok(textObject);assert.equal(textObject.encoding,'utf8');assert.equal(textObject.length,Buffer.byteLength(text));assert.ok((await store.secure.read(entry.recordId,'record')).length<2048);
  const reopened=await new JobStore(directory,store.secure.key).init(),metadata=await reopened.getJobMetadata(job.id,'fictional-owner');assert.equal(metadata.result.text,text);assert.equal(metadata.result.pdf.__foliquoSecureObject.encoding,'base64');assert.equal(metadata.result.word.__foliquoSecureObject.encoding,'base64');
+ const deferred=await reopened.getJobMetadata(job.id,'fictional-owner',{deferText:true});assert.equal(typeof deferred.result.text,'object');assert.equal(reopened.getObjectInfo(job.id,['result','text'],'fictional-owner').encoding,'utf8');let streamedText='';assert.equal(await reopened.withJobObject(job.id,['result','text'],'fictional-owner',async({tempPath,encoding,size})=>{assert.equal(encoding,'utf8');assert.equal(size,Buffer.byteLength(text));streamedText=await readFile(tempPath,'utf8');}),true);assert.equal(streamedText,text);
  const full=await reopened.getJob(job.id);assert.equal(full.result.text,text);assert.equal(Buffer.from(full.result.pdf,'base64').toString(),'fictional pdf');assert.equal(Buffer.from(full.result.word,'base64').toString(),'fictional word');assert.deepEqual(full,job);const recordId=entry.recordId;await reopened.commitJobs([full]);assert.equal(reopened.index.jobs[0].recordId,recordId,'chunked fingerprinting preserves unchanged large-text records');
 });
 
