@@ -327,3 +327,8 @@ This document tracks implementation separately from automated verification and e
 - `lib/benchmark.mjs` now reports special-region precision, recall and F1 alongside expected-fact recall, plus the count of export preflight issues. Baseline comparison reports a separate regression when region F1 falls or export issues increase; older reports without these fields remain readable and simply skip those comparisons.
 - Added regressions proving a region omission and a new export issue are detected independently while expected-fact recall stays unchanged. Benchmark tests passed 6/6; `npm test`: 308/308; smoke benchmark: 3 cases, 0 regressions, 0 requests; synthetic development benchmark: 20 cases, 0 regressions, 0 requests; `npm run acceptance`: 12/12; demo build passed and generated assets were restored; syntax and diff checks passed.
 - These are deterministic structural/export signals over synthetic fixtures. They do not measure typography fidelity, full document structure, OCR recall, translation fluency or professional quality. Held-out representative cases and qualified human evaluation remain required.
+
+### P06 refinement: unavailable benchmark signals stay unknown (2026-10-31)
+
+- `gradeTranslation` now distinguishes a measured empty region/preflight list from missing result data. Missing measurements serialize as `null`; baseline comparison skips them rather than converting missing evidence into a zero or a false regression.
+- Regression coverage verifies both explicit empty measurements and absent measurements. Focused benchmark/workflow tests: 17/17; full `npm test`: 308/308. No translation request or user data was used.
