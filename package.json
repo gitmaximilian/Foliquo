@@ -13,8 +13,21 @@
   },
   "scripts": {
     "start": "node bin/foliquo.mjs",
-    "test": "node --test --test-force-exit tests/*.test.mjs",
+    "test": "node --test --test-force-exit --test-concurrency=1 tests/*.test.mjs",
+    "test:browser": "playwright test",
+    "test:storage": "node scripts/storage-scale.mjs",
+    "test:backup:scale": "node scripts/backup-scale.mjs",
+    "test:backup:legacy-profile": "node --expose-gc scripts/legacy-backup-profile.mjs",
+    "test:storage:full-volume": "node scripts/full-volume-profile.mjs",
+    "test:storage:memory": "node --expose-gc scripts/storage-memory.mjs",
+    "test:storage:large-pdf": "node --expose-gc scripts/profile-large-pdf.mjs",
+    "test:storage:result-json": "node --expose-gc scripts/profile-result-json.mjs",
+    "test:storage:full-result-json": "node --expose-gc scripts/profile-result-json.mjs --full-result",
+    "test:storage:review-json": "node --expose-gc scripts/profile-result-json.mjs --review-preview",
+    "test:recovery:profile": "node --expose-gc scripts/recovery-profile.mjs",
     "benchmark": "node scripts/benchmark.mjs",
+    "benchmark:acceptance:validate": "node scripts/validate-acceptance-corpus.mjs",
+    "learning:impact": "node scripts/learning-impact.mjs",
     "demo:build": "node scripts/build-demo.mjs",
     "acceptance": "node scripts/acceptance.mjs",
     "doctor": "node scripts/check-install.mjs",
@@ -43,6 +56,7 @@
     "foliquo": "bin/foliquo.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@tauri-apps/cli": "2.12.4"
   }
 }

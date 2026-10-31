@@ -18,6 +18,8 @@ output/
 *.sqlite
 *.sqlite3
 coverage/
+test-results/
+playwright-report/
 
 release/
 .packaging/
