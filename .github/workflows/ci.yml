@@ -58,6 +58,7 @@ jobs:
         run: |
           npm run test:storage:memory
           npm run test:storage:large-pdf
+          npm run test:storage:result-json
           npm run test:recovery:profile
           npm run test:backup:scale
           npm run test:backup:legacy-profile
