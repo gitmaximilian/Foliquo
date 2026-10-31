@@ -16,12 +16,14 @@ test('structured document editor changes table layout, supports undo and saves a
   const csrf=await page.evaluate(()=>fetch('/api/session').then(response=>response.json()).then(session=>session.csrf));
   const {id}=await page.evaluate(async csrf=>{const response=await fetch('/api/demo',{method:'POST',headers:{'content-type':'application/json','x-translateocr-csrf':csrf},body:'{}'});return response.json();},csrf);
   await page.locator('#jobs-open').click();const review=page.locator(`#queue-list .queue-row[data-job-id="${id}"] [data-queue-action="review"]`);await expect(review).toBeVisible({timeout:25000});await review.click();
+  const anchoredBlock=workspace.data.jobs.find(job=>job.id===id).result.document.blocks[0];anchoredBlock.sourceBlockIds=['fictional-source-anchor'];
   await expect(page.locator('#review-edit-open')).toBeVisible();await page.locator('#review-edit-open').click();await expect(page.locator('#direct-edit-dialog')).toBeVisible();
-  await page.getByRole('button',{name:'Structure',exact:true}).click();await expect(page.locator('#structured-editor')).toBeVisible();
+  await page.getByRole('button',{name:'Structure',exact:true}).click();await expect(page.locator('#structured-editor')).toBeVisible();await page.locator('.structured-block').first().getByRole('button',{name:'Move down'}).click();
+  expect(await page.evaluate(()=>window.directEditPayload().document.blocks[1].sourceBlockIds)).toContain('fictional-source-anchor');
   const firstWidth=page.getByRole('spinbutton',{name:'Column width 1 as a percentage'}).first();await firstWidth.fill('25');await firstWidth.press('Tab');
   await page.getByRole('button',{name:'Add table row'}).first().click();await page.locator('#document-undo').click();await page.locator('#document-redo').click();
   await page.locator('#direct-save').click();await expect(page.locator('#review-version')).toHaveText('Version 2',{timeout:15000});
-  const stored=workspace.data.jobs.find(job=>job.id===id).result.document;expect(stored.schema).toBe(1);expect(stored.blocks.find(block=>block.type==='table').relativeColumnWidths[0]).toBeCloseTo(25,0);
+  const stored=workspace.data.jobs.find(job=>job.id===id).result.document;expect(stored.schema).toBe(1);expect(stored.blocks.find(block=>block.type==='table').relativeColumnWidths[0]).toBeCloseTo(25,0);expect(stored.blocks.find(block=>block.id===anchoredBlock.id).sourceBlockIds).toContain('fictional-source-anchor');
   expect(externalRequests).toEqual([]);expect(pageErrors).toEqual([]);
  }finally{await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});}
 });
