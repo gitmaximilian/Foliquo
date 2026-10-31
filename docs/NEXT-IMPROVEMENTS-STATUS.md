@@ -259,3 +259,10 @@ This document tracks implementation separately from automated verification and e
 - Commit `412dc72` localizes the repeated-value consistency label and explanation in English, German and Arabic. Browser coverage switches locales in each real engine and verifies page numbers and variant text remain visible.
 - Focused localized flow passed in Chromium, Firefox and WebKit (3/3); complete matrix 33/33. Full Node suite 301/301; benchmark 3/3 without regressions/requests; acceptance 12/12; demo build passed.
 - Rebuilt local macOS arm64 package (already-published 0.11.11): SHA-256 `028fea9ae563270ecdee5aea08a21bb38277ecbe107487fdfca57eb26bc67e87`, 155,427,914 bytes; 3,345 manifest entries verified; bundled runtime/geometry smoke passed. No public update was published.
+
+
+### P10 follow-up: synthetic omission-coverage gold case
+
+- Added `tests/source-coverage-gold.test.mjs` with a five-page, 100-field fictional PDF and an explicit expected set of five present targets versus 95 intentional omissions. The test extracts source blocks through the production embedded-text path and verifies all five known targets map, all 95 omitted items remain open, omission recall is at least 95%, and false-alarm rate is at most 5%.
+- Focused test passed 1/1; full `npm test` passed 302/302. This measures deterministic behavior against a synthetic fixture only. It does not represent OCR/scanned-page accuracy, a representative document corpus, or qualified human review; P10 remains partial.
+- No application source or package changed. No version, release, public asset or tag changed.
