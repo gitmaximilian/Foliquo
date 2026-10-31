@@ -33,7 +33,29 @@ test('same-label repeated source blocks on different pages remain separate inven
  for(let pageNumber=1;pageNumber<=2;pageNumber++){const page=pdf.addPage([600,800]);page.drawText('FICTIONAL NAME: Alex Example',{x:72,y:700,size:14,font});}
  const bytes=Buffer.from(await pdf.save()),files=[{name:'fictional.pdf',type:'application/pdf',data:bytes.toString('base64')}],sourceBlocks=(await extractEmbeddedSourceBlocks([{name:files[0].name,type:'application/pdf',bytes}])).map(item=>({...item,translated:'Alex Example'})),document=documentFromLegacyText('Alex Example');
  const inventory=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document}),items=inventory.items.filter(item=>item.extractionMethod==='embedded-text');
- assert.equal(items.length,2);assert.deepEqual(items.map(item=>item.page),[1,2]);assert.equal(new Set(items.map(item=>item.id)).size,2);assert.equal(new Set(items.map(item=>item.pageId)).size,2);assert.ok(items.every(item=>item.label==='Textzeile 1'&&item.coverageStatus==='mapped'));
+ assert.equal(items.length,2);assert.deepEqual(items.map(item=>item.page),[1,2]);assert.equal(new Set(items.map(item=>item.id)).size,2);assert.equal(new Set(items.map(item=>item.pageId)).size,2);assert.ok(items.every(item=>item.label==='Textzeile 1'&&item.coverageStatus==='unreviewed'&&item.targetNodeIds.length===0),'one target occurrence cannot prove both source pages were translated');
+ const review={version:1,busy:false,proposal:null,hasQuestions:false,finalizedVersion:null},job={finishedAt:1,result:{document,sourceInventory:inventory,checks:[]}};
+ applySourceInventoryDecision(job,{version:1,sourceId:items[0].id,action:'map',targetNodeIds:[document.blocks[0].id]},review);
+ const rebuilt=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document,previousInventory:inventory}),first=rebuilt.items.find(item=>item.id===items[0].id),second=rebuilt.items.find(item=>item.id===items[1].id);
+ assert.equal(first.coverageStatus,'mapped','an explicit mapping survives the rebuild');assert.deepEqual(first.targetNodeIds,[document.blocks[0].id]);assert.equal(second.coverageStatus,'unreviewed','an explicit decision for page one must not decide page two');assert.deepEqual(second.targetNodeIds,[]);
+});
+
+test('repeated target text stays ambiguous even when multiple target nodes contain it',()=>{
+ const files=[{data:Buffer.from('fictional repeated source').toString('base64')}],document=documentFromLegacyText('Alex Example\nAlex Example'),sourceBlocks=[1,2].map(page=>({kind:'paragraph',label:`Name ${page}`,fileIndex:0,page,sourceText:'Fictional source name',translated:'Alex Example',box:[.1,.1,.3,.1],extractionMethod:'embedded-text'}));
+ const inventory=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document}),items=inventory.items.filter(item=>item.extractionMethod==='embedded-text');assert.ok(items.every(item=>item.coverageStatus==='unreviewed'&&item.targetNodeIds.length===0),'the text alone cannot decide which target belongs to which page');
+ const review={version:1,busy:false,proposal:null,hasQuestions:false},job={finishedAt:1,result:{document,sourceInventory:inventory,checks:[]}};
+ for(const item of items)applySourceInventoryDecision(job,{version:review.version,sourceId:item.id,action:'map',targetNodeIds:[document.blocks[0].id]},review);
+ const rebuilt=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document,previousInventory:inventory});assert.ok(items.every(item=>rebuilt.items.find(candidate=>candidate.id===item.id).coverageStatus==='mapped'),'explicit many-to-one mappings remain supported');
+});
+
+test('different target values may map to the same translation paragraph',()=>{
+ const document=documentFromLegacyText('Name: Alex Example, date: 12.03.2000'),fields=[{label:'Name',source:'Alex Example',translated:'Alex Example',fileIndex:0,page:1},{label:'Date',source:'12.03.2000',translated:'12.03.2000',fileIndex:0,page:1}],inventory=buildSourceInventory({files:[{data:'ZmljdGlvbmFs'}],pageCounts:[1],fields,document});
+ const values=inventory.items.filter(item=>item.targetText);assert.equal(values.length,2);assert.ok(values.every(item=>item.coverageStatus==='mapped'&&item.targetNodeIds[0]===document.blocks[0].id));
+});
+
+test('a repeated source is ambiguous when different proposed target strings match one paragraph',()=>{
+ const document=documentFromLegacyText('Name: Alex Example'),sourceBlocks=[{fileIndex:0,page:1,sourceText:'Fictional repeated name',translated:'Name: Alex Example'},{fileIndex:0,page:2,sourceText:'Fictional repeated name',translated:'Alex Example'}],inventory=buildSourceInventory({files:[{data:'ZmljdGlvbmFs'}],pageCounts:[2],sourceBlocks,document});
+ const items=inventory.items.filter(item=>item.targetText);assert.equal(items.length,2);assert.ok(items.every(item=>item.coverageStatus==='unreviewed'&&item.targetNodeIds.length===0));
 });
 
 test('embedded source PDF text is extracted locally with normalized source coordinates',async()=>{

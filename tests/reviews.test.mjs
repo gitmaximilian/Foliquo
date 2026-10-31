@@ -11,6 +11,11 @@ test('review snapshot exposes the compact source inventory without exposing orig
  assert.equal(reviewSnapshot(job).sourceInventory.items[0].sourceText,undefined);assert.equal(JSON.stringify(reviewSnapshot(job)).includes('PRIVATE ORIGINAL TEXT'),false);assert.equal(JSON.stringify(reviewSnapshot(job)).includes('private.pdf'),false);
  assert.equal('document'in reviewSnapshot(job).versions[0],false);assert.equal('sourceInventory'in reviewSnapshot(job).versions[0],false);
 });
+test('legacy review snapshots do not present ambiguous automatic mappings as reviewed',()=>{
+ const items=[1,2].map(page=>({id:`source-${page}`,page,sourceText:'PRIVATE SOURCE',targetText:page===1?'Name: Fictional name':'Fictional name',coverageStatus:'mapped',targetNodeIds:['target-1'],review:null})),inventory={schema:1,items,summary:{total:2,reviewed:2,mapped:2,open:0,percent:100}},document={blocks:[{id:'target-1',type:'paragraph',content:'Name: Fictional name',sourceBlockIds:[]}]},job={id:'job',status:'succeeded',review:{version:1},result:{context:{},sourceInventory:inventory,document}};
+ let snapshot=reviewSnapshot(job).sourceInventory;assert.deepEqual(snapshot.items.map(item=>item.coverageStatus),['unreviewed','unreviewed']);assert.equal(snapshot.summary.open,2);assert.ok(snapshot.items.every(item=>item.targetNodeIds.length===0));assert.equal(items[0].coverageStatus,'mapped','reading a review does not overwrite the saved inventory');assert.equal(JSON.stringify(snapshot).includes('PRIVATE SOURCE'),false);
+ items[0].review={decision:'map',version:1};document.blocks[0].sourceBlockIds=['source-1'];snapshot=reviewSnapshot(job).sourceInventory;assert.deepEqual(snapshot.items.map(item=>item.coverageStatus),['mapped','unreviewed']);assert.equal(snapshot.summary.reviewed,1);
+});
 test('Dates use dots everywhere and German terminology applies without altering other target languages',()=>{
  assert.equal(normalizeDates('7.3.1998; 07 03 1998; 1998-03-07; 7/3/1998'),'07.03.1998; 07.03.1998; 07.03.1998; 07.03.1998');
  assert.equal(normalizeTranslation('Kennzeichen: unversehrt'),'Merkmale: keine besonderen Merkmale');assert.equal(normalizeTranslation('Kennzeichen: unversehrt','Englisch'),'Kennzeichen: unversehrt');
