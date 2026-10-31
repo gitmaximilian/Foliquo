@@ -332,3 +332,8 @@ This document tracks implementation separately from automated verification and e
 
 - `gradeTranslation` now distinguishes a measured empty region/preflight list from missing result data. Missing measurements serialize as `null`; baseline comparison skips them rather than converting missing evidence into a zero or a false regression.
 - Regression coverage verifies both explicit empty measurements and absent measurements. Focused benchmark/workflow tests: 17/17; full `npm test`: 308/308. No translation request or user data was used.
+
+### P10 follow-up: show OCR uncertainty and confidence in the inventory (2026-10-31)
+
+- The source-inventory cards now label local OCR observations as uncertain and show the stored confidence percentage when available. The indicator is localized in English, German and Arabic and does not change coverage status or imply OCR correctness.
+- The real learning-offer/source-inventory browser flow seeds a fictional 37% OCR observation and verifies the visible uncertainty marker. Focused Chromium/Firefox/WebKit run: 3/3. This verifies disclosure only; representative OCR quality, omission/false-alarm rates and qualified review remain open.
