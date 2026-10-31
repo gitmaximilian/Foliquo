@@ -61,8 +61,7 @@ jobs:
           npm run test:recovery:profile
           npm run test:backup:scale
           npm run test:backup:legacy-profile
-      - name: Verify atomic storage on a full APFS volume
-        if: runner.os == 'macOS'
+      - name: Verify atomic storage on a full filesystem volume
         run: npm run test:storage:full-volume
       - run: npm run benchmark
       - run: npm run demo:build
