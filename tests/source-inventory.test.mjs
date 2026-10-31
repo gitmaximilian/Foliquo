@@ -28,6 +28,14 @@ test('duplicate source observations normalize once and table cells remain addres
  assert.equal(inventory.items.length,2);assert.deepEqual(inventory.items[1].targetNodeIds,[document.blocks[0].rows[0][0].id,document.blocks[0].rows[0][1].id]);
 });
 
+test('same-label repeated source blocks on different pages remain separate inventory items',async()=>{
+ const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica);
+ for(let pageNumber=1;pageNumber<=2;pageNumber++){const page=pdf.addPage([600,800]);page.drawText('FICTIONAL NAME: Alex Example',{x:72,y:700,size:14,font});}
+ const bytes=Buffer.from(await pdf.save()),files=[{name:'fictional.pdf',type:'application/pdf',data:bytes.toString('base64')}],sourceBlocks=(await extractEmbeddedSourceBlocks([{name:files[0].name,type:'application/pdf',bytes}])).map(item=>({...item,translated:'Alex Example'})),document=documentFromLegacyText('Alex Example');
+ const inventory=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document}),items=inventory.items.filter(item=>item.extractionMethod==='embedded-text');
+ assert.equal(items.length,2);assert.deepEqual(items.map(item=>item.page),[1,2]);assert.equal(new Set(items.map(item=>item.id)).size,2);assert.equal(new Set(items.map(item=>item.pageId)).size,2);assert.ok(items.every(item=>item.label==='Textzeile 1'&&item.coverageStatus==='mapped'));
+});
+
 test('embedded source PDF text is extracted locally with normalized source coordinates',async()=>{
  const pdf=await PDFDocument.create(),page=pdf.addPage([600,800]),font=await pdf.embedFont(StandardFonts.Helvetica);page.drawText('Fictional source paragraph',{x:72,y:700,size:14,font});const blocks=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}]);
  assert.equal(blocks.length,1);assert.equal(blocks[0].sourceText,'Fictional source paragraph');assert.equal(blocks[0].kind,'heading');assert.equal(blocks[0].extractionMethod,'embedded-text');assert.equal(blocks[0].fileIndex,0);assert.equal(blocks[0].page,1);assert.equal(blocks[0].box.length,4);assert.ok(blocks[0].box.every(value=>value>=0&&value<=1));
