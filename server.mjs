@@ -50,17 +50,20 @@ import {documentFromLegacyText,documentToLegacyText,adaptDocumentModel} from './
 import {buildSourceInventory,extractEmbeddedSourceBlocks,applySourceInventoryDecision} from './lib/source-inventory.mjs';
 
 const root = fileURLToPath(new URL('.',import.meta.url));
+const normalizeConflictTerm=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 function glossaryConflictQuestions(payload,context){
- const pending=[],clarifications=payload.metadata.clarifications||[],retained=[];
- for(const conflict of context.glossaryConflicts||[]){
-  const targets=[...new Set(conflict.entries.map(entry=>entry.target))],contextKey=`Glossarentscheidung · ${conflict.source} · ${targets.join(' | ')}`;
+ const pending=[],clarifications=payload.metadata.clarifications||[],retainedGlossary=[],retainedLearning=[];
+ for(const [kind,conflict] of [...(context.glossaryConflicts||[]).map(conflict=>['glossary',conflict]),...(context.learningConflicts||[]).map(conflict=>['learning',conflict])]){
+  const targets=[...new Set(conflict.entries.map(entry=>entry.target))],contextKey=kind==='learning'?`Lernregelentscheidung · ${conflict.source} · ${targets.join(' | ')}`:`Glossarentscheidung · ${conflict.source} · ${targets.join(' | ')}`;
+  const prompt=kind==='learning'?`Deine freigegebenen Muster verwenden für „${conflict.source}“ unterschiedliche Übersetzungen. Welche soll in diesem Auftrag gelten? Nenne eine der Vorschläge oder gib eine eigene Übersetzung an.`:`Welche Übersetzung soll Foliquo für „${conflict.source}“ verwenden? Nenne eine der vorgeschlagenen Übersetzungen oder gib eine passende eigene Übersetzung an.`;
   const decision=clarifications.find(item=>item.context===contextKey&&typeof item.answer==='string');
-  if(!decision){pending.push({question:`Welche Übersetzung soll Foliquo für „${conflict.source}“ verwenden? Nenne eine der vorgeschlagenen Übersetzungen oder gib eine passende eigene Übersetzung an.`,context:contextKey});continue;}
-  const chosen=decision.answer.trim().slice(0,300);if(!chosen){pending.push({question:`Welche Übersetzung soll Foliquo für „${conflict.source}“ verwenden?`,context:contextKey});continue;}
-  const term={...conflict.entries[0],source:conflict.source,target:chosen,status:'approved',scope:'job',scopeId:payload.metadata.jobId||'',jobId:payload.metadata.jobId||'',name:conflict.source};retained.push(term);
+  if(!decision){pending.push({question:prompt,context:contextKey});continue;}
+  const chosen=decision.answer.trim().slice(0,300);if(!chosen){pending.push({question:prompt,context:contextKey});continue;}
+  const term={id:`job-term-${createHash('sha256').update(`${payload.metadata.jobId||''}\0${conflict.source}\0${chosen}`).digest('hex').slice(0,24)}`,name:conflict.source,source:conflict.source,target:chosen,sourceLanguage:payload.metadata.sourceLanguage||'any',targetLanguage:payload.metadata.targetLanguage||'Deutsch',documentType:payload.sourceExtraction?.documentType||payload.metadata.documentType||'any',matchMode:'phrase',version:1,status:'approved',scope:'job',scopeId:payload.metadata.jobId||'',jobId:payload.metadata.jobId||''};(kind==='learning'?retainedLearning:retainedGlossary).push(term);
+  if(kind==='learning'){const sourceKey=normalizeConflictTerm(conflict.source);context.learningExamples=(context.learningExamples||[]).map(example=>({...example,terminology:(example.terminology||[]).filter(item=>normalizeConflictTerm(item.source)!==sourceKey)}));for(const applied of context.appliedLearning||[])applied.ruleRefs=(applied.ruleRefs||[]).filter(rule=>rule.kind!=='terminology'||normalizeConflictTerm(rule.text.split(' → ')[0])!==sourceKey);}
  }
  if(pending.length)return pending;
- context.terms=[...(context.terms||[]),...retained];context.glossaryConflicts=[];context.glossaryConflictDecisions=retained.map(({source,target})=>({source,target}));context.contextVersion=createHash('sha256').update(JSON.stringify({prior:context.contextVersion,terms:context.terms,decisions:context.glossaryConflictDecisions})).digest('hex').slice(0,32);
+ context.terms=[...(context.terms||[]),...retainedGlossary,...retainedLearning];context.glossaryConflicts=[];context.learningConflicts=[];if(retainedGlossary.length)context.glossaryConflictDecisions=retainedGlossary.map(({source,target})=>({source,target}));if(retainedLearning.length)context.learningConflictDecisions=retainedLearning.map(({source,target})=>({source,target}));context.contextVersion=createHash('sha256').update(JSON.stringify({prior:context.contextVersion,terms:context.terms,glossaryDecisions:context.glossaryConflictDecisions||[],learningDecisions:context.learningConflictDecisions||[]})).digest('hex').slice(0,32);
  return [];
 }
 const assets = {'/':'index.html','/index.html':'index.html','/theme.js':'theme.js','/theme.css':'theme.css','/icons/icon.svg':'brand/community/svg/icon-color.svg','/icons/icon-180.png':'brand/community/png/app-icon-light-180.png','/icons/icon-192.png':'brand/community/png/app-icon-light-192.png','/icons/icon-512.png':'brand/community/png/app-icon-light-512.png','/app.js':'app.js','/import-batches.js':'import-batches.js','/workspace-dialogs.js':'workspace-dialogs.js','/question-copy.js':'question-copy.js','/ai-settings.js':'ai-settings.js','/connection.js':'connection.js','/queue-status.js':'queue-status.js','/queue.js':'queue.js','/review.js':'review.js','/style.css':'style.css','/workspace.js':'workspace.js','/source-geometry.js':'source-geometry.js','/source-viewer.js':'source-viewer.js','/source-text.js':'source-text.js','/inspector.js':'inspector.js','/document-editor.js':'document-editor.js','/workflow.js':'workflow.js','/studio.js':'studio.js','/runtime-i18n.js':'runtime-i18n.js','/i18n.js':'i18n.js','/updates.js':'updates.js','/scan-metrics.mjs':'scan-metrics.mjs','/layout-audit.mjs':'layout-audit.mjs'};
@@ -180,6 +183,9 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
 
     if(!payload.contextSnapshot)context=await pinJobContext(payload,{...payload.metadata,documentType:payload.sourceExtraction?.documentType||payload.metadata.documentType},payload.metadata.jobId,owner,onCheckpoint);else context=payload.contextSnapshot;
     const glossaryQuestions=glossaryConflictQuestions(payload,context);if(glossaryQuestions.length)return {requiresInput:true,questions:glossaryQuestions,detected:{sourceLanguage:payload.metadata.sourceLanguage||'Automatisch',documentType:payload.sourceExtraction?.documentType||payload.metadata.documentType||'Dokument'}};
+    // The chosen term is pinned into this job's context above. Do not send the
+    // question history (which contains every disputed candidate) back to the model.
+    payload.metadata.clarifications=(payload.metadata.clarifications||[]).filter(item=>!String(item.context||'').startsWith('Lernregelentscheidung · '));
     const renderMeta={...payload.metadata,...(context.layout&&!payload.revision?{layout:context.layout}:{})};
     const request=translationRequest(payload.model,documents,renderMeta);if(payload.metadata.nameSpellings)request.input[0].content.push({type:'input_text',text:'Vom Benutzer bestätigte Namensschreibweise(n), nur für die passende Person verwenden: '+payload.metadata.nameSpellings});
     if(definitions.length){request.instructions+='\nDie bestätigte Formularvorlage definiert feste Felder. Ordne alle vorhandenen Angaben den Feldbezeichnungen zu, verwende die Zielbezeichnungen und frage bei fehlenden Pflichtfeldern nach. Erhalte alle übrigen Inhalte vollständig; erfinde keine Werte.';request.input[0].content.push({type:'input_text',text:'Bestätigte Formularzuordnung: '+JSON.stringify(definitions)});}
@@ -195,6 +201,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     renderMeta.terms=context.terms||[];
     renderMeta.glossaryConflicts=context.glossaryConflicts||[];
     renderMeta.glossaryConflictDecisions=context.glossaryConflictDecisions||[];
+    renderMeta.learningConflictDecisions=context.learningConflictDecisions||[];
     renderMeta.examples=(context.examples||[]).map(entry=>({id:entry.id,name:entry.name,documentType:entry.documentType,targetLanguage:entry.targetLanguage}));
     renderMeta.dossierId=context.dossierId||'';
     renderMeta.dossierFacts=context.dossierFacts||[];
