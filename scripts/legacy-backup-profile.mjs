@@ -9,9 +9,10 @@ import {fileURLToPath} from 'node:url';
 import {Worker,isMainThread,parentPort,workerData} from 'node:worker_threads';
 import {Workspace} from '../lib/workspace.mjs';
 
-const MIB=1024*1024,fixtureMiB=Number(process.env.FOLIQUO_LEGACY_BACKUP_PROFILE_MIB||64),jobCount=16,jobMiB=fixtureMiB/jobCount;
-if(!Number.isInteger(fixtureMiB)||fixtureMiB<48||fixtureMiB>128)throw new Error('FOLIQUO_LEGACY_BACKUP_PROFILE_MIB must be an integer from 48 through 128.');
-if(!Number.isInteger(jobMiB))throw new Error('FOLIQUO_LEGACY_BACKUP_PROFILE_MIB must be divisible by 16.');
+const MIB=1024*1024,fixtureMiB=Number(process.env.FOLIQUO_LEGACY_BACKUP_PROFILE_MIB||64),jobCount=Number(process.env.FOLIQUO_LEGACY_BACKUP_PROFILE_JOBS||16),jobMiB=fixtureMiB/jobCount;
+if(!Number.isInteger(fixtureMiB)||fixtureMiB<1||fixtureMiB>255)throw new Error('FOLIQUO_LEGACY_BACKUP_PROFILE_MIB must be an integer from 1 through 255.');
+if(!Number.isInteger(jobCount)||jobCount<1||jobCount>100)throw new Error('FOLIQUO_LEGACY_BACKUP_PROFILE_JOBS must be an integer from 1 through 100.');
+if(!Number.isInteger(jobMiB))throw new Error('FOLIQUO_LEGACY_BACKUP_PROFILE_MIB must be divisible by FOLIQUO_LEGACY_BACKUP_PROFILE_JOBS.');
 const passphrase='fictional legacy backup profile passphrase',owner='fictional-legacy-profile-owner',jobId=index=>`fictional-legacy-profile-job-${String(index).padStart(2,'0')}`;
 const digest=text=>createHash('sha256').update(text).digest('hex');
 
