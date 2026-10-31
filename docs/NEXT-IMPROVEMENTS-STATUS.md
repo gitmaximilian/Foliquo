@@ -299,3 +299,9 @@ This document tracks implementation separately from automated verification and e
 
 - Commit `0ccce1f` extends the same focused browser flow: after skipping onboarding, the user opens provider usage settings with Enter, tabs from the final available control back to the first control within the dialog, and closes with Escape. Focus returns to the launch button. The test waits for onboarding to finish saving before the next keyboard action.
 - Focused Chromium/Firefox/WebKit run passed 3/3. This is automated keyboard behavior coverage; it does not replace screen-reader, zoom, contrast, or human usability checks.
+
+
+### P05/P13 follow-up: usage dialog at narrow and desktop widths
+
+- Commit `d5dc5cd` checks the real usage/settings dialog at 375, 1024 and 1440 CSS pixels in the same keyboard flow. It asserts no document-level horizontal overflow and that the dialog stays within the viewport.
+- Focused Chromium/Firefox/WebKit run passed 3/3. This covers those viewport sizes for this dialog only; it does not establish whole-app responsive conformance or replace zoom/assistive-technology reviews.
