@@ -9,7 +9,7 @@ import { PDFDocument } from 'pdf-lib';
 import { unzipSync } from 'fflate';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { mkdtemp, stat, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, stat, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
@@ -152,4 +152,10 @@ test('HTTP backup streams TOCRBACK2 and restores owner-scoped lazy history',asyn
  await workspace.jobStore.commitJob(job);const app=createApp({connection:{status:()=>({connected:false})},port,workspace});await new Promise((resolve,reject)=>app.once('error',reject).listen(port,'127.0.0.1',resolve));t.after(async()=>{await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(dir,{recursive:true,force:true});});
  const home=await fetch(origin),cookie=home.headers.get('set-cookie').split(';')[0],session=await fetch(`${origin}/api/session`,{headers:{cookie}}).then(r=>r.json()),response=await fetch(`${origin}/api/backup`,{method:'POST',headers:{cookie,origin,'content-type':'application/json','x-foliquo-csrf':session.csrf},body:JSON.stringify({passphrase:'fictional streamed backup password'})});
  assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'application/octet-stream');const bytes=Buffer.from(await response.arrayBuffer());assert.equal(bytes.subarray(0,9).toString(),'TOCRBACK2');const restore=await fetch(`${origin}/api/backup/restore`,{method:'POST',headers:{cookie,origin,'content-type':'application/octet-stream','x-foliquo-csrf':session.csrf,'x-foliquo-backup-passphrase':Buffer.from('fictional streamed backup password').toString('base64url'),'x-foliquo-backup-confirm':'true'},body:bytes});assert.equal(restore.status,200);assert.deepEqual(await restore.json(),{restored:true});const restored=await workspace.jobStore.getJob(job.id);assert.equal(restored.result.text,'fictional backup text');assert.equal(restored.owner,decodeURIComponent(cookie.split('=')[1]));
+});
+
+test('HTTP legacy JSON restore keeps TOCRBACK1 compatibility and streams validated jobs into the active owner',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'foliquo-legacy-json-restore-')),sourceDir=await mkdtemp(join(tmpdir(),'foliquo-legacy-json-source-')),workspace=await new Workspace(dir,{lazyJobs:true}).init(),source=await new Workspace(sourceDir).init(),port=16000+Math.floor(Math.random()*10000),origin=`http://127.0.0.1:${port}`,job={id:'12345678-1234-4234-8234-123456789abc',owner:'fictional-old-owner',status:'succeeded',createdAt:Date.now(),finishedAt:Date.now(),result:{text:'fictional legacy HTTP result'},questions:[]};source.data.jobs=[job];const passphrase='fictional legacy HTTP password',backup=source.backup(passphrase),app=createApp({connection:{status:()=>({connected:false})},port,workspace});
+ await new Promise((resolve,reject)=>app.once('error',reject).listen(port,'127.0.0.1',resolve));t.after(async()=>{await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(dir,{recursive:true,force:true});await rm(sourceDir,{recursive:true,force:true});});
+ const home=await fetch(origin),cookie=home.headers.get('set-cookie').split(';')[0],owner=decodeURIComponent(cookie.split('=')[1]),session=await fetch(`${origin}/api/session`,{headers:{cookie}}).then(r=>r.json()),restore=await fetch(`${origin}/api/backup/restore`,{method:'POST',headers:{cookie,origin,'content-type':'application/json','x-foliquo-csrf':session.csrf},body:JSON.stringify({confirm:true,data:backup.toString('base64'),passphrase})});assert.equal(restore.status,200);assert.deepEqual(await restore.json(),{restored:true});const restored=await workspace.jobStore.getJob(job.id);assert.equal(restored.result.text,job.result.text);assert.equal(restored.owner,owner);assert.equal((await readdir(dir)).some(name=>name.startsWith('.restore-staging-')),false);
 });
