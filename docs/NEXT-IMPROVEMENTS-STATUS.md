@@ -321,3 +321,9 @@ This document tracks implementation separately from automated verification and e
 ### P09 follow-up: keyboard activation of structured block controls (2026-10-31)
 
 - The real document-editor browser flow now focuses the block-move control and activates it with Enter before checking that the source anchor moves with its block. Chromium, Firefox, and WebKit passed 3/3. This covers keyboard activation only; human keyboard usability, screen-reader sessions, ten timed representative edits, and rendered cross-platform PDF/Word comparisons remain open.
+
+### P06 follow-up: baseline regressions for special regions and export checks (2026-10-31)
+
+- `lib/benchmark.mjs` now reports special-region precision, recall and F1 alongside expected-fact recall, plus the count of export preflight issues. Baseline comparison reports a separate regression when region F1 falls or export issues increase; older reports without these fields remain readable and simply skip those comparisons.
+- Added regressions proving a region omission and a new export issue are detected independently while expected-fact recall stays unchanged. Benchmark tests passed 6/6; `npm test`: 308/308; smoke benchmark: 3 cases, 0 regressions, 0 requests; synthetic development benchmark: 20 cases, 0 regressions, 0 requests; `npm run acceptance`: 12/12; demo build passed and generated assets were restored; syntax and diff checks passed.
+- These are deterministic structural/export signals over synthetic fixtures. They do not measure typography fidelity, full document structure, OCR recall, translation fluency or professional quality. Held-out representative cases and qualified human evaluation remain required.
