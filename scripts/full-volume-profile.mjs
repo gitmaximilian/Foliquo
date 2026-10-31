@@ -31,8 +31,19 @@ async function prepareWindows(){
  await run('icacls.exe',[volume,'/grant',`${user}:(OI)(CI)F`]);
  cleanup=async()=>{
   await writeFile(script,[`select vdisk file="${image}"`,'detach vdisk','exit'].join('\r\n')+'\r\n');
-  await run('diskpart.exe',['/s',script]);
+  let diskpartError;
+  try{await run('diskpart.exe',['/s',script]);}catch(error){diskpartError=error;}
+  const quotedImage=image.replace(/'/g,"''"),attached=async()=>{
+   const status=(await run('powershell.exe',['-NoProfile','-Command',`(Get-DiskImage -ImagePath '${quotedImage}').Attached`])).stdout.trim().toLowerCase();
+   if(status!=='true'&&status!=='false')throw new Error('Windows could not determine whether the isolated test VHD is still attached.');
+   return status==='true';
+  };
+  if(await attached()){
+   await run('powershell.exe',['-NoProfile','-Command',`Dismount-DiskImage -ImagePath '${quotedImage}' -ErrorAction Stop | Out-Null`]);
+  }
+  if(await attached())throw diskpartError||new Error('Windows did not detach the isolated test VHD.');
   windowsVhdDetached=true;
+  if(diskpartError)console.log('DiskPart reported a detach error, but Get-DiskImage confirmed the test VHD is detached.');
   // Hosted Windows runners can retain the detached image handle until the job
   // exits. The test's security boundary is the successful DiskPart detach;
   // delete the fictional image when the runner releases it.
@@ -75,9 +86,9 @@ try{
  console.log(JSON.stringify({mode:'genuine-full-volume-atomic-replacement',platform:`${process.platform}/${process.arch}`,volume:`isolated 192 MiB ${process.platform==='darwin'?'APFS sparsebundle':process.platform==='win32'?'NTFS VHD':'ext4 loopback image'}`,fillerFiles:filled,replaceBytes:16*MIB,error:observed,previousObjectPreserved:true,temporaryFilesRemaining:0,providerRequests:0}));
 }finally{
  try{await cleanup();}finally{
-  if(process.platform==='win32'&&windowsVhdDetached){
+  if(process.platform==='win32'){
    for(const name of await readdir(root))if(name!=='bounded-test.vhd')await rm(join(root,name),{recursive:true,force:true});
-   await rm(image,{force:true}).catch(error=>{if(!['EBUSY','EPERM'].includes(error.code))throw error;});
+   if(windowsVhdDetached)await rm(image,{force:true}).catch(error=>{if(!['EBUSY','EPERM'].includes(error.code))throw error;});
    if(!existsSync(image))await rm(root,{recursive:true,force:true});
   }else await rm(root,{recursive:true,force:true});
  }
