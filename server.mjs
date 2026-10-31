@@ -101,11 +101,14 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     try{const raw=await trackedProviderRespond(engine,request,signal,{operation,jobId,onProgress,onStarted:entry=>{beginCheckpoint(payload,phase,fingerprint,entry.id);onStarted(entry);},onStartFailed:()=>{if(previous)payload.checkpoints[phase]=previous;else delete payload.checkpoints?.[phase];onStartFailed();}});completeCheckpoint(payload,phase,fingerprint,raw);await onCheckpoint();return raw;}
     catch(error){interruptCheckpoint(payload,phase,fingerprint);await Promise.resolve().then(onCheckpoint).catch(()=>{});throw error;}
   }
-  function segmentRequest(base,segmentDocs,segment){
+  function segmentRequest(base,segmentDocs,segment,sourceFields=[]){
     const request=structuredClone(base),content=request.input?.[0]?.content||[];
-    request.input[0].content=content.filter(item=>item.type!=='input_file'&&item.type!=='input_image'&&!(item.type==='input_text'&&/^Datei \d+ von \d+, Bestandteil desselben Dokuments:/u.test(item.text||'')));
+    const sourceFieldPrefix='Separat erfasste Originalfelder – überprüfe sie am Bild und gib für jedes Feld in fields den tatsächlich übersetzten Wert aus: ';
+    request.input[0].content=content.filter(item=>item.type!=='input_file'&&item.type!=='input_image'&&!(item.type==='input_text'&&(/^Datei \d+ von \d+, Bestandteil desselben Dokuments:/u.test(item.text||'')||(item.text||'').startsWith(sourceFieldPrefix))));
     const only=translationRequest(base.model,segmentDocs,{targetLanguage:'segment',sourceLanguage:'segment'}).input[0].content;
     request.input[0].content.push(...only.slice(1));
+    const relevantFields=sourceFields.filter(field=>field&&field.fileIndex===segment.fileIndex&&Number.isInteger(field.page)&&field.page>=segment.pageRange[0]&&field.page<=segment.pageRange[1]);
+    if(relevantFields.length)request.input[0].content.push({type:'input_text',text:sourceFieldPrefix+JSON.stringify(relevantFields)});
     request.instructions+=`\nDies ist ausschließlich Abschnitt ${segment.pageRange[0]}–${segment.pageRange[1]} der Originaldatei ${segment.fileIndex+1}. Übersetze diesen Abschnitt vollständig und in Originalreihenfolge. Gib fileIndex ${segment.fileIndex} und Originalseitenzahlen an. Wenn dieser Abschnitt nicht abschließt, beende ihn ohne Zusammenfassung; Foliquo setzt die Abschnitte anschließend in Reihenfolge zusammen.`;
     return request;
   }
@@ -136,7 +139,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     if(!plan||plan.sourceFingerprint!==buildTranslationPlan(planInput).sourceFingerprint||plan.provider!==planInput.provider||plan.model!==planInput.model||plan.contextVersion!==planInput.contextVersion){plan=buildTranslationPlan(planInput);payload.translationPlan=plan;await onCheckpoint();}
     const pieces=[],fields=[],regions=[];let detected=null;
     for(let index=0;index<plan.segments.length;index++){
-      signal.throwIfAborted();const segment=plan.segments[index],phase=`translation-${segment.id}`,segmentDocs=await translationSegmentDocuments(plan,segment.id,documents),request=segmentRequest(baseRequest,segmentDocs,segment),segmentSignal=()=>AbortSignal.any([signal,AbortSignal.timeout(300000)]);onStage('translating',{segmentIndex:index+1,segmentCount:plan.segments.length,segmentsComplete:translationPlanProgress(plan).complete});
+      signal.throwIfAborted();const segment=plan.segments[index],phase=`translation-${segment.id}`,segmentDocs=await translationSegmentDocuments(plan,segment.id,documents),request=segmentRequest(baseRequest,segmentDocs,segment,planInput.sourceBlocks),segmentSignal=()=>AbortSignal.any([signal,AbortSignal.timeout(300000)]);onStage('translating',{segmentIndex:index+1,segmentCount:plan.segments.length,segmentsComplete:translationPlanProgress(plan).complete});
       const fingerprint=checkpointFingerprint(request,phase),cached=reusableCheckpoint(payload,phase,fingerprint);
       if(['complete','needs_input'].includes(segment.status)&&cached===null){const reset=resetTranslationSegmentAndDependents(plan,segment.id);for(const id of reset){const affected=plan.segments.find(item=>item.id===id);if(affected)invalidateCheckpoint(payload,`translation-${id}`);}await onCheckpoint();}
       let raw;
