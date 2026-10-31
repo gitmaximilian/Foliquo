@@ -30,7 +30,9 @@ $stderrLog = Join-Path $work 'winget-install.stderr.log'
 $installArgs = 'install --manifest "' + $manifest + '" --silent --disable-interactivity --skip-dependencies --accept-package-agreements --accept-source-agreements --log "' + $installerLog + '"'
 $install = Start-Process $winget -ArgumentList $installArgs -PassThru -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
 if (-not $install.WaitForExit(480000)) {
-  Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'winget|Foliquo|Setup' } | Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine | Format-List | Out-String | Write-Host
+  $processLog = Join-Path $work 'processes.log'
+  Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'winget|Foliquo|Setup|msiexec|AppInstaller' } | Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine | Format-List | Out-String | Set-Content $processLog
+  Get-Content $processLog | Write-Host
   foreach ($log in @($stdoutLog,$stderrLog,$installerLog)) { if (Test-Path $log) { Get-Content $log -Tail 60 | Write-Host } }
   Stop-Process -Id $install.Id -Force
   throw 'WinGet installation exceeded eight minutes; inspect the attached installer diagnostics.'
