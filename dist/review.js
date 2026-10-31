@@ -6,7 +6,8 @@ const localizedReviewMessages=new Set([
  'Änderung übernommen. Die Vorschau zeigt die neue Fassung. Du kannst weitere Änderungen anfordern oder die finalen Dateien herunterladen.',
  'Änderungsvorschlag bereit. Prüfe die Unterschiede und übernimm die gewünschten Änderungen.',
  'Frühere Fassung als neue Version wiederhergestellt.',
- 'Ausgewählte Änderungen übernommen. Bitte die neue Fassung prüfen.'
+ 'Ausgewählte Änderungen übernommen. Bitte die neue Fassung prüfen.',
+ 'Die unterbrochene Überarbeitung wurde verworfen. Die bisherige Fassung bleibt erhalten.'
 ]);
 function reviewMessageText(message){return message.role==='assistant'&&localizedReviewMessages.has(message.text)?reviewCopy(message.text):message.text;}
 function renderReviewMessages(messages){
@@ -21,7 +22,9 @@ async function openReviewWorkspace(id,{historyMode='push'}={}){
  $('#review-pdf').removeAttribute('src');$('#review-text').textContent='';if(reviewUrl){URL.revokeObjectURL(reviewUrl);reviewUrl=null;}renderReviewControls();await loadReview(true);
 }
 function renderReviewControls(){
- const busy=reviewUnavailable||!reviewData||reviewData.busy||reviewSubmitting||reviewData.proposal;$('#review-busy').hidden=!reviewData?.busy&&!reviewSubmitting;$('#review-send').disabled=busy;$('#review-prompt').disabled=busy;
+ const progress=reviewData?.revisionProgress,interrupted=progress?.state==='interrupted',busy=reviewUnavailable||!reviewData||reviewData.busy||reviewSubmitting||reviewData.proposal||interrupted;$('#review-busy').hidden=!reviewData?.busy&&!reviewSubmitting;$('#review-send').disabled=busy;$('#review-prompt').disabled=busy;
+ $('#review-revision-controls').hidden=!progress;$('#review-revision-progress').textContent=progress?reviewCopy('{complete} von {total} Abschnitten gespeichert.',{complete:progress.complete,total:progress.total}):'';$('#review-revision-warning').textContent=interrupted?reviewCopy(progress.unknown?'Ein unterbrochener Aufruf kann bei Fortsetzung erneut Kontingent oder API-Kosten verbrauchen. Mit „Fortsetzen“ bestätigst du die Wiederholung.':'Gespeicherte Abschnitte bleiben erhalten.'):progress?.state==='needs_input'?reviewCopy('Bitte beantworte die Rückfrage für diesen Abschnitt.'):'';
+ $('#review-revision-resume').hidden=!interrupted;$('#review-revision-discard').hidden=!['interrupted','needs_input'].includes(progress?.state);$('#review-revision-cancel').hidden=!reviewData?.busy||!progress;$('#review-revision-resume').disabled=reviewUnavailable||reviewSubmitting;$('#review-revision-discard').disabled=reviewUnavailable||reviewSubmitting||Boolean(reviewData?.busy);$('#review-revision-cancel').disabled=reviewUnavailable||!reviewData?.busy;
  const blocked=reviewUnavailable||!reviewData?.result;for(const id of ['review-final-pdf','review-final-word','review-final-both'])$("#"+id).disabled=blocked;
  $('#review-version').textContent=reviewData?reviewCopy('Version {version}',{version:reviewData.version}):reviewCopy('Wird geladen');
  $('#review-final-status').textContent=reviewUnavailable?reviewCopy('Dieser Auftrag ist abgelaufen. Bitte zurückgehen und die Dateien erneut hochladen.'):!reviewData?.result?reviewCopy('Die Übersetzung wird geladen …'):reviewCopy('Version {version}',{version:reviewData.version});
@@ -49,7 +52,7 @@ function renderLearningFeedback(styles,snapshot){const locale=window.TOCRI18n?.g
 async function sendLearningFeedback(style,outcome,savedMessage){try{await localRequest(`/api/jobs/${reviewJobId}/learning-feedback`,{version:reviewData.version,entryId:style.id,profileVersion:style.profileVersion,...(style.ruleId?{ruleId:style.ruleId}:{}),outcome});await loadReview();toast(savedMessage);}catch(error){$('#review-error').textContent=error.message;}}
 function renderReview(snapshot){
  if(!snapshot.result&&reviewData?.jobId===snapshot.jobId&&reviewData.version===snapshot.version&&reviewData.result)snapshot={...snapshot,result:reviewData.result,names:snapshot.names||reviewData.names};
- reviewData=snapshot;$('#review-proposal').hidden=!snapshot.proposal;$('#review-messages').hidden=snapshot.messages.length===1&&snapshot.messages[0].role==='assistant';if(snapshot.proposal&&!reviewHadProposal){$('#revision-card').open=true;}reviewHadProposal=Boolean(snapshot.proposal);$('#review-error').textContent=snapshot.error||'';const styles=snapshot.styleReferences||[];$('#review-style-indicator').hidden=!styles.length;if(styles.length){$('#review-style-indicator summary').textContent=styles.length===1?reviewCopy('Stil aus einem Muster verwendet'):reviewCopy('Stil aus {count} Mustern verwendet',{count:styles.length});renderLearningFeedback(styles,snapshot);}else $('#review-style-details').replaceChildren();
+ reviewData=snapshot;$('#review-proposal').hidden=!snapshot.proposal;$('#review-messages').hidden=snapshot.messages.length===1&&snapshot.messages[0].role==='assistant';if(snapshot.proposal&&!reviewHadProposal){$('#revision-card').open=true;}reviewHadProposal=Boolean(snapshot.proposal);$('#review-error').textContent=reviewCopy(snapshot.error||'');const styles=snapshot.styleReferences||[];$('#review-style-indicator').hidden=!styles.length;if(styles.length){$('#review-style-indicator summary').textContent=styles.length===1?reviewCopy('Stil aus einem Muster verwendet'):reviewCopy('Stil aus {count} Mustern verwendet',{count:styles.length});renderLearningFeedback(styles,snapshot);}else $('#review-style-details').replaceChildren();
  renderReviewMessages(snapshot.messages);
  let glossaryInfo=$('#review-glossary-info');if(!glossaryInfo){glossaryInfo=document.createElement('details');glossaryInfo.id='review-glossary-info';glossaryInfo.className='review-style-indicator';$('#review-style-indicator').after(glossaryInfo);}const terms=snapshot.result?.context?.terms||[],decisions=snapshot.result?.context?.glossaryConflictDecisions||[];glossaryInfo.hidden=!terms.length&&!decisions.length;glossaryInfo.replaceChildren();if(terms.length||decisions.length){const summary=document.createElement('summary');summary.textContent=`Glossar im Auftrag · ${terms.length} Begriffe`;glossaryInfo.append(summary);const list=document.createElement('ul');for(const term of terms){const item=document.createElement('li');item.textContent=`${term.source} → ${term.target}`;list.append(item);}for(const decision of decisions){const item=document.createElement('li');item.textContent=`Konfliktentscheidung: ${decision.source} → ${decision.target}`;list.append(item);}glossaryInfo.append(list);}
  if(snapshot.result){
@@ -75,6 +78,15 @@ $('#review-form').onsubmit=async event=>{
  catch(error){if(id===reviewJobId){$('#review-error').textContent=error.message;await loadReview();}}
  finally{reviewSubmitting=false;if(id===reviewJobId)renderReviewControls();}
 };
+async function reviewRevisionAction(action){
+ if(!reviewJobId||!reviewData)return;const id=reviewJobId,version=reviewData.version,cancel=action==='cancel';if(!cancel)reviewSubmitting=true;$('#review-error').textContent='';renderReviewControls();
+ try{const path=cancel?'cancel':'edit',data=cancel?{version}:action==='resume'?{resume:true,confirmUnknown:true,version,requestId:crypto.randomUUID()}:{discard:true,version};const snapshot=await localRequest(`/api/jobs/${id}/review/${path}`,data).then(r=>r.json());if(id!==reviewJobId)return;renderReview(snapshot);await loadReview(true);}
+ catch(error){if(id===reviewJobId){$('#review-error').textContent=error.message;await loadReview();}}
+ finally{if(!cancel)reviewSubmitting=false;if(id===reviewJobId)renderReviewControls();}
+}
+$('#review-revision-resume').onclick=()=>void reviewRevisionAction('resume');
+$('#review-revision-discard').onclick=()=>void reviewRevisionAction('discard');
+$('#review-revision-cancel').onclick=()=>void reviewRevisionAction('cancel');
 async function learningOfferAction(action,extra={}){
  if(!reviewJobId||!reviewData)return;const id=reviewJobId,version=reviewData.version;$('#learning-offer-status').textContent=reviewCopy('Wird gespeichert …');
  try{const snapshot=await localRequest(`/api/jobs/${id}/learn`,{action,version,...extra}).then(r=>r.json());if(id!==reviewJobId)return;renderReview(snapshot);if(action==='start')toast(reviewCopy('Die Musteranalyse wurde gestartet.'));await loadReview(true);}
