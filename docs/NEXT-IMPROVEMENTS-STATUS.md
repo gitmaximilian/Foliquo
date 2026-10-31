@@ -285,3 +285,11 @@ This document tracks implementation separately from automated verification and e
 - Verification on the current source: Node 24.22.1 `npm test` 307/307; browser matrix 39/39 (Chromium, Firefox, WebKit); `npm run benchmark` 3 offline cases, 0 regressions, 0 requests; `npm run acceptance` 12/12; demo build passed and generated fixture assets were restored; syntax checks and `git diff --check` passed. Commit `ccfc68c` contains the app and regression changes.
 - Rebuilt the local macOS arm64 Community archive for existing version 0.11.11. `scripts/verify-package.mjs` verified 3,345 files; packaged Node 24.22.1, native `sharp`, and server smoke passed. SHA-256 `3d18b6a806edf763285db14df522879afee01abd0ce14b3f00c3d81fbf10d00a`; 155,428,574 bytes. This is not a new version and was not published.
 - Remaining P02 scope includes legacy `/result`/non-streaming/repair hydration, whole-workspace restore materialization, full-volume and cross-platform crash/permission testing, and a representative peak-RAM matrix. P02 is still partial. No release or public asset changed.
+
+
+### P05/P11/P12 follow-up: visible usage for API and ChatGPT sign-in
+
+- Commit `59db2f3` extends the real browser usage flow using fictional ledger entries: API requests display provider-reported token totals, estimated list-price range, and the local monthly API budget; ChatGPT sign-in displays Foliquo request totals and a recorded provider limit error while explicitly stating that remaining quota and reset time are unavailable. The UI is checked for absence of a fabricated percentage.
+- The same flow switches between a per-job ChatGPT filter and a per-job API filter, then verifies Arabic RTL and German localization. Chromium, Firefox and WebKit passed 3/3 focused cases; the complete browser matrix passed 39/39. `npm test` passed 307/307; benchmark 3 offline cases/0 regressions/0 requests; acceptance 12/12; demo build passed and generated fixtures were restored. Syntax and whitespace checks passed.
+- The fixture verifies local display and provider-reported limit handling only. It does not reveal a ChatGPT account quota, prove billing totals, or measure real usage; the product intentionally does not claim these values.
+- No product runtime code or package contents changed. No release, tag or public asset changed.
