@@ -22,6 +22,7 @@
     "test:storage:large-pdf": "node --expose-gc scripts/profile-large-pdf.mjs",
     "test:recovery:profile": "node --expose-gc scripts/recovery-profile.mjs",
     "benchmark": "node scripts/benchmark.mjs",
+    "benchmark:acceptance:validate": "node scripts/validate-acceptance-corpus.mjs",
     "learning:impact": "node scripts/learning-impact.mjs",
     "demo:build": "node scripts/build-demo.mjs",
     "acceptance": "node scripts/acceptance.mjs",
