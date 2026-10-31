@@ -29,11 +29,11 @@ $stdoutLog = Join-Path $work 'winget-install.stdout.log'
 $stderrLog = Join-Path $work 'winget-install.stderr.log'
 $installArgs = 'install --manifest "' + $manifest + '" --silent --disable-interactivity --skip-dependencies --accept-package-agreements --accept-source-agreements --log "' + $installerLog + '"'
 $install = Start-Process $winget -ArgumentList $installArgs -PassThru -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
-if (-not $install.WaitForExit(240000)) {
-  Get-Process | Where-Object { $_.ProcessName -match 'winget|Foliquo|Setup' } | Select-Object Id,ProcessName,Path | Format-Table | Out-String | Write-Host
+if (-not $install.WaitForExit(480000)) {
+  Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'winget|Foliquo|Setup' } | Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine | Format-List | Out-String | Write-Host
   foreach ($log in @($stdoutLog,$stderrLog,$installerLog)) { if (Test-Path $log) { Get-Content $log -Tail 60 | Write-Host } }
   Stop-Process -Id $install.Id -Force
-  throw 'WinGet installation exceeded four minutes; inspect the attached installer diagnostics.'
+  throw 'WinGet installation exceeded eight minutes; inspect the attached installer diagnostics.'
 }
 Get-Content $stdoutLog | Write-Host
 Get-Content $stderrLog | Write-Host
