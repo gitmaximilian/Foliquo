@@ -35,6 +35,18 @@ test('large binary job writes and unchanged-record detection avoid Buffer JSON e
  const changedBytes=Buffer.from(bytes);changedBytes[changedBytes.length-1]^=0xff;const changed={...unchanged,payload:{files:[{name:'fictional-source.bin',bytes:changedBytes}]}};await store.commitJobs([changed]);assert.notEqual(store.index.jobs[0].recordId,first.recordId,'a changed source byte creates a new encrypted record');
 });
 
+test('streamed job-record JSON preserves escaping and surrogate pairs across chunk boundaries',async t=>{
+ const {store}=await fixture(t),boundary=64*1024-1,text=`${'x'.repeat(boundary)}😀\n\\"${'y'.repeat(64*1024+17)}`,job={...fictionalJob('fictional-streamed-json'),result:{text,meta:{quote:'"',slash:'\\',line:'first\nsecond'}}};await store.commitJob(job);
+ const bytes=await store.secure.read(store.index.jobs[0].recordId,'record');assert.deepEqual(bytes,Buffer.from(JSON.stringify(job)));assert.equal((await store.getJob(job.id)).result.text,text);
+});
+
+test('large translation text is stored as an authenticated sidecar and metadata reads do not hydrate export binaries',async t=>{
+ const {directory,store}=await fixture(t),text=`${'Fictional translated paragraph. '.repeat(70000)}😀`,job={...fictionalJob('fictional-large-text'),result:{text,pdf:Buffer.from('fictional pdf').toString('base64'),word:Buffer.from('fictional word').toString('base64')}};await store.commitJob(job);
+ const entry=store.index.jobs[0],textObject=entry.objects.find(object=>object.path==='["result","text"]');assert.ok(textObject);assert.equal(textObject.encoding,'utf8');assert.equal(textObject.length,Buffer.byteLength(text));assert.ok((await store.secure.read(entry.recordId,'record')).length<2048);
+ const reopened=await new JobStore(directory,store.secure.key).init(),metadata=await reopened.getJobMetadata(job.id,'fictional-owner');assert.equal(metadata.result.text,text);assert.equal(metadata.result.pdf.__foliquoSecureObject.encoding,'base64');assert.equal(metadata.result.word.__foliquoSecureObject.encoding,'base64');
+ const full=await reopened.getJob(job.id);assert.equal(full.result.text,text);assert.equal(Buffer.from(full.result.pdf,'base64').toString(),'fictional pdf');assert.equal(Buffer.from(full.result.word,'base64').toString(),'fictional word');
+});
+
 test('legacy JSON fingerprints are verified once then upgraded to compact state fingerprints',async t=>{
  const {directory,store}=await fixture(t),job=fictionalJob('fictional-legacy-fingerprint');await store.commitJob(job);const entry=store.index.jobs[0],recordId=entry.recordId;entry.fingerprint=createHash('sha256').update(JSON.stringify(job)).digest('hex');delete entry.fingerprintVersion;delete entry.recordFingerprint;await store.writeIndex(store.index);
  const reopened=await new JobStore(directory,store.secure.key).init(),loaded=await reopened.getJob(job.id),upgraded=reopened.index.jobs[0];assert.equal(loaded.result.text,job.result.text);assert.equal(upgraded.fingerprintVersion,2);assert.match(upgraded.recordFingerprint,/^[a-f0-9]{64}$/);assert.equal(upgraded.recordId,recordId);await reopened.commitJobs([loaded]);assert.equal(reopened.index.jobs[0].recordId,recordId,'an unchanged legacy record remains reusable after its one-time upgrade');
@@ -103,9 +115,10 @@ test('owner-scoped job metadata keeps sidecar objects as references without hydr
 });
 
 test('metadata and streamed object integrity failures carry the recoverable corruption code',async t=>{
- const {directory,store}=await fixture(t),job={...fictionalJob('fictional-corrupt-metadata'),payload:{files:[{name:'fictional-source.bin',bytes:Buffer.from('FICTIONAL SOURCE')}]},result:{text:'fictional result',word:'RkFLRQ=='}};await store.commitJob(job);
- const entry=store.index.jobs[0],word=entry.objects.find(object=>object.path===JSON.stringify(['result','word']));assert.ok(word);
+ const {directory,store}=await fixture(t);store.cacheBytes=0;const job={...fictionalJob('fictional-corrupt-metadata'),payload:{files:[{name:'fictional-source.bin',bytes:Buffer.from('FICTIONAL SOURCE')}]},result:{text:'F'.repeat(1024*1024+1),word:'RkFLRQ=='}};await store.commitJob(job);
+ const entry=store.index.jobs[0],word=entry.objects.find(object=>object.path===JSON.stringify(['result','word'])),text=entry.objects.find(object=>object.path===JSON.stringify(['result','text']));assert.ok(word);assert.ok(text);
  await rm(join(directory,word.type,`${word.id}.enc`));await assert.rejects(()=>store.withJobObject(job.id,['result','word'],'fictional-owner',async()=>{}),{code:'ERR_FOLIQUO_JOB_STORE_CORRUPT'});
+ await rm(join(directory,text.type,`${text.id}.enc`));await assert.rejects(()=>store.getJob(job.id),{code:'ERR_FOLIQUO_JOB_STORE_CORRUPT'});
  await rm(join(directory,'record',`${entry.recordId}.enc`));await assert.rejects(()=>store.getJobMetadata(job.id,'fictional-owner'),{code:'ERR_FOLIQUO_JOB_STORE_CORRUPT'});
 });
 

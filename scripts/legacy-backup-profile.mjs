@@ -19,18 +19,23 @@ const digest=text=>createHash('sha256').update(text).digest('hex');
 if(!isMainThread){
  const workspace=await new Workspace(workerData.directory,{lazyJobs:true}).init();
  try{
+  parentPort.postMessage({phase:'restoring',start:true});
   if(workerData.mode==='buffer')workspace.restore(await readFile(workerData.archive),passphrase);
   else await workspace.restoreStream(createReadStream(workerData.archive),passphrase,{owner});
+  parentPort.postMessage({phase:'restored',rssBytes:process.memoryUsage.rss()});
+  parentPort.postMessage({phase:'saving',start:true});
   await workspace.save();
+  parentPort.postMessage({phase:'saved',rssBytes:process.memoryUsage.rss()});
+  parentPort.postMessage({phase:'verifying',start:true});
   for(let index=0;index<jobCount;index++){const job=await workspace.jobStore.getJob(jobId(index));if(job?.result?.text.length!==jobMiB*MIB||digest(job.result.text)!==workerData.expectedHash)throw new Error(`Restored legacy backup job ${index} failed its length or digest check.`);}
-  parentPort.postMessage({ok:true});parentPort.close();
+  parentPort.postMessage({phase:'verified',rssBytes:process.memoryUsage.rss()});parentPort.postMessage({ok:true});parentPort.close();
  }catch(error){parentPort.postMessage({ok:false,error:error.message});parentPort.close();}
 }else if(process.argv.includes('--restore-worker')){
  const {directory,archive,mode}=process.env;
- let worker,peakRss=process.memoryUsage.rss(),baselineRss=peakRss;
- const sample=setInterval(()=>{peakRss=Math.max(peakRss,process.memoryUsage.rss());},5);
+ let worker,activePhase='init',peakRss=process.memoryUsage.rss(),baselineRss=peakRss;const phasePeaks={init:peakRss};
+ const sample=setInterval(()=>{const rss=process.memoryUsage.rss();peakRss=Math.max(peakRss,rss);phasePeaks[activePhase]=Math.max(phasePeaks[activePhase]||0,rss);},5);
   worker=new Worker(new URL(import.meta.url),{workerData:{directory,archive,mode,expectedHash:process.env.FOLIQUO_LEGACY_PROFILE_HASH}});
- worker.once('message',message=>{peakRss=Math.max(peakRss,process.memoryUsage.rss());clearInterval(sample);const result=!message.ok?{error:message.error}:{mode,baselineRss,peakRss,peakDeltaBytes:peakRss-baselineRss};process.send(result,()=>{if(!message.ok)process.exitCode=1;process.disconnect();});});
+  worker.on('message',message=>{if(message.phase){if(message.start)activePhase=message.phase;else{phasePeaks[activePhase]=Math.max(phasePeaks[activePhase]||0,message.rssBytes||0);activePhase=message.phase;}return;}peakRss=Math.max(peakRss,process.memoryUsage.rss());clearInterval(sample);const result=!message.ok?{error:message.error}:{mode,baselineRss,peakRss,peakDeltaBytes:peakRss-baselineRss,phasePeakRssBytes:phasePeaks};process.send(result,()=>{if(!message.ok)process.exitCode=1;process.disconnect();});});
  worker.once('error',error=>{clearInterval(sample);process.send({error:error.message},()=>{process.exitCode=1;process.disconnect();});});
 }else{
  const root=await mkdtemp(join(tmpdir(),'foliquo-legacy-backup-profile-')),archive=join(root,'fictional-tocrback1.enc'),script=fileURLToPath(import.meta.url),text='F'.repeat(jobMiB*MIB),expectedHash=digest(text);
@@ -46,6 +51,7 @@ if(!isMainThread){
    assert.ok(result.baselineRss>0&&result.peakRss>=result.baselineRss,`${mode} RSS measurements are invalid.`);results.push(result);
   }
   const [buffered,streamed]=results;
-  console.log(JSON.stringify({mode:'legacy-tocrback1-restore-memory-comparison',platform:`${process.platform}/${process.arch}`,fixtureMiB,jobCount,jobMiB,archiveBytes,baselineRssBytes:buffered.baselineRss,bufferRestorePeakDeltaMiB:Number((buffered.peakDeltaBytes/MIB).toFixed(2)),streamRestorePeakDeltaMiB:Number((streamed.peakDeltaBytes/MIB).toFixed(2)),streamDeltaReductionMiB:Number(((buffered.peakDeltaBytes-streamed.peakDeltaBytes)/MIB).toFixed(2)),sha256:expectedHash,temporaryWorkspaces:true,providerRequests:0}));
+  const summarizePhases=result=>Object.fromEntries(Object.entries(result.phasePeakRssBytes||{}).map(([phase,rss])=>[phase,Number((rss/MIB).toFixed(2))]));
+  console.log(JSON.stringify({mode:'legacy-tocrback1-restore-memory-comparison',platform:`${process.platform}/${process.arch}`,fixtureMiB,jobCount,jobMiB,archiveBytes,baselineRssBytes:buffered.baselineRss,bufferRestorePeakDeltaMiB:Number((buffered.peakDeltaBytes/MIB).toFixed(2)),streamRestorePeakDeltaMiB:Number((streamed.peakDeltaBytes/MIB).toFixed(2)),streamDeltaReductionMiB:Number(((buffered.peakDeltaBytes-streamed.peakDeltaBytes)/MIB).toFixed(2)),bufferPhasePeakRssMiB:summarizePhases(buffered),streamPhasePeakRssMiB:summarizePhases(streamed),sha256:expectedHash,temporaryWorkspaces:true,providerRequests:0}));
  }finally{await rm(root,{recursive:true,force:true});}
 }
