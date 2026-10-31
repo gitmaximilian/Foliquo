@@ -6,5 +6,10 @@ export default defineConfig({
  workers:1,
  reporter:'list',
  timeout:30000,
- use:{browserName:'chromium',headless:true,trace:'retain-on-failure',screenshot:'only-on-failure'},
+ projects:[
+  {name:'chromium',use:{browserName:'chromium'}},
+  {name:'firefox',use:{browserName:'firefox'}},
+  {name:'webkit',use:{browserName:'webkit'}},
+ ],
+ use:{headless:true,trace:'retain-on-failure',screenshot:'only-on-failure'},
 });
