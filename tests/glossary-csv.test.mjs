@@ -27,6 +27,13 @@ test('CSV round-trips multiple allowed variants as a quoted multiline field',()=
  assert.ok(exported.includes('"licensed title\ntitle, permitted\nعنوان معتمد"'));
 });
 
+test('CSV import reports differing variants for a repeated source and target as a conflict',()=>{
+ const exact=parseGlossaryCSV('source,target,allowedVariants\nfictional source,primary target,"first variant\nsecond variant"\nfictional source,primary target,"first variant\nsecond variant"\n');
+ assert.equal(exact.errors.length,0);assert.equal(exact.rows.length,1);
+ const conflict=parseGlossaryCSV('source,target,allowedVariants\nfictional source,primary target,first variant\nfictional source,primary target,different variant\n');
+ assert.equal(conflict.rows.length,1);assert.match(conflict.errors[0].error,/erlaubte Varianten/u);
+});
+
 test('CSV import distinguishes exact duplicates from conflicting targets without overwriting',()=>{
  const parsed=parseGlossaryCSV('source,target\n"fictional source",existing target\n"new source",new target\n');
  const result=compareGlossaryImport(parsed,[{source:'fictional source',target:'existing target'}]);
