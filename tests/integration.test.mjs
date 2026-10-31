@@ -143,7 +143,7 @@ test('HTTP streams a valid archived PDF larger than the queue memory cap after r
  await workspace.jobStore.commitJob(job);job=null;pdfBase64=null;await workspace.tail;await workspace.save();await workspace.tail;
  await new Promise(resolve=>app.close(resolve));workspace=await new Workspace(dir,{lazyJobs:true}).init();await workspace.tail;app=createApp({connection:{status:()=>({connected:false})},port,workspace});await new Promise((resolve,reject)=>app.once('error',reject).listen(port,'127.0.0.1',resolve));
  workspace.jobStore.getJob=async()=>{throw new Error('Large archived result download must stream without hydrating its JobStore record.');};
- const download=await fetch(`${origin}/api/jobs/12345678-1234-4234-8234-123456789abe/download/pdf`,{headers:{cookie}});assert.equal(download.status,200);assert.equal(download.headers.get('content-type'),'application/pdf');assert.equal(Number(download.headers.get('content-length')),artifactBytes);
+ const download=await fetch(`${origin}/api/jobs/12345678-1234-4234-8234-123456789abe/download/pdf`,{headers:{cookie}});if(download.status!==200)assert.fail(`Large archived PDF download returned ${download.status}: ${await download.text()}`);assert.equal(download.headers.get('content-type'),'application/pdf');assert.equal(Number(download.headers.get('content-length')),artifactBytes);
  const output=join(dir,'fictional-large-download.pdf');await pipeline(Readable.fromWeb(download.body),createWriteStream(output,{mode:0o600}));const digest=createHash('sha256');for await(const chunk of createReadStream(output))digest.update(chunk);assert.equal(digest.digest('hex'),expectedHash);
 });
 
