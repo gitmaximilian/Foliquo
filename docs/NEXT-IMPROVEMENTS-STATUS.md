@@ -393,3 +393,9 @@ This document tracks implementation separately from automated verification and e
 
 - The isolated public-release acceptance script now enables WinGet verbose logs, captures descendant and installer-broker process details at timeout, and copies recent Windows App Installer diagnostic logs into the uploaded artifact. It does not disable SmartScreen or other OS security protections.
 - The script-guard regression passed 1/1 locally. Windows execution is not available on this host, so this is not an installation result and does not resolve the existing handoff timeout. No release or package manifest changed.
+
+### P02/P14 cross-platform CI after storage and installer-diagnostic changes, 31 October 2026
+
+- GitHub Actions run [41169372307](https://github.com/gitmaximilian/Foliquo/actions/runs/41169372307) passed on Windows, macOS and Linux. It includes the Windows-specific directory-sync fallback, complete Node suite, >1 GiB encrypted store, large PDF and backup/recovery profiles, benchmark, demo build and acceptance run.
+- Follow-up run [41169485669](https://github.com/gitmaximilian/Foliquo/actions/runs/41169485669) also passed on all three platforms after the large-PDF integration assertion was improved to print the sanitized HTTP error body on failure. An earlier single run [41169294865](https://github.com/gitmaximilian/Foliquo/actions/runs/41169294865) had returned HTTP 400 in that one PDF test; both later runs passed, so the transient failure was not reproduced and no root cause was established.
+- This verifies the current source on hosted OS runners, not actual user devices or physical power-loss behavior. The separate public WinGet install workflow still has not been rerun with its new diagnostics. No package version, tag or public release changed.
