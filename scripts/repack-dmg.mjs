@@ -10,7 +10,8 @@ if(!original.isFile())throw new Error('DMG path must be a regular file.');
 const scratch=await mkdtemp(join(dirname(image),'.foliquo-dmg-'));
 const candidate=join(scratch,basename(image));
 const run=(args)=>{
- const result=spawnSync(process.env.FOLIQUO_HDIUTIL||'hdiutil',args,{encoding:'utf8',maxBuffer:16*1024*1024});
+ const executable=process.env.FOLIQUO_HDIUTIL||'hdiutil',prefix=process.env.FOLIQUO_HDIUTIL_SCRIPT?[process.env.FOLIQUO_HDIUTIL_SCRIPT]:[];
+ const result=spawnSync(executable,[...prefix,...args],{encoding:'utf8',maxBuffer:16*1024*1024});
  if(result.error)throw result.error;
  if(result.status!==0)throw new Error(`hdiutil ${args[0]} failed: ${(result.stderr||result.stdout).trim()}`);
  return result.stdout;
