@@ -173,3 +173,11 @@ This document tracks implementation separately from automated verification and e
 - Baseline comparisons now reject mismatched fixture sets and evaluation modes. The comparison metric is labeled as expected-fact regression detection, not full translation quality.
 - Verification: benchmark CLI tests 4/4; smoke pipeline 3 cases / 0 regressions / 0 requests; development pipeline 20 cases / 0 regressions / 0 requests; complete `npm test` 245/245; acceptance 12/12; browser 7/7; demo build passed and generated assets were restored.
 - Limits: development references are synthetic and produce deterministic expected outputs; their 100% reference match is not a model-quality score. The held-out 100-case collection, qualified linguistic ratings, OCR/image layout cases, and live model evaluation remain outstanding.
+
+### Current continuation checkpoint (2026-10-31)
+
+- Current branch: `codex/community-improvements`; implementation commit: `3e9748b` (`fix: localize glossary import errors`).
+- P07 follow-up: glossary CSV parser messages, including dynamic conflicting-row errors, now render in English and Arabic. The Chromium glossary flow verifies locale switching for these messages, unsaved form values, and a fictional 100-term import.
+- Verification on this commit: `npm test` 286/286; `npm run test:browser` 10/10; focused glossary browser flow 1/1; `npm run benchmark` 3 offline cases, 0 regressions, 0 requests; `npm run acceptance` 12/12; `npm run demo:build` passed and generated fixture assets were restored; `node --check` and `git diff --check` passed before commit.
+- A 100-row fictional CSV was previewed and imported in the automated browser run; elapsed browser test time was under five seconds. This establishes automated flow capacity, not that a person can complete the task in under five minutes.
+- Release remains blocked by the documented unverified human and external gates: held-out qualified terminology/translation assessment, accessibility and usability sessions, fresh cross-platform install/upgrade and failure matrices, signed/notarized platform artifacts, and the pending WinGet moderator review. No release was created.
