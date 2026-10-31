@@ -31,7 +31,12 @@ async function prepareWindows(){
  await run('icacls.exe',[volume,'/grant',`${user}:(OI)(CI)F`]);
  cleanup=async()=>{
   await writeFile(script,[`select vdisk file="${image}"`,'detach vdisk','exit'].join('\r\n')+'\r\n');
-  await run('diskpart.exe',['/s',script]).catch(()=>{});
+  await run('diskpart.exe',['/s',script]);
+  // Windows may keep the detached VHD locked briefly while the virtual disk
+  // service releases its handle. Retry removal here so cleanup is included in
+  // the profile result instead of turning a successful ENOSPC check into a
+  // spurious failure.
+  await rm(image,{force:true,maxRetries:20,retryDelay:250});
  };
  return volume;
 }
