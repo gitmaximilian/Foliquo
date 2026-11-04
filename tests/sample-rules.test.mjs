@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {approvedSampleDefinitions,synchronizeSampleRules} from '../lib/sample-rules.mjs';
-import {initializeRuleLibrary} from '../lib/personal-rules.mjs';
+import {initializeRuleLibrary,proposeRule,reviewRuleProposal} from '../lib/personal-rules.mjs';
 import {createRuleSnapshot,resolveRuleSnapshot} from '../lib/rule-resolver.mjs';
 import {selectGlossary} from '../lib/glossary.mjs';
 
@@ -38,4 +38,10 @@ test('pending profile edits preserve the prior approval and legacy effective pro
  const data=initializeRuleLibrary({learning:[entry],glossary:[]});synchronizeSampleRules(data,{now:1000});assert.equal(data.personalRules.some(r=>r.effect.text==='Not yet approved.'),false);assert.equal(data.personalRules.some(r=>r.effect.text==='Keep headings concise.'),true);
  const legacy=sample('legacy');delete legacy.status;delete legacy.analysis;legacy.rules=['Legacy effective wording.'];
  const old=initializeRuleLibrary({learning:[legacy],glossary:[]});synchronizeSampleRules(old,{now:1000});assert.equal(old.personalRules[0].approvalMode,'legacy-effective');assert.equal(old.personalRules[0].approvedAt,0);
+});
+test('explicit edits to a derived rule survive repeated sample synchronization without recreating its old value',()=>{
+ const data=initializeRuleLibrary({learning:[sample()],glossary:[]});synchronizeSampleRules(data,{now:1000});
+ const rule=data.personalRules.find(rule=>rule.effect.kind==='layout'),proposal=proposeRule(data,{operation:'replace',targetId:rule.id,targetVersion:rule.version,definition:{title:'User spacing choice',effect:{kind:'layout',key:'lineHeight',value:1.8},scope:rule.scope,origins:rule.origins,profileIds:rule.profileIds,independent:rule.independent}});
+ reviewRuleProposal(data,proposal.id,{version:1,accept:true});const before=structuredClone(data.personalRules);synchronizeSampleRules(data,{now:2000});
+ assert.deepEqual(data.personalRules,before);assert.equal(data.personalRules.filter(rule=>rule.effect.kind==='layout').length,1);assert.equal(data.personalRules.find(item=>item.id===rule.id).effect.value,1.8);
 });

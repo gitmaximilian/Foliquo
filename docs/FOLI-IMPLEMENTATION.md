@@ -18,7 +18,7 @@ Baseline: version 0.12.0, clean worktree at `0a4cd28`. Scope is the private Foli
 | F01 | Inspected | Plan and AGENTS read; storage, schema, learning approval and context/export boundaries inspected. |
 | F02 | Storage transactions implemented, API wiring pending | Bounded typed rules/proposals, explicit approval, optimistic versions, idempotent repeated approval and inactive/deleted-rule preservation implemented. Workspace schema 5, encrypted persistence and both backup formats include the library. |
 | F03 | Context integration implemented | New schema-2 context snapshots use the canonical resolver; legacy schema-1 snapshots retain prior behavior. Bound job conflict/scope questions and existing terminology questions are connected. |
-| F04 | Pending | Rule views, primary-page controls and API wiring. |
+| F04 | API implemented, UI pending | Paginated rule/proposal reads, stable-ID proposal creation, explicit single/batch review and real resolver preview; inherited session/origin/CSRF boundary. |
 | F05 | Pipeline foundation implemented | Canonical instructions and layout reach real translation/export; explicit application to old results and visual export review remain required. |
 | F06 | Pending | Foli chat, bounded encrypted conversations and provider proposal flow. |
 | F07 | In progress | Canonical sample migration is implemented; shared proposal cards, per-rule sample review and full UI/feedback integration remain required. |
@@ -57,3 +57,11 @@ New jobs freeze schema-2 context libraries and resolve approved manual/sample ru
 Canonical terms use the existing glossary selector with rule activation gating. Language aliases now share one matching/conflict group. Approved rules override template/profile defaults according to the agreed new-plan priority; legacy snapshots keep the prior priority. New sample rule feedback IDs remain eligible for ranking summaries.
 
 Evidence: focused context, learning feedback/layout and segmented translation/review runtime checks passed 20/20, including uncertain retries and restart. Follow-up context/glossary/export checks passed 12/12 after adding alias-conflict and version-trace assertions. The fictional HTTP export test makes exactly one extraction and one translation request, sees each approved wording rule once, verifies actual DOCX `w:line=360` for 1.5 spacing and verifies a multi-page PDF retains its source annex. Independent visual PDF review is still pending. Full repository/browser/platform gates will run at an integrated feature checkpoint; no feature completion or new release is claimed.
+
+### Rule-management API
+
+Added session-protected paginated rule/proposal reads and CSRF-protected proposal, approval/rejection and current-job preview endpoints. Manual origins are assigned server-side. Proposal creation uses a stable per-session request identity; approvals use exact versions and accept idempotent retries. Per-job exclusions/layout overrides enter the same validated metadata and resolver used by translation. No rule-management provider requests are issued.
+
+Sample-derived rules now retain source fingerprints separately from edited effects. A manual edit remains authoritative when the same approved sample synchronizes again, avoiding both recreation of its old value and deterministic-ID collisions. Existing source bindings remain bounded and validated. Explicit edits/enabling are marked approved rather than retaining the legacy-effective label.
+
+Write-queue completion no longer remains rejected after a handled stale/invalid rule operation; the initiating save still rejects with its original error. A stale decision does not masquerade as a disk failure. Focused HTTP/core/sample checks passed 13/13, covering replay, mismatched request IDs, real restart, preview-only exclusion, disable, CSRF refusal, atomic batch rejection, injected disk-full failure and subsequent retry. Views/chat and full feature/release gates remain pending.
