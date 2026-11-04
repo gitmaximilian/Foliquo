@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import {basename,join} from 'node:path';
 import {readFile,readdir,rm} from 'node:fs/promises';
+import {CURRENT_VERSION} from '../lib/version.mjs';
 import {setTimeout as delay} from 'node:timers/promises';
 
 if (process.platform !== 'win32') throw new Error('This native window smoke check runs on Windows only.');
@@ -11,7 +12,8 @@ const installerDirectory = join(process.cwd(), 'desktop/src-tauri/target/release
 const installerName = (await readdir(installerDirectory)).find(name => name.endsWith('-setup.exe'));
 if (!installerName) throw new Error('The Windows NSIS installer was not produced.');
 const installDir = join(tmpdir(), 'foliquo-window-install-' + randomUUID());
-const installer = spawnSync(join(installerDirectory, installerName), ['/S', '/D=' + installDir], {
+const candidateInstaller=join(installerDirectory,installerName),initialInstaller=process.env.FOLIQUO_UPGRADE_FROM_INSTALLER||candidateInstaller;
+const installer = spawnSync(initialInstaller, ['/S', '/D=' + installDir], {
   cwd: process.cwd(),
   stdio: 'inherit',
   timeout: 360000,
@@ -58,7 +60,7 @@ const child = spawn(executable, [], {
 let exited = false;
 let exitCode = null;
 child.once('exit', code => { exited = true; exitCode = code; });
-let socket;
+let socket,followupChild;
 const pending = new Map();
 const browserErrors = [];
 let commandId = 0;
@@ -150,6 +152,28 @@ try {
     throw new Error('The native window did not render the Foliquo workspace: ' + JSON.stringify({state, browserErrors: browserErrors.slice(-20), serviceLog: serviceLog.slice(-5000)}));
   }
   console.log('Windows WebView2 rendered the Foliquo workspace: ' + JSON.stringify(state));
+  const seeded=await cdp('Runtime.evaluate',{expression:"(async()=>{const s=await fetch('/api/session').then(r=>r.json());const r=await fetch('/api/preferences',{method:'POST',headers:{'content-type':'application/json','x-foliquo-csrf':s.csrf},body:JSON.stringify({locale:'en',displayName:'Fictional update check',introComplete:true})});if(!r.ok)throw new Error('Could not save fictional upgrade preferences');return r.json();})()",awaitPromise:true,returnByValue:true});
+  if(seeded.result?.exceptionDetails)throw new Error('Could not seed the isolated upgrade workspace.');
+  const keyBefore=await readFile(join(dataDir,'workspace.key')),oldRecord=JSON.parse(await readFile(join(dataDir,'service.json'),'utf8'));
+  // Simulate the orphan left by older updaters: terminate only the window,
+  // deliberately leave its Node child, then exercise the new installer hook.
+  try{socket?.close();}catch{}
+  const killed=spawnSync('taskkill.exe',['/pid',String(child.pid),'/f'],{stdio:'ignore'});
+  if(killed.status!==0)throw new Error('Could not isolate the orphan-service upgrade fixture.');
+  await Promise.race([new Promise(resolve=>child.once('exit',resolve)),delay(10000)]);
+  const oldHealth=await fetch('http://127.0.0.1:'+oldRecord.port+'/api/health',{signal:AbortSignal.timeout(3000)}).then(r=>r.json());
+  if(oldHealth.instance!==oldRecord.instance)throw new Error('The old service did not remain available for the upgrade fixture.');
+  const upgraded=spawnSync(candidateInstaller,['/UPDATE','/S','/D='+installDir],{cwd:process.cwd(),env:{...process.env,FOLIQUO_DATA_DIR:dataDir,FOLIQUO_LOG_DIR:join(dataDir,'logs')},stdio:'inherit',timeout:360000,windowsHide:true});
+  if(upgraded.error)throw upgraded.error;if(upgraded.status!==0)throw new Error('The orphan-service upgrade installer failed with exit code '+upgraded.status+'.');
+  if(!keyBefore.equals(await readFile(join(dataDir,'workspace.key'))))throw new Error('The upgrade changed the existing workspace key.');
+  followupChild=spawn(executable,[],{cwd:installDir,env:{...process.env,FOLIQUO_DATA_DIR:dataDir,FOLIQUO_LOG_DIR:join(dataDir,'logs'),FOLIQUO_NO_BROWSER:'1'},stdio:'ignore',windowsHide:false});
+  let upgradedRecord;const upgradeDeadline=Date.now()+60000;
+  while(Date.now()<upgradeDeadline){try{const record=JSON.parse(await readFile(join(dataDir,'service.json'),'utf8')),health=await fetch('http://127.0.0.1:'+record.port+'/api/health',{signal:AbortSignal.timeout(1000)}).then(r=>r.json());if(health.version===CURRENT_VERSION&&health.instance===record.instance&&health.instance!==oldRecord.instance){upgradedRecord=record;break;}}catch{}await delay(300);}
+  if(!upgradedRecord)throw new Error('The upgraded desktop did not start its new bundled service.');
+  const upgradedOrigin='http://127.0.0.1:'+upgradedRecord.port,rootResponse=await fetch(upgradedOrigin),cookie=rootResponse.headers.get('set-cookie').split(';')[0],session=await fetch(upgradedOrigin+'/api/session',{headers:{cookie}}).then(r=>r.json());
+  if(session.version!==CURRENT_VERSION||session.preferences.displayName!=='Fictional update check')throw new Error('The upgraded desktop did not preserve the fictional workspace preferences.');
+  console.log('Desktop installer upgrade preserved the encrypted workspace and replaced an orphaned old service: '+JSON.stringify({from:oldHealth.version,to:CURRENT_VERSION,keyPreserved:true,preferencesPreserved:true}));
+
 } finally {
   try { socket?.close(); } catch {}
   await stopOwnedService();
@@ -158,6 +182,7 @@ try {
     await Promise.race([new Promise(resolve => child.once('exit', resolve)), delay(10000)]);
   }
   await stopOwnedService();
+  if(followupChild?.pid&&followupChild.exitCode===null){spawnSync('taskkill.exe',['/pid',String(followupChild.pid),'/t','/f'],{stdio:'ignore'});await Promise.race([new Promise(resolve=>followupChild.once('exit',resolve)),delay(10000)]);}
   for (let attempt = 0; attempt < 8; attempt++) {
     try {
       await rm(installDir, {recursive: true, force: true});

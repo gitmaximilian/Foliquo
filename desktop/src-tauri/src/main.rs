@@ -113,6 +113,19 @@ fn start_service(app: &tauri::App) -> Result<(u16, Option<OwnedService>), String
         return Err("The desktop package is incomplete: Node, Foliquo, or LibreOffice is missing.".into());
     }
     let workspace = workspace_directory()?;
+    if let Some(health) = probe(4318) {
+        if health["application"] == "foliquo" && health["protocol"] == 1 && health["desktopBridge"] == 1
+            && health["workspaceId"] == workspace_id(&workspace) && health["version"] != env!("CARGO_PKG_VERSION") {
+            if let Some(instance) = health["instance"].as_str() {
+                let script = "const {stopPreviousService}=await import('./lib/service-upgrade.mjs'); await stopPreviousService(process.argv[1],{expectedInstance:process.argv[2],newVersion:process.argv[3]});";
+                let result = Command::new(&node).args(["--input-type=module", "-e", script])
+                    .arg(&workspace).arg(instance).arg(env!("CARGO_PKG_VERSION"))
+                    .current_dir(&service).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
+                    .status().map_err(|_| "The previous Foliquo service could not be checked. Close it before opening this version.".to_string())?;
+                if !result.success() { return Err("The previous Foliquo service is still running or could not be verified. Close its window or browser service before reopening this version. Your saved data is retained.".into()); }
+            }
+        }
+    }
     let (port, reuse) = select_port(&workspace)?;
     if reuse { return Ok((port, None)) }
     let logs = env::var_os("FOLIQUO_LOG_DIR")

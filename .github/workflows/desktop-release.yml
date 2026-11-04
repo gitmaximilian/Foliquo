@@ -54,6 +54,14 @@ jobs:
         run: |
           brew update
           brew install --cask libreoffice
+      - name: Download the previous public Windows installer for upgrade validation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $previous = Join-Path $env:RUNNER_TEMP 'Foliquo-previous-setup.exe'
+          Invoke-WebRequest 'https://github.com/gitmaximilian/Foliquo/releases/download/desktop-v0.11.11/Foliquo_0.11.11_x64-setup.exe' -OutFile $previous
+          if ((Get-FileHash $previous -Algorithm SHA256).Hash.ToLower() -ne '1fe09a395ace8312f7e25e3cbf2d6ad191b3b2707d1a518f202a4fd4dca1996c') { throw 'Previous installer checksum mismatch.' }
+          "FOLIQUO_UPGRADE_FROM_INSTALLER=$previous" >> $env:GITHUB_ENV
       - name: Install Windows export tool
         if: runner.os == 'Windows'
         shell: pwsh
