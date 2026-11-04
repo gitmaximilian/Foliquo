@@ -24,6 +24,10 @@
   <img src="https://img.shields.io/badge/interface-EN%20%2F%20DE%20%2F%20AR-27272a" alt="English, German and Arabic interface">
 </p>
 
+## Foli and personal rules
+
+Foli, manual editing and sample analysis share one reviewed rule library. Inspect scope and conflicts before translating; apply new rules to a finished translation only through a separate revision proposal. Read [the personal-rules guide](docs/PERSONAL-RULES.md) for approval, consumption, backup and update behavior.
+
 ## See the workflow
 
 [![Actual Foliquo guided demo with a fictional document](docs/images/demo-workflow.jpg)](https://maximilianauer.at/projects/foliquo/demo/?lang=en)
@@ -58,7 +62,7 @@ Foliquo opens a local browser-based workspace. It listens only on `127.0.0.1`; k
 
 **Desktop apps:** Free Windows, macOS (Apple Silicon and Intel), and Linux x64 packages are published on the [latest published GitHub desktop release](https://github.com/gitmaximilian/Foliquo/releases/latest), with a [platform install guide](docs/DESKTOP-APPS.md). Windows and macOS apps check for updates and install a verified update from inside Foliquo. Versions v0.11.8 and newer can update from inside the app; older desktop versions must first be updated manually to v0.11.8. The Windows installer and macOS apps remain unsigned by the operating systems and can show first-install warnings; Linux stays a local Flatpak bundle with manual updates. The release also includes an unsigned MSIX Store-intake candidate. It is not a direct-install package: its identity must match the app’s Partner Center identity, and Microsoft must sign a Store build before end-user installation.
 
-**Stable browser/CLI distribution:** [The latest published version](https://github.com/gitmaximilian/Foliquo/releases/latest) has verified platform downloads and checksums. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. Foliquo is not yet available through WinGet; [the Microsoft submission](https://github.com/microsoft/winget-pkgs/pull/462448) is under review.
+**Stable browser/CLI distribution:** [The latest published version](https://github.com/gitmaximilian/Foliquo/releases/latest) has verified platform downloads and checksums. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. WinGet publication is handled separately; this release does not submit a WinGet update.
 
 | Platform | Installation and use |
 | --- | --- |
