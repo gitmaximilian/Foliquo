@@ -2,6 +2,28 @@
 
 This document tracks implementation separately from automated verification and external evidence. The detailed scope and acceptance criteria are in the private handoff plan dated 30 October 2026.
 
+## Current release checkpoint — 4 November 2026
+
+Version 0.12.0 is prepared; the public version remains 0.11.11 until coordinated publication. The original package table below records earlier partial milestones; this checkpoint and the dated follow-ups describe the current implementation.
+
+| Packages | Current technical result | Evidence boundary |
+| --- | --- | --- |
+| P00–P01 | Safe reference contract and reproducible baseline implemented. | Fictional automated cases; no private reference text is exposed. |
+| P02–P04 | Encrypted record/object storage, migration, streaming, retention and recovery verified on supported CI platforms. | Compatibility/repair operations can still materialize larger records. Same-device recovery is not protection against device loss. |
+| P05, P13 | Onboarding, navigation and browser workflows implemented; focused clarification/update/profile checks pass in Chromium and WebKit, with earlier core Chromium/Firefox/WebKit evidence retained. | Human usability and assistive-technology studies remain pending. |
+| P06 | Technical corpus/reporting and independent-review tooling implemented. | No completed independent human/live quality baseline is claimed. |
+| P07 | Glossary scope, CSV conflicts and approved variants implemented and automatically checked. | Held-out terminology accuracy is unmeasured. |
+| P08–P09 | Shared document structure, editing, source anchors and exports implemented and checked with fictional documents. | Representative professional visual/layout assessment remains pending. |
+| P10 | Source inventory, editable coverage, geometry and OCR uncertainty implemented. | Coverage is not proof of semantic completeness or translation correctness; independent OCR recall/false-alarm targets are unmeasured. |
+| P11 | Resumable translation/revision, related-page hints, explicit uncertain retries, usage and budgets implemented. | Group hints can be incomplete; old jobs without valid text maps retain the legacy revision path. |
+| P12 | Page/layout analysis, opt-in learning, editable/scoped approved profiles, versioned feedback and explicit layout choices implemented. | Personal configuration does not train model weights; independent learning-benefit studies remain pending. |
+| P14 | Excluded by user instruction (rank 7). | Operating-system signing/notarization and installer trust are not added as release blockers for this task. |
+| P15 | Source distribution gates and historical Windows upgrade passed; coordinated tag builds/drafts are next. | No 0.12.0 public release yet. Website content is staged; Cloudflare needs a personal sign-in step. |
+
+Source distribution [41798384737](https://github.com/gitmaximilian/Foliquo/actions/runs/41798384737) passed all four platform builds, metadata, both Homebrew checks and official WinGet manifest validation. Historical Windows upgrade [41800425731](https://github.com/gitmaximilian/Foliquo/actions/runs/41800425731) verified real updater signatures for 0.11.11 and 0.12.0 and reported `from: 0.11.11`, `to: 0.12.0`, unchanged workspace key and retained preferences after replacing an orphaned old service. Complete source CI for the signature/alias changes passed in [41800354214](https://github.com/gitmaximilian/Foliquo/actions/runs/41800354214).
+
+The plan permits shipping technically verified functions with unmeasured benefits clearly disclosed. Human studies are not marked completed and no numerical quality/learning improvement is advertised. Release drafts will be promoted only after both source and desktop tag workflows pass.
+
 ## Baseline
 
 - Starting commit: `1bbf22f` (`docs: record v0.11.11 distribution verification`).
