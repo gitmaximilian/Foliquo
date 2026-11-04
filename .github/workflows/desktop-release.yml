@@ -186,7 +186,7 @@ jobs:
           cd release-assets
           find . -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
           sha256sum -c SHA256SUMS
-      - name: Publish the verified desktop apps release
+      - name: Stage the verified desktop apps release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -194,6 +194,6 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME#desktop-v}"
           mapfile -t assets < <(find release-assets -maxdepth 1 -type f -print | sort)
-          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Foliquo Community v$version — Desktop apps" \
-            --latest --notes-file "docs/RELEASE-$version.md" "${assets[@]}"
-          echo "Published Windows, macOS (Apple Silicon and Intel), and Linux desktop packages." >> "$GITHUB_STEP_SUMMARY"
+          gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Foliquo Community v$version — Desktop apps" \
+            --latest=false --notes-file "docs/RELEASE-$version.md" "${assets[@]}"
+          echo "Verified desktop packages are staged as a draft. Publish only after the matching source distribution gates also pass." >> "$GITHUB_STEP_SUMMARY"
