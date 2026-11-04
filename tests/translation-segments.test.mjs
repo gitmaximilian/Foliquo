@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {PDFDocument} from 'pdf-lib';
-import {approveTranslationSegmentRetry,assembleTranslatedSegments,beginTranslationSegment,buildTranslationPlan,completeTranslationSegment,failTranslationSegment,interruptTranslationSegment,markTranslationSegmentNeedsInput,resetTranslationSegmentAndDependents,translatedSegmentSourcesMatch,translatedSegmentsMatch,translationPlanProgress,translationSegmentDocuments} from '../lib/translation-segments.mjs';
+import {approveTranslationSegmentRetry,assembleTranslatedSegments,beginTranslationSegment,buildTranslationPlan,normalizeSourcePageGroups,completeTranslationSegment,failTranslationSegment,interruptTranslationSegment,markTranslationSegmentNeedsInput,resetTranslationSegmentAndDependents,translatedSegmentSourcesMatch,translatedSegmentsMatch,translationPlanProgress,translationSegmentDocuments} from '../lib/translation-segments.mjs';
 
 test('translation plans are deterministic, page ordered and bind source, model, prompt and context',()=>{
  const documents=[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('Fictional document bytes')}],sourceBlocks=[{id:'src-one',fileIndex:0,page:1},{id:'src-two',fileIndex:0,page:6}];
@@ -53,4 +53,14 @@ test('materialized PDF segments contain only their assigned source pages',async(
 test('a clarification holds later segments until its source-bound segment is rerun',()=>{
  const plan=buildTranslationPlan({documents:[{name:'fictional.pdf',type:'application/pdf',bytes:Buffer.from('Fictional source')}],pageCounts:[2],provider:'openai',model:'fixture-model',maxPagesPerSegment:1}),[first,second]=plan.segments;
  beginTranslationSegment(plan,first.id,'usage-question');markTranslationSegmentNeedsInput(plan,first.id,{resultRef:'translation-'+first.id,usageId:'usage-question'});assert.equal(first.status,'needs_input');assert.throws(()=>beginTranslationSegment(plan,second.id,'usage-second'),/Vorgelagerte/);assert.deepEqual(resetTranslationSegmentAndDependents(plan,first.id),[first.id,second.id]);beginTranslationSegment(plan,first.id,'usage-after-answer');
+});
+
+test('related page groups stay together across density boundaries and forced splits retain continuation hints',()=>{
+ const documents=[{name:'fictional-table.pdf',type:'application/pdf',bytes:Buffer.from('fictional bounded source')}],pageCounts=[6],sourceBlocks=Array.from({length:90},(_,index)=>({id:`field-${index}`,fileIndex:0,page:Math.floor(index/15)+1,source:'fictional field'})),pageGroups=[{fileIndex:0,start:3,end:5,kind:'table'}],input={documents,pageCounts,sourceBlocks,provider:'openai',model:'fictional-model'};
+ const grouped=buildTranslationPlan({...input,pageGroups});assert.deepEqual(grouped.segments.map(segment=>segment.pageRange),[[1,2],[3,5],[6,6]]);assert.ok(grouped.segments.every(segment=>segment.pageRange[1]-segment.pageRange[0]<5));assert.notEqual(grouped.sourceFingerprint,buildTranslationPlan(input).sourceFingerprint);
+ const forced=buildTranslationPlan({...input,sourceBlocks:[],pageGroups:[{fileIndex:0,start:1,end:5,kind:'related-pages'}],maxPagesPerSegment:3});assert.deepEqual(forced.segments.map(segment=>segment.pageRange),[[1,3],[4,6]]);assert.deepEqual(forced.segments[0].continuation,{fromPrevious:false,toNext:true});assert.deepEqual(forced.segments[1].continuation,{fromPrevious:true,toNext:false});const result=assembleTranslatedSegments(forced,['First fictional half','Second fictional half'],documents,pageCounts);assert.equal(translatedSegmentsMatch(result.translationSegments,result.text),true);assert.deepEqual(result.translationSegments.segments[0].continuation,forced.segments[0].continuation);
+});
+
+test('source grouping hints are bounded, coordinate-only and confined to their source pages',()=>{
+ const hints=[{fileIndex:0,start:1,end:2,kind:'table',source:'private fictional text'},{fileIndex:1,start:1,end:2,kind:'table'},{fileIndex:0,start:0,end:2,kind:'table'},{fileIndex:0,start:1,end:99,kind:'table'}];assert.deepEqual(normalizeSourcePageGroups(hints,[10,10],{fileIndex:1,pageOffset:5}),[{fileIndex:1,start:6,end:7,kind:'table'}]);assert.equal(JSON.stringify(normalizeSourcePageGroups(hints,[10,10])).includes('private'),false);assert.equal(normalizeSourcePageGroups(Array(600).fill(hints[0]),[10]).length,500);
 });
