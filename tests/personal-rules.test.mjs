@@ -66,3 +66,20 @@ test('schema-4 migration, restart and encrypted backup retain approved rules and
  reopened.data.personalRules[0].effect.value=1.2;reopened.writeMetadata=async()=>{throw Object.assign(new Error('Fictional disk full'),{code:'ENOSPC'});};await assert.rejects(()=>reopened.save(),{code:'ENOSPC'});
  assert.deepEqual(await readFile(join(directory,'workspace.enc')),committed);assert.deepEqual((await new Workspace(directory).init()).data.personalRules,[result.rule]);
 });
+test('rule transactions publish only after durable save, serialize approvals and survive concurrent ordinary saves',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-fictional-rule-transaction-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const workspace=await new Workspace(directory).init();await workspace.save();
+ const write=workspace.writeMetadata.bind(workspace);let entered,release;
+ const waiting=new Promise(resolve=>{entered=resolve;}),gate=new Promise(resolve=>{release=resolve;});
+ workspace.writeMetadata=async snapshot=>{entered();await gate;return write(snapshot);};
+ const approval=workspace.save({ruleOperation:data=>approve(data)});await waiting;
+ assert.equal(workspace.data.personalRules.length,0,'uncommitted approval is not visible');
+ workspace.data.settings.displayName='Fictional display name';const ordinary=workspace.save();release();const result=await approval;await ordinary;
+ assert.equal(workspace.data.personalRules[0].id,result.rule.id);
+ const reopened=await new Workspace(directory).init();assert.equal(reopened.data.personalRules[0].id,result.rule.id);assert.equal(reopened.data.settings.displayName,'Fictional display name');
+ workspace.writeMetadata=async()=>{throw Object.assign(new Error('Fictional denied write'),{code:'EACCES'});};
+ const before=structuredClone(workspace.data.personalRules);
+ await assert.rejects(()=>workspace.save({ruleOperation:data=>approve(data,definition({effect:{kind:'layout',key:'margin',value:22}}))}),{code:'EACCES'});
+ assert.deepEqual(workspace.data.personalRules,before,'failed approval never reaches live state');
+ workspace.writeMetadata=write;await workspace.save();assert.deepEqual((await new Workspace(directory).init()).data.personalRules,before);
+});

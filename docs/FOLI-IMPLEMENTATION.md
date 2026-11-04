@@ -16,7 +16,7 @@ Baseline: version 0.12.0, clean worktree at `0a4cd28`. Scope is the private Foli
 | Package | State | Evidence / next step |
 | --- | --- | --- |
 | F01 | Inspected | Plan and AGENTS read; storage, schema, learning approval and context/export boundaries inspected. |
-| F02 | Foundation implemented, API transactions pending | Bounded typed rules/proposals, explicit approval, optimistic versions, idempotent repeated approval and inactive/deleted-rule preservation implemented. Workspace schema 5, encrypted persistence and both backup formats include the library. |
+| F02 | Storage transactions implemented, API wiring pending | Bounded typed rules/proposals, explicit approval, optimistic versions, idempotent repeated approval and inactive/deleted-rule preservation implemented. Workspace schema 5, encrypted persistence and both backup formats include the library. |
 | F03 | Resolver foundation implemented, integration pending | Four focused tests pass: partial-order scope precedence, explicit job overrides/exclusions, pending scope, conflicts, origin neutrality and frozen rule/profile state. |
 | F04–F08 | Pending | Views, pipeline/export, chat, sample integration, upgrade and release gates remain required. |
 
@@ -31,3 +31,9 @@ Full repository gates, UI, resolver/context integration, sample conversion and r
 ### Resolver boundary
 
 `rule-resolver.mjs` is a single pure applicability/precedence implementation for the later server API and translation pipeline. Conditions override broader conditions only by containment, rather than arbitrary condition counts. Conflicting incomparable rules do not produce a layout value. Changes stay as sparse layout properties, and fixed typography/annex properties are rejected. Snapshot tests verify profile switches, per-job exceptions and rule versions. It is not yet wired into provider or renderer requests; the existing learning path remains unchanged until canonical sample conversion can replace it without duplication.
+
+### Durable approval transactions
+
+Workspace saves now accept an internal synchronous rule operation, computed against a private library copy inside the existing write queue. The live library changes only after its encrypted manifest commits. Ordinary saves queued during approval preserve the latest committed rule library; failed approval never publishes its draft state. Metadata remains serialized without reparsing large existing sample payloads. Focused transaction checks passed, including a deliberately held write, a concurrent ordinary save and injected EACCES.
+
+This storage checkpoint passed `npm test` 378/378, `npm run benchmark` (3 offline cases, zero regressions/requests), `npm run demo:build` and `npm run acceptance` 12/12 on macOS arm64. Generated tracked demo artifacts were restored after verification. These are technical storage/regression checks, not proof of the still-pending Foli UI, sample conversion or export feature.
