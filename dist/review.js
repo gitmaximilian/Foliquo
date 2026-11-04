@@ -28,7 +28,7 @@ function renderReviewControls(){
  const blocked=reviewUnavailable||!reviewData?.result;for(const id of ['review-final-pdf','review-final-word','review-final-both'])$("#"+id).disabled=blocked;
  $('#review-version').textContent=reviewData?reviewCopy('Version {version}',{version:reviewData.version}):reviewCopy('Wird geladen');
  $('#review-final-status').textContent=reviewUnavailable?reviewCopy('Dieser Auftrag ist abgelaufen. Bitte zurückgehen und die Dateien erneut hochladen.'):!reviewData?.result?reviewCopy('Die Übersetzung wird geladen …'):reviewCopy('Version {version}',{version:reviewData.version});
- renderLearningOffer(reviewData);
+ window.TOCRRuleApplication?.update(reviewData);renderLearningOffer(reviewData);
 }
 function renderLearningOffer(snapshot){
  const card=$('#learning-offer'),button=$('#review-learning-finish'),offer=snapshot?.learningOffer,state=offer?.state;
