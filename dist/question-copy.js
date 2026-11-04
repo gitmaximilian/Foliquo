@@ -4,6 +4,7 @@
 window.TOCRQuestionCopy=(question,locale='en')=>{
  const q=question||{},language=['en','de','ar'].includes(locale)?locale:'en';
  const source=String(q.source||q.context||'').replace(/^Namensabgleich:\s*/,'').replace(/^Unleserliche Stelle:\s*/,'');
+ if(q.kind==='learning-layout')return language==='en'?'Your approved samples have different layout settings. Which sample should apply to this job? Enter its number or sample name.':language==='ar'?'تختلف إعدادات التنسيق في نماذجك المعتمدة. أي نموذج تريد تطبيقه على هذه المهمة؟ أدخل رقمه أو اسمه.':q.question;
  if(q.kind==='name'){
   if(language==='en')return `Which Latin-script spelling of “${source}” appears in the passport, or should be used after verification?`;
   if(language==='ar')return `ما هي كتابة الاسم بالأحرف اللاتينية لـ «${source}» كما تظهر في جواز السفر أو التي ينبغي استخدامها بعد التحقق؟`;

@@ -34,7 +34,8 @@ import {acceptRevision,rememberVersion,commitDirect} from './lib/revisions.mjs';
 import {StandardFonts} from 'pdf-lib';
 import {reviewState,reviewSnapshot,applyReview,finalReview} from './lib/reviews.mjs';
 import {jobSourceDocuments,locateSource,saveSourceLocation} from './lib/source-location.mjs';
-import {learningList} from './lib/learning.mjs';
+import {learningLayoutQuestions} from './lib/learning-layout.mjs';
+import {beginLearningEdit,cancelLearningEdit,learningList} from './lib/learning.mjs';
 import {createContextLibrarySnapshot,resolveContextSnapshot,referenceStructure} from './lib/context.mjs';
 import {analysisPreflight,queueLearningFiles,analyzeLearningFiles,extractLocalOcrSourceBlocks} from './lib/learning-analysis.mjs';
 import {newUsageRequest,mergeUsageRequest,pruneUsage,usageSummary,estimateRequestCost} from './lib/usage.mjs';
@@ -211,7 +212,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     }
 
     if(!payload.contextSnapshot)context=await pinJobContext(payload,{...payload.metadata,documentType:payload.sourceExtraction?.documentType||payload.metadata.documentType},payload.metadata.jobId,owner,onCheckpoint);else context=payload.contextSnapshot;
-    const glossaryQuestions=payload.revision?[]:glossaryConflictQuestions(payload,context);if(glossaryQuestions.length)return {requiresInput:true,questions:glossaryQuestions,detected:{sourceLanguage:payload.metadata.sourceLanguage||'Automatisch',documentType:payload.sourceExtraction?.documentType||payload.metadata.documentType||'Dokument'}};
+    const glossaryQuestions=payload.revision?[]:[...learningLayoutQuestions(payload,context),...glossaryConflictQuestions(payload,context)];if(glossaryQuestions.length)return {requiresInput:true,questions:glossaryQuestions,detected:{sourceLanguage:payload.metadata.sourceLanguage||'Automatisch',documentType:payload.sourceExtraction?.documentType||payload.metadata.documentType||'Dokument'}};
     // The chosen term is pinned into this job's context above. Do not send the
     // question history (which contains every disputed candidate) back to the model.
     payload.metadata.clarifications=(payload.metadata.clarifications||[]).filter(item=>!String(item.context||'').startsWith('Lernregelentscheidung · '));
@@ -530,7 +531,10 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
       if(url.pathname==='/api/learning/update'){
        if(!workspace)throw new Error('Workspace erforderlich.');const input=await body(req,25000),entry=workspace.data.learning.find(item=>item.id===input.id);if(!entry)throw new Error('Muster nicht gefunden.');
        if(input.remove===true){learningTasks.get(entry.id)?.controller.abort();workspace.data.learning=workspace.data.learning.filter(item=>item.id!==entry.id);if(entry.originJobId){const sourceJob=await loadOriginJob(entry.originJobId);if(sourceJob?.learningOffer?.entryId===entry.id)sourceJob.learningOffer.state='removed';}}
+       else if(input.edit===true){beginLearningEdit(entry,input.version);}
+       else if(input.cancelEdit===true){cancelLearningEdit(entry,input.version);}
        else if(input.approve===true){
+        if(entry.pendingEdit&&input.version!==entry.version)throw new Error('Das Muster wurde geändert. Bitte die aktuelle Fassung erneut öffnen.');
         if(entry.status!=='pending_review'||entry.analysis?.complete!==true)throw new Error('Nur eine vollständig analysierte und sichtbare Vorschau kann freigegeben werden.');
         const profileText=(value,max=420)=>{if(typeof value!=='string'||value.trim().length<8||value.length>max||/[\u0000-\u001f\u007f]/u.test(value)||/\b(?:email|e-mail|https?:\/\/|www\.)/iu.test(value)||/\b\d{3,}\b/u.test(value)||/\b(?:passport|document|personal|identity|akten|ausweis|pass)[ -]?(?:no|nr|nummer|number|id)\b/iu.test(value))throw new Error('Bitte entferne persönliche Angaben aus den bearbeiteten Profilregeln.');return value.trim().replace(/\s+/gu,' ');};
         const offeredRules=Array.isArray(entry.rules)?entry.rules:[],selectedRules=input.rules===undefined?offeredRules:input.rules;if(!Array.isArray(selectedRules)||selectedRules.length>80||selectedRules.some(rule=>typeof rule!=='string'||!offeredRules.includes(rule)))throw new Error('Ungültige Regelauswahl.');const offeredFields=Array.isArray(entry.fieldLabels)?entry.fieldLabels:[],selectedFields=input.fieldLabels===undefined?offeredFields:input.fieldLabels;if(!Array.isArray(selectedFields)||selectedFields.length>120||selectedFields.some(field=>typeof field!=='string'||!offeredFields.includes(field)))throw new Error('Ungültige Feldauswahl.');
@@ -540,13 +544,15 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
         const terminology=entry.analysis.terminology||[],terminologyIds=new Set(Array.isArray(input.terminologyIds)?input.terminologyIds:terminology.map(item=>item.id));if([...terminologyIds].some(id=>!terminology.some(item=>item.id===id)))throw new Error('Ungültige Begriffsauswahl.');
         if(input.terminologyEdits!==undefined&&(!Array.isArray(input.terminologyEdits)||input.terminologyEdits.length>100))throw new Error('Zu viele Begriffsänderungen.');const terminologyEdits=new Map();for(const edit of input.terminologyEdits||[]){if(!edit||!terminologyIds.has(edit.id)||!terminology.some(item=>item.id===edit.id))throw new Error('Ungültige Begriffsänderung.');terminologyEdits.set(edit.id,{source:profileText(edit.source,100),target:profileText(edit.target,100)});}
         const applyLayout=input.applyLayout!==false;if(!applyLayout&&!selectedRules.length&&!selectedFields.length&&!observationIds.size&&!terminologyIds.size)throw new Error('Wähle mindestens eine freizugebende Regel, Feldreihenfolge, Beobachtung, Terminologie oder Layoutwerte aus.');
+        let scope=null;if(input.scope!==undefined){if(!input.scope||typeof input.scope!=='object'||Array.isArray(input.scope))throw new Error('Ungültiger Geltungsbereich.');const read=(key,max)=>{const value=input.scope[key];if(typeof value!=='string'||!value.trim()||value.length>max||/[\u0000-\u001f\u007f]/u.test(value))throw new Error('Bitte Sprache und Dokumenttyp vollständig angeben.');return value.trim();};scope={sourceLanguage:read('sourceLanguage',100),targetLanguage:read('targetLanguage',100),documentType:read('documentType',120)};}
         entry.rules=[...new Set(selectedRules.map(rule=>ruleEdits.has(rule)?ruleEdits.get(rule):rule))];entry.fieldLabels=selectedFields;
         for(const item of observations){if(observationEdits.has(item.id))item.text=observationEdits.get(item.id);item.approved=observationIds.has(item.id);}
         for(const item of terminology){const edit=terminologyEdits.get(item.id);if(edit){item.source=edit.source;item.target=edit.target;}item.approved=terminologyIds.has(item.id);}
+        if(scope){entry.documentType=scope.documentType;entry.targetLanguage=scope.targetLanguage;entry.analysis.sourceLanguage=scope.sourceLanguage;}delete entry.pendingEdit;
         entry.layoutApproved=applyLayout;entry.status='active';entry.active=true;entry.analysis.approvedAt=Date.now();entry.analysis.profileVersion=(entry.analysis.profileVersion||0)+1;
         if(entry.originJobId){const sourceJob=await loadOriginJob(entry.originJobId);if(sourceJob?.learningOffer?.entryId===entry.id)sourceJob.learningOffer.state='active';}
        }else if(typeof input.layoutApproved==='boolean'&&entry.status==='active'){entry.layoutApproved=input.layoutApproved;}else if(typeof input.active==='boolean'){if(input.active&&!['active',undefined].includes(entry.status))throw new Error('Prüfe und bestätige das Profil, bevor es angewandt wird.');entry.active=input.active;if(!entry.status&&input.active)entry.status='active';}
-       else throw new Error('Ungültige Musteraktion.');if(action!=='remove')entry.version=(entry.version||0)+1;entry.updatedAt=Date.now();await persist();json(res,{entries:learningList(workspace)});return;
+       else throw new Error('Ungültige Musteraktion.');if(input.remove!==true)entry.version=(entry.version||0)+1;entry.updatedAt=Date.now();await persist();json(res,{entries:learningList(workspace)});return;
       }
       const draftRoute=url.pathname.match(/^\/api\/jobs\/([a-f0-9-]+)\/clarification-draft$/);
       if(draftRoute){const input=await body(req),job=queue.find(draftRoute[1],active.id);let files;if(input.files!==undefined){files=input.files.length?validateDocuments(input.files):[];if(files.length)validateDocuments([...(job.payload?.files||[]),...files].map(f=>({name:f.name,type:f.type,data:f.bytes.toString('base64')})));}queue.saveClarificationDraft(job.id,active.id,input.answers,files);await persist();json(res,{saved:true,files:(job.clarificationDraft?.files||[]).map(f=>({name:f.name,type:f.type}))});return;}
