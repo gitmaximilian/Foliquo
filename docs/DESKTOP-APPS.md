@@ -1,18 +1,20 @@
 # Foliquo desktop apps
 
-Free desktop packages for Windows 10/11 x64, macOS 15+ (Apple Silicon and Intel), and Linux x64 are attached to the [desktop apps release](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v0.11.11). The release includes checksums and per-platform build reports. These are direct downloads; the GitHub Actions artifact browser is not needed.
+Free desktop packages for Windows 10/11 x64, macOS 15+ (Apple Silicon and Intel), and Linux x64 are attached to the [desktop apps release](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v0.12.0). The release includes checksums and per-platform build reports. These are direct downloads; the GitHub Actions artifact browser is not needed.
 
 ## Downloads
 
-- Windows x64 direct installer: `Foliquo_0.11.11_x64-setup.exe`
-- Windows MSIX Store-intake candidate: `Foliquo-Desktop-0.11.11-Windows-x64-Store-intake.msix` (not for direct installation; see below)
+- Windows x64 direct installer: `Foliquo_0.12.0_x64-setup.exe`
+- Windows MSIX Store-intake candidate: `Foliquo-Desktop-0.12.0-Windows-x64-Store-intake.msix` (not for direct installation; see below)
 - macOS Apple Silicon: `Foliquo-Desktop-macOS-arm64.dmg`
 - macOS Intel: `Foliquo-Desktop-macOS-x64.dmg`
-- Linux x64: `Foliquo-Desktop-0.11.11-Linux-x64.flatpak`
+- Linux x64: `Foliquo-Desktop-0.12.0-Linux-x64.flatpak`
 
 The Windows installer is a regular unsigned per-user installer. Windows SmartScreen may show a warning because the community app has no paid code-signing certificate. The macOS apps are unsigned and not notarized; after verifying the download, macOS may require a one-time Open Anyway approval in System Settings → Privacy & Security. Do not turn off either operating system’s protection globally. The Linux package is a local Flatpak bundle, not a Flathub listing. No store certification or trusted publisher signature is claimed.
 
 The separate MSIX is an unsigned Store-intake candidate, not an end-user installer. Its manifest identity is provisional; its Name and Publisher must exactly match the app identity assigned in Partner Center before submission. The candidate is not Store-certified or Store-signed and is not suitable for direct side-loading.
+
+Each desktop build also emits `BUILD-REPORT.txt` and `BUILD-REPORT.json`. The report records the build target, the platform that actually ran signature verification, per-artifact operating-system signature evidence, macOS Gatekeeper and notarization results where applicable, the separate Tauri updater-signature presence, and package checksums. Statuses such as `unsigned`, `invalid`, `mixed`, `signed-but-rejected`, and `unverified` describe different outcomes; `unverified` is not evidence that an artifact is unsigned. The updater signature does not substitute for Authenticode or Apple code signing and notarization. A report from one build must not be used to imply the status of artifacts from another platform.
 
 ## Install
 
@@ -29,7 +31,7 @@ Choose the DMG matching the Mac’s processor, open it, and drag Foliquo into Ap
 Install Flatpak if needed, then install the downloaded bundle:
 
 ```sh
-flatpak install --user ./Foliquo-Desktop-0.11.11-Linux-x64.flatpak
+flatpak install --user ./Foliquo-Desktop-0.12.0-Linux-x64.flatpak
 ```
 
 Flatpak can fetch the GNOME 50 runtime when it is not already installed. Start Foliquo from the application menu or with:
@@ -48,6 +50,14 @@ The original browser and CLI use remain available. Desktop packages include the 
 
 Windows and macOS apps check for updates when Foliquo starts and periodically while it is open. A dialog shows the new version; choosing **Update now** downloads the Tauri-signed updater package, verifies it, installs it, and restarts Foliquo. The private updater key stays in GitHub Actions secrets; the public verification key is embedded in the app. Linux continues to update by installing a newer Flatpak manually.
 
-Versions v0.11.8 and newer can update to v0.11.11 from inside Foliquo. Users of earlier versions must first install v0.11.8 manually because it introduced the updater. Updates preserve the private workspace. Use the release’s `SHA256SUMS` file to verify direct downloads. Windows and macOS packages remain unsigned and do not imply Microsoft Store, Mac App Store, or Flathub approval.
+Versions v0.11.8 and newer can update to v0.12.0 from inside Foliquo. Users of earlier versions must first install v0.11.8 manually because it introduced the updater. Updates preserve the private workspace. Use the release’s `SHA256SUMS` file to verify direct downloads. Windows and macOS packages remain unsigned and do not imply Microsoft Store, Mac App Store, or Flathub approval.
 
-The latest source and build workflow are on the [`codex/native-desktop` branch](https://github.com/gitmaximilian/Foliquo/tree/codex/native-desktop). Each build report records the source commit, target platform, and unsigned status. The packages include the required upstream license and notice files; see [third-party notices](THIRD-PARTY.md).
+The latest source and build workflow are on the [`main` branch](https://github.com/gitmaximilian/Foliquo/tree/main). Each platform build publishes a report alongside its checksums. The packages include the required upstream license and notice files; see [third-party notices](THIRD-PARTY.md).
+
+### Update troubleshooting
+
+If an automatic update fails, download the matching installer from the desktop release and replace the application. Keep the existing per-user Foliquo data folder; replacing the application does not require deleting it. Linux Flatpak installations use a newer local Flatpak bundle for updates.
+
+On macOS, copy Foliquo from its disk image into Applications, close the disk-image copy, and open the installed copy before updating. A disk-image or translocated copy cannot be replaced reliably. If startup reports an incompatible running service after an older update, close the other Foliquo window or stop its browser service before reopening the new application.
+
+Desktop builds from v0.12.0 record updater failures in `desktop-updater.log` in the application log directory (or the directory selected by `FOLIQUO_LOG_DIR`). This local log distinguishes checking from installation failures. The interface provides a manual download when automatic installation cannot start or the install location is not writable. No documents or account credentials are included in update checks.

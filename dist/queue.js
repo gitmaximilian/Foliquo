@@ -59,15 +59,15 @@ function renderFeaturedJob(){
  const job=queueState.jobs.find(item=>item.id===featuredJobId&&item.status!=='expired');
  if(!job){card.hidden=true;studio.classList.remove('is-featured');return;}
  card.hidden=false;studio.classList.add('is-featured');
- const state=queueStatus(job,queueState.paused),status=$('#featured-job-status'),title=$('#featured-job-title'),names=$('#featured-job-files'),detail=$('#featured-job-detail'),actions=$('#featured-job-actions');
- const signature=JSON.stringify([job.id,job.status,job.stage,job.targetLanguage,job.provider,job.error,job.progress,queueState.paused,job.names]);if(card.dataset.renderSignature===signature)return;card.dataset.renderSignature=signature;
+ const state=queueStatus(job,queueState.paused),locale=window.TOCRI18n?.getLocale?.()||'de',status=$('#featured-job-status'),title=$('#featured-job-title'),names=$('#featured-job-files'),detail=$('#featured-job-detail'),actions=$('#featured-job-actions');
+ const signature=JSON.stringify([locale,job.id,job.status,job.stage,job.targetLanguage,job.provider,job.error,job.progress,job.segmentProgress,queueState.paused,job.names]);if(card.dataset.renderSignature===signature)return;card.dataset.renderSignature=signature;
  const focusedAction=actions.contains(document.activeElement)?document.activeElement.dataset.queueAction:null;
  status.textContent=window.TOCRI18n?.t(state.label)||state.label;
  const titles={running:'Deine Übersetzung läuft',queued:'Übersetzung wartet',awaiting_answers:'Deine Antwort wird gebraucht',succeeded:'Deine Übersetzung ist bereit',failed:'Übersetzung fehlgeschlagen',cancelling:'Abbruch läuft',cancelled:'Auftrag abgebrochen'};
  title.textContent=window.TOCRI18n?.t(titles[job.status]||'Übersetzung wird vorbereitet')||titles[job.status]||'Übersetzung wird vorbereitet';
  names.textContent=job.names.join(' · ');names.dataset.noTranslate='';
  const progressTrack=$('#featured-job-progress'),progressFill=progressTrack.querySelector('span'),progress=actualProgress(job);progressTrack.hidden=!['queued','running','cancelling'].includes(job.status);if(progressTrack.hidden){progressTrack.classList.remove('is-indeterminate');progressTrack.removeAttribute('aria-valuenow');progressTrack.removeAttribute('aria-valuetext');progressFill.style.width='';}else if(progress===null){progressTrack.classList.add('is-indeterminate');progressTrack.removeAttribute('aria-valuenow');progressTrack.removeAttribute('aria-valuetext');progressFill.style.width='';}else{progressTrack.classList.remove('is-indeterminate');progressTrack.setAttribute('aria-valuemin','0');progressTrack.setAttribute('aria-valuemax','100');progressTrack.setAttribute('aria-valuenow',String(progress));progressTrack.setAttribute('aria-valuetext',`${progress}%`);progressFill.style.width=`${progress}%`;}
- const stage=phaseLabels[job.stage]||state.label;detail.textContent=job.status==='succeeded'?`${job.targetLanguage} · ${providerLabels[job.provider]||job.provider||'ChatGPT'}`:job.status==='failed'?(job.error||'Bitte öffne die Aufträge für Details und einen erneuten Versuch.'):`${window.TOCRI18n?.t(stage)||stage} · ${job.targetLanguage}`;
+ const stage=phaseLabels[job.stage]||state.label,segmentText=job.segmentProgress?.total>1?locale==='en'?` · ${job.segmentProgress.complete} of ${job.segmentProgress.total} sections saved`:locale==='ar'?` · تم حفظ ${job.segmentProgress.complete} من ${job.segmentProgress.total} أقسام`:` · Abschnitt ${job.segmentProgress.complete} von ${job.segmentProgress.total} gespeichert`:'';detail.textContent=job.status==='succeeded'?`${job.targetLanguage} · ${providerLabels[job.provider]||job.provider||'ChatGPT'}`:job.status==='failed'?(job.error||'Bitte öffne die Aufträge für Details und einen erneuten Versuch.'):`${window.TOCRI18n?.t(stage)||stage} · ${job.targetLanguage}${segmentText}`;
  actions.replaceChildren();
  if(job.status==='awaiting_answers')actions.append(queueButton('Rückfragen beantworten','answer',job));
  if(job.status==='succeeded'){actions.append(queueButton('Übersetzung prüfen','review',job),queueButton('PDF herunterladen','download',job),queueButton('Word herunterladen','word',job));}
@@ -129,8 +129,9 @@ function renderQueue(){
  const waiting=jobs.filter(j=>j.status==='awaiting_answers');if(clarificationJobId){const current=waiting.find(j=>j.id===clarificationJobId);if(current)showClarifications(current,false);else if(!clarificationSubmitting)closeClarifications();}
  updateQueueButton();if(typeof renderDocuments==='function'&&document.querySelector('#documents-view')&&!document.querySelector('#documents-view').hidden)renderDocuments();
 }
-window.addEventListener('translateocr-locale',()=>updateQueueLiveAnnouncement(true));
-async function jobResult(job){if(queueResultCache.has(job.id))return queueResultCache.get(job.id);const result=await localRequest(`/api/jobs/${job.id}/result`).then(r=>r.json());queueResultCache.set(job.id,result);while(queueResultCache.size>4)queueResultCache.delete(queueResultCache.keys().next().value);return result;}
+window.addEventListener('translateocr-locale',()=>{updateQueueLiveAnnouncement(true);renderFeaturedJob();});
+async function jobResult(job){if(queueResultCache.has(job.id))return queueResultCache.get(job.id);const result=await localRequest(`/api/jobs/${job.id}/result?metadata=1`).then(r=>r.json());queueResultCache.set(job.id,result);while(queueResultCache.size>4)queueResultCache.delete(queueResultCache.keys().next().value);return result;}
+async function jobSourceFiles(jobId){const {files:manifest}=await localRequest(`/api/jobs/${jobId}/source/manifest`).then(r=>r.json());return Promise.all(manifest.map(async item=>{const response=await localRequest(`/api/jobs/${jobId}/source/${item.index}`);return new File([await response.blob()],item.name,{type:item.type});}));}
 async function queueAction(action,job,launcher=document.activeElement){
  try{
   if(action==='remove'&&!confirm('Diesen Auftrag mit Dokumenten, Chat und Fassungen dauerhaft löschen?'))return;
@@ -139,21 +140,22 @@ async function queueAction(action,job,launcher=document.activeElement){
   if(action==='retry'&&job.budgetConsentRequired){const warning='Foliquo kann den Betrag dieses API-Aufrufs nicht zuverlässig schätzen. Die lokale Monatsgrenze kann dadurch überschritten werden. Diesen einen Aufruf trotzdem erlauben?';if(!confirm(window.TOCRI18n?.t(warning)||warning))return;await localRequest('/api/usage/consent-once',{provider:job.provider,model:job.model,confirm:true});}
   if(action==='review'){await openReviewWorkspace(job.id);return;}
   if(action==='answer'){showClarifications(job,true);return;}
-  if(action==='word'){const result=await jobResult(job);downloadWord(result.word,queueFilename(job).replace(/\.pdf$/,'.docx'));return;}
+  if(action==='word'){await downloadJobFile(job,'word');return;}
   if(action==='bundle'){await downloadBundle(job);markDownloaded(job.id);return;}
-  if(action==='download'){const result=await jobResult(job);downloadPDF(result.pdf,queueFilename(job));markDownloaded(job.id);return;}
+  if(action==='download'){await downloadJobFile(job,'pdf');markDownloaded(job.id);return;}
   if(action==='open'){
    if((files.length||$('#translation').value.trim())&&!confirm('Die aktuelle Auswahl und der bearbeitbare Entwurf werden durch dieses Ergebnis ersetzt. Fortfahren?'))return;
    const result=await jobResult(job);example=false;$('#target-language').value=job.targetLanguage;window.syncLanguageSelectors?.();draftTargetLanguage=job.targetLanguage;detectedDocument=result.detected||null;window.syncTranslateContext?.();convertedPreviews.clear();
    const snapshot=queueSnapshots.get(job.id);
-   files=snapshot?[...snapshot]:result.previews.map(f=>{const raw=atob(f.data),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));return new File([bytes],f.type==='application/pdf'?f.name.replace(/\.[^.]+$/,'')+'.pdf':f.name,{type:f.type});});
-   for(const f of result.previews||[])convertedPreviews.set(f.name,f);renderFiles();view('studio');openEditor(launcher);$('#translation').value=result.text;$('#draft-tag').textContent='Übersetzung abgeschlossen';document.querySelectorAll('.review-checks input').forEach(el=>el.checked=false);cachedPDF={fingerprint:pdfFingerprint(),data:result.pdf};cachedWord={fingerprint:pdfFingerprint(),data:result.word};return;
+   files=snapshot?[...snapshot]:await jobSourceFiles(job.id);
+   renderFiles();view('studio');openEditor(launcher);$('#translation').value=result.text;$('#draft-tag').textContent='Übersetzung abgeschlossen';document.querySelectorAll('.review-checks input').forEach(el=>el.checked=false);cachedPDF=null;cachedWord=null;return;
   }
-  await localRequest(`/api/jobs/${job.id}/${action}`,{});if(action==='remove'){queueSnapshots.delete(job.id);queueResultCache.delete(job.id);}await pollQueue();
+  await localRequest(`/api/jobs/${job.id}/${action}`,{});if(action==='remove'){queueSnapshots.delete(job.id);queueResultCache.delete(job.id);}await pollQueue();if(action==='remove')await window.refreshDocumentHistory?.({removeId:job.id});
  }catch(error){toast(error.message);}
 }
 function queueFilename(job){const base=job.names[0]?.replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,70)||'foliquo';return `${base}-${job.targetLanguage}-uebersetzung.pdf`;}
-async function downloadBundle(job){const response=await localRequest(`/api/jobs/${job.id}/bundle`);downloadBlob(await response.blob(),queueFilename(job).replace(/\.pdf$/,'-PDF-Word.zip'));}
+async function downloadJobFile(job,format){const response=await localRequest(`/api/jobs/${job.id}/download/${format}`);const suffix=format==='word'?'.docx':format==='bundle'?'-PDF-Word.zip':'.pdf',name=queueFilename(job).replace(/\.pdf$/,'')+suffix;downloadBlob(await response.blob(),name);}
+async function downloadBundle(job){return downloadJobFile(job,'bundle');}
 function announceCompletion(job){
  if(job.clientId!==queueClientId||queueAnnounced.has(job.id)||!job.hasResult)return;
  markCompletionAnnounced(job.id);toast('Übersetzung bereit. PDF und Word kannst du direkt herunterladen.');
@@ -238,7 +240,7 @@ function showClarifications(job,scroll){
   const fields=job.questions.map((q,i)=>{
    const field=document.createElement('div');field.className='clarification-field';field.dataset.questionId=q.id;field.addEventListener('focusin',()=>{document.querySelectorAll('.clarification-field').forEach(el=>el.classList.toggle('is-current',el===field));});
    const label=document.createElement('label');label.htmlFor=`answer-${q.id}`;label.textContent=`${i+1}. ${window.TOCRI18n?.localizeQuestion(q)||q.question}`;
-   const context=document.createElement('details');context.className='question-context';const contextTitle=document.createElement('summary');contextTitle.textContent='Kontext';const contextText=document.createElement('p');contextText.textContent=q.context;context.append(contextTitle,contextText);
+   const context=document.createElement('details');context.className='question-context';const contextTitle=document.createElement('summary');contextTitle.textContent='Kontext';const contextText=document.createElement('p');contextText.textContent=q.displayContext||q.context;context.append(contextTitle,contextText);
    const answer=document.createElement('textarea');answer.id=label.htmlFor;answer.dataset.questionId=q.id;answer.maxLength=4000;answer.required=true;answer.rows=2;answer.placeholder=window.TOCRI18n?.t('Deine Antwort …')||'Deine Antwort …';answer.value=drafts.get(q.id)||'';
    const suggestion=document.createElement('div');suggestion.className='question-suggestion';suggestion.hidden=!q.suggestion;
    const actions=document.createElement('div');actions.className='clarification-actions';
@@ -248,8 +250,8 @@ function showClarifications(job,scroll){
     const use=document.createElement('button');use.type='button';use.className='text-button question-action question-use';use.textContent='Vorschlag übernehmen';use.onclick=()=>void acceptClarification(job,q,q.suggestion);
     suggestion.append(heading,candidate);actions.append(use);
    }
-   const locate=document.createElement('button');locate.type='button';locate.className='text-button question-action question-source';locate.setAttribute('aria-pressed','false');locate.textContent='Originalstelle ansehen';locate.onclick=async()=>{document.querySelectorAll('.clarification-field').forEach(el=>el.classList.toggle('is-current',el===field));locate.disabled=true;locate.textContent='Originalstelle wird gesucht …';try{await questionOriginalReady;if(!q.box){const location=await localRequest(`/api/jobs/${job.id}/locate`,{questionId:q.id}).then(r=>r.json());Object.assign(q,location);}if(clarificationJobId===job.id&&typeof focusQuestionOriginal==='function'){await focusQuestionOriginal(q);document.querySelectorAll('#clarification-fields .question-source').forEach(button=>button.setAttribute('aria-pressed',String(button===locate)));}}catch(error){$('#clarification-error').textContent=error.message;}finally{locate.disabled=false;locate.textContent='Originalstelle ansehen';}};actions.append(locate);
-   {
+   const locate=document.createElement('button');locate.type='button';locate.className='text-button question-action question-source';locate.setAttribute('aria-pressed','false');locate.textContent='Originalstelle ansehen';locate.onclick=async()=>{document.querySelectorAll('.clarification-field').forEach(el=>el.classList.toggle('is-current',el===field));locate.disabled=true;locate.textContent='Originalstelle wird gesucht …';try{await questionOriginalReady;if(!q.box){const location=await localRequest(`/api/jobs/${job.id}/locate`,{questionId:q.id}).then(r=>r.json());Object.assign(q,location);}if(clarificationJobId===job.id&&typeof focusQuestionOriginal==='function'){await focusQuestionOriginal(q);document.querySelectorAll('#clarification-fields .question-source').forEach(button=>button.setAttribute('aria-pressed',String(button===locate)));}}catch(error){$('#clarification-error').textContent=error.message;}finally{locate.disabled=false;locate.textContent='Originalstelle ansehen';}};if(q.kind!=='learning-layout')actions.append(locate);
+   if(q.kind!=='learning-layout'){
     const unreadable=document.createElement('button');unreadable.type='button';unreadable.className='text-button question-action question-unreadable';unreadable.textContent='Unleserlich';
     unreadable.onclick=()=>void acceptClarification(job,q,null);
     actions.append(unreadable);

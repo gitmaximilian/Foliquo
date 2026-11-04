@@ -54,6 +54,17 @@ jobs:
         run: |
           brew update
           brew install --cask libreoffice
+      - name: Download the previous public Windows installer for upgrade validation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $previous = Join-Path $env:RUNNER_TEMP 'Foliquo-previous-setup.exe'
+          Invoke-WebRequest 'https://github.com/gitmaximilian/Foliquo/releases/download/desktop-v0.11.11/Foliquo_0.11.11_x64-setup.exe' -OutFile $previous
+          if ((Get-FileHash $previous -Algorithm SHA256).Hash.ToLower() -ne '1fe09a395ace8312f7e25e3cbf2d6ad191b3b2707d1a518f202a4fd4dca1996c') { throw 'Previous installer checksum mismatch.' }
+          Invoke-WebRequest 'https://github.com/gitmaximilian/Foliquo/releases/download/desktop-v0.11.11/Foliquo_0.11.11_x64-setup.exe.sig' -OutFile "$previous.sig"
+          node scripts/check-updater-signatures.mjs $previous 0.11.11
+          if ($LASTEXITCODE -ne 0) { throw 'Previous installer updater signature mismatch.' }
+          "FOLIQUO_UPGRADE_FROM_INSTALLER=$previous" >> $env:GITHUB_ENV
       - name: Install Windows export tool
         if: runner.os == 'Windows'
         shell: pwsh
@@ -84,6 +95,9 @@ jobs:
       - name: Verify the native Windows window renders the workspace
         if: runner.os == 'Windows'
         run: node scripts/smoke-desktop-window.mjs
+      - name: Verify updater artifact against the application public key
+        if: runner.os != 'Linux'
+        run: node scripts/check-updater-signatures.mjs
       - name: Collect macOS app and DMG
         if: runner.os == 'macOS'
         shell: bash
@@ -96,6 +110,7 @@ jobs:
           test -f "$updater.sig"
           ditto -c -k --sequesterRsrc --keepParent "$app" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.zip"
           hdiutil create -quiet -srcfolder "$app" -volname Foliquo -format UDZO "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.dmg"
+          node scripts/repack-dmg.mjs "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.dmg"
           cp "$updater" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.app.tar.gz"
           cp "$updater.sig" "release-desktop/final/Foliquo-Desktop-${{ matrix.platform }}.app.tar.gz.sig"
       - name: Collect Windows desktop installer
@@ -171,7 +186,7 @@ jobs:
           cd release-assets
           find . -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
           sha256sum -c SHA256SUMS
-      - name: Publish the verified desktop apps release
+      - name: Stage the verified desktop apps release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -179,6 +194,6 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME#desktop-v}"
           mapfile -t assets < <(find release-assets -maxdepth 1 -type f -print | sort)
-          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Foliquo Community v$version — Desktop apps" \
-            --latest --notes-file "docs/RELEASE-$version.md" "${assets[@]}"
-          echo "Published Windows, macOS (Apple Silicon and Intel), and Linux desktop packages." >> "$GITHUB_STEP_SUMMARY"
+          gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Foliquo Community v$version — Desktop apps" \
+            --latest=false --notes-file "docs/RELEASE-$version.md" "${assets[@]}"
+          echo "Verified desktop packages are staged as a draft. Publish only after the matching source distribution gates also pass." >> "$GITHUB_STEP_SUMMARY"

@@ -14,6 +14,11 @@ test('launcher refuses an unrelated server on the selected port',async t=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));t.after(()=>new Promise(resolve=>server.close(resolve)));
  await assert.rejects(probeService(server.address().port),/another application/);
 });
+test('launcher tolerates a slow first health response from a cold local service',async t=>{
+ const server=http.createServer((req,res)=>setTimeout(()=>res.end(JSON.stringify({application:'foliquo',protocol:1})),1300));
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));t.after(()=>new Promise(resolve=>server.close(resolve)));
+ assert.deepEqual(await probeService(server.address().port),{application:'foliquo',protocol:1});
+});
 test('installed CLI starts from another working directory, reuses the service and stops with authorization',async t=>{
  const directory=await mkdtemp(join(tmpdir(),'foliquo-launch-test-'));t.after(()=>rm(directory,{recursive:true,force:true}));
  const portServer=http.createServer();await new Promise(resolve=>portServer.listen(0,'127.0.0.1',resolve));const port=portServer.address().port;await new Promise(resolve=>portServer.close(resolve));

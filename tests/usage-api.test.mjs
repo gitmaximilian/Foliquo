@@ -34,6 +34,16 @@ test('the local API records source extraction and translation usage without retu
  assert.equal(response.status,200);assert.equal(totals.requests,2);assert.equal(totals.completeRequests,2);assert.equal(totals.inputTokens,200);assert.equal(totals.outputTokens,40);assert.equal(data.summary.operationsByProvider.find(item=>item.operation==='source_extraction').requests,1);assert.equal(data.summary.operationsByProvider.find(item=>item.operation==='translation').requests,1);assert.equal(JSON.stringify(data).includes('Alex Example'),false);assert.equal(data.chatgptRemaining.available,false);
 });
 
+test('usage can be filtered by period, provider, and individual job while retaining safe job choices',async t=>{
+ const app=await start(t,fixtureProvider()),now=Date.now(),{mergeUsageRequest}=await import('../lib/usage.mjs');
+ for(const [jobId,offset,input] of [['fictional-job-a',1000,100],['fictional-job-b',2000,300]]){const entry=newUsageRequest({provider:'openai',model:'fictional-model',operation:'translation',jobId},now-offset);app.workspace.data.usage.push(entry);mergeUsageRequest(app.workspace.data.usage,entry.id,{inputTokens:input,outputTokens:20},{complete:true},now-offset+50);}
+ await app.workspace.save();
+ const all=await app.get('/api/usage?days=30&provider=openai').then(response=>response.json());assert.deepEqual(all.jobs.map(job=>job.jobId),['fictional-job-a','fictional-job-b']);assert.equal(all.jobs[0].requests,1);assert.equal(JSON.stringify(all).includes('responseId'),false);
+ const selected=await app.get('/api/usage?days=7&provider=openai&jobId=fictional-job-a').then(response=>response.json());assert.equal(selected.summary.totals.requests,1);assert.equal(selected.summary.totals.inputTokens,100);assert.equal(selected.jobs.length,2,'filter choices remain available when one job is selected');
+ const range=await app.get(`/api/usage?provider=openai&fromMs=${now-1500}&toMs=${now-500}`).then(response=>response.json());assert.deepEqual(range.jobs.map(job=>job.jobId),['fictional-job-a']);assert.equal(range.summary.fromMs,now-1500);assert.equal(range.summary.toMs,now-500);
+ const invalid=await app.get(`/api/usage?fromMs=${now}&toMs=${now-1}`);assert.equal(invalid.status,400);
+});
+
 test('a server-reported ChatGPT plan limit is recorded as Foliquo-scoped and leaves usage unknown',async t=>{
  const provider={id:'chatgpt',selected:'chatgpt',status:()=>({connected:true,planEnabled:true}),models:async()=>[{id:'fictional-model',name:'Fictional model'}],respond:async()=>{const error=new Error('limited');error.code='subscription_sharing_usage_limit_exceeded';error.pauseQueue=true;throw error;}};
  const app=await start(t,provider),file={name:'fictional-source.txt',type:'text/plain',data:Buffer.from('Fictional source document.').toString('base64')};
@@ -47,7 +57,7 @@ test('an interrupted job is marked uncertain and is never replayed automatically
  const provider={id:'openai',selected:'openai',status:()=>({connected:true,planEnabled:true}),models:async()=>[{id:'fictional-model',name:'Fictional model'}],respond:async()=>{calls++;return 'never automatically sent';}},server=createApp({connection:{status:()=>({connected:true,planEnabled:true})},workspace,provider,port});await new Promise((resolve,reject)=>server.once('error',reject).listen(port,'127.0.0.1',resolve));
  t.after(async()=>{await new Promise(resolve=>server.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});});
  const cookie=`urkundenklar=${sessionId}`,jobs=await fetch(origin+'/api/jobs',{headers:{cookie}}).then(response=>response.json()),usageView=await fetch(origin+'/api/usage?provider=openai',{headers:{cookie}}).then(response=>response.json()),job=jobs.jobs.find(item=>item.id===jobId);
- assert.equal(job.status,'failed');assert.equal(job.interrupted,true);assert.equal(job.checkpoint.phase,'translation');assert.equal(job.checkpoint.status,'interrupted');assert.match(job.error,/erneut Verbrauch/);assert.equal(usageView.summary.totals.unknownRequests,1);assert.equal(calls,0);
+ assert.equal(job.status,'failed');assert.equal(job.interrupted,true);assert.equal(job.checkpoint.phase,'translation');assert.equal(job.checkpoint.status,'interrupted');assert.match(job.error,/erneut Verbrauch/);assert.equal(usageView.summary.totals.unknownRequests,1);assert.equal(calls,0);await workspace.tail;assert.equal((await workspace.jobStore.getJob(jobId)).status,'failed');
 });
 
 test('the local API budget stops a known-cost request before provider work starts',async t=>{
@@ -72,7 +82,7 @@ test('unknown API estimates require a deliberate, job-scoped approval',async t=>
 test('learning analysis asks for explicit approval when its API estimate is unknown',async t=>{
  let calls=0;const app=await start(t,jobProvider('unlisted-model',()=>calls++));await app.post('/api/settings',{apiBudgetUSDMonthly:0.5});const pdf=await PDFDocument.create(),page=pdf.addPage([595,842]),font=await pdf.embedFont(StandardFonts.Helvetica);page.drawText('Fictional certificate · Name: Alex Example',{x:50,y:790,font,size:12});const data=Buffer.from(await pdf.save()).toString('base64'),file={name:'fictional-learning.pdf',type:'application/pdf',data};
  const uploaded=await app.post('/api/learning/upload',{provider:'openai',model:'unlisted-model',files:[file],confirmed:true}).then(response=>response.json()),entry=await waitForLearning(app,uploaded.entry.id,'interrupted');assert.equal(calls,0);assert.equal(entry.budgetConsentRequired,true);
- const refused=await app.post(`/api/learning/${entry.id}/resume`,{confirmed:true});assert.equal(refused.status,400);const resumed=await app.post(`/api/learning/${entry.id}/resume`,{confirmed:true,allowUnknownCost:true});assert.equal(resumed.status,202);const completed=await waitForLearning(app,entry.id,'pending_review');assert.equal(completed.analysis.complete,true);assert.equal(calls,1);
+ const refused=await app.post(`/api/learning/${entry.id}/resume`,{confirmed:true});assert.equal(refused.status,400);const resumed=await app.post(`/api/learning/${entry.id}/resume`,{confirmed:true,allowUnknownCost:true});assert.equal(resumed.status,202,await resumed.clone().text());const completed=await waitForLearning(app,entry.id,'pending_review');assert.equal(completed.analysis.complete,true);assert.equal(calls,1);
 });
 
 test('ChatGPT usage history is scoped to the currently connected account',async t=>{

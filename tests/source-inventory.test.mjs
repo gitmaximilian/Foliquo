@@ -1,0 +1,133 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {PDFDocument,StandardFonts,degrees} from 'pdf-lib';
+import {createCanvas} from '@napi-rs/canvas';
+import {applySourceInventoryDecision,buildSourceInventory,extractEmbeddedSourceBlocks,sourceCoverage} from '../lib/source-inventory.mjs';
+import {locationsOnOriginal} from '../lib/source-geometry.mjs';
+import {correctScan} from '../lib/scans.mjs';
+import {extractLocalOcrSourceBlocks} from '../lib/learning-analysis.mjs';
+import {documentFromLegacyText} from '../lib/document-adapter.mjs';
+import {acceptRevision,rememberVersion} from '../lib/revisions.mjs';
+
+test('source inventory creates deterministic page IDs, links extracted fields, and leaves unreviewed page content open',()=>{
+ const files=[{data:Buffer.from('fictional input').toString('base64')}],fields=[{label:'Document number',source:'DEMO-482',translated:'Dokumentnummer DEMO-482',fileIndex:0,page:2,box:[.1,.2,.3,.1]}],document=documentFromLegacyText('Dokumentnummer DEMO-482\nWeitere Übersetzung');
+ const input={files,pageCounts:[2],fields,regions:[],document},first=buildSourceInventory(input),second=buildSourceInventory(input);
+ assert.deepEqual(first,second);assert.equal(first.items.length,3);assert.notEqual(first.items[0].id,first.items[1].id);
+ const page=first.items.find(item=>item.kind==='other'&&item.page===1),field=first.items.find(item=>item.label==='Document number');
+ assert.equal(page.coverageStatus,'unreviewed');assert.equal(field.coverageStatus,'mapped');assert.deepEqual(field.targetNodeIds,[document.blocks[0].id]);assert.equal(field.pageId,first.items.find(item=>item.page===2&&item.label==='Seite 2').id);
+ assert.deepEqual(first.summary,{total:3,reviewed:1,mapped:1,open:2,percent:33,label:'zugeordnete/geprüfte Quellbereiche'});
+});
+
+test('source coverage recognizes explicit reviewed states and reports zero items honestly',()=>{
+ assert.equal(sourceCoverage([]).percent,0);assert.equal(sourceCoverage([{coverageStatus:'unreadable-confirmed'},{coverageStatus:'excluded-reviewed'},{coverageStatus:'unreviewed'}]).reviewed,2);
+});
+
+test('duplicate source observations normalize once and table cells remain addressable nodes',()=>{
+ const field={label:'Number',source:'DEMO-482',translated:'Nummer | DEMO-482',fileIndex:0,page:1,box:[.1,.2,.3,.1]},document=documentFromLegacyText('Nummer | DEMO-482');
+ const inventory=buildSourceInventory({files:[{data:'ZmljdGlvbmFs'}],pageCounts:[1],fields:[field],regions:[{...field,kind:'stamp'}],document});
+ assert.equal(inventory.items.length,2);assert.deepEqual(inventory.items[1].targetNodeIds,[document.blocks[0].rows[0][0].id,document.blocks[0].rows[0][1].id]);
+});
+
+test('same-label repeated source blocks on different pages remain separate inventory items',async()=>{
+ const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica);
+ for(let pageNumber=1;pageNumber<=2;pageNumber++){const page=pdf.addPage([600,800]);page.drawText('FICTIONAL NAME: Alex Example',{x:72,y:700,size:14,font});}
+ const bytes=Buffer.from(await pdf.save()),files=[{name:'fictional.pdf',type:'application/pdf',data:bytes.toString('base64')}],sourceBlocks=(await extractEmbeddedSourceBlocks([{name:files[0].name,type:'application/pdf',bytes}])).map(item=>({...item,translated:'Alex Example'})),document=documentFromLegacyText('Alex Example');
+ const inventory=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document}),items=inventory.items.filter(item=>item.extractionMethod==='embedded-text');
+ assert.equal(items.length,2);assert.deepEqual(items.map(item=>item.page),[1,2]);assert.equal(new Set(items.map(item=>item.id)).size,2);assert.equal(new Set(items.map(item=>item.pageId)).size,2);assert.ok(items.every(item=>item.label==='Textzeile 1'&&item.coverageStatus==='unreviewed'&&item.targetNodeIds.length===0),'one target occurrence cannot prove both source pages were translated');
+ const review={version:1,busy:false,proposal:null,hasQuestions:false,finalizedVersion:null},job={finishedAt:1,result:{document,sourceInventory:inventory,checks:[]}};
+ applySourceInventoryDecision(job,{version:1,sourceId:items[0].id,action:'map',targetNodeIds:[document.blocks[0].id]},review);
+ const rebuilt=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document,previousInventory:inventory}),first=rebuilt.items.find(item=>item.id===items[0].id),second=rebuilt.items.find(item=>item.id===items[1].id);
+ assert.equal(first.coverageStatus,'mapped','an explicit mapping survives the rebuild');assert.deepEqual(first.targetNodeIds,[document.blocks[0].id]);assert.equal(second.coverageStatus,'unreviewed','an explicit decision for page one must not decide page two');assert.deepEqual(second.targetNodeIds,[]);
+});
+
+test('repeated target text stays ambiguous even when multiple target nodes contain it',()=>{
+ const files=[{data:Buffer.from('fictional repeated source').toString('base64')}],document=documentFromLegacyText('Alex Example\nAlex Example'),sourceBlocks=[1,2].map(page=>({kind:'paragraph',label:`Name ${page}`,fileIndex:0,page,sourceText:'Fictional source name',translated:'Alex Example',box:[.1,.1,.3,.1],extractionMethod:'embedded-text'}));
+ const inventory=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document}),items=inventory.items.filter(item=>item.extractionMethod==='embedded-text');assert.ok(items.every(item=>item.coverageStatus==='unreviewed'&&item.targetNodeIds.length===0),'the text alone cannot decide which target belongs to which page');
+ const review={version:1,busy:false,proposal:null,hasQuestions:false},job={finishedAt:1,result:{document,sourceInventory:inventory,checks:[]}};
+ for(const item of items)applySourceInventoryDecision(job,{version:review.version,sourceId:item.id,action:'map',targetNodeIds:[document.blocks[0].id]},review);
+ const rebuilt=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document,previousInventory:inventory});assert.ok(items.every(item=>rebuilt.items.find(candidate=>candidate.id===item.id).coverageStatus==='mapped'),'explicit many-to-one mappings remain supported');
+});
+
+test('different target values may map to the same translation paragraph',()=>{
+ const document=documentFromLegacyText('Name: Alex Example, date: 12.03.2000'),fields=[{label:'Name',source:'Alex Example',translated:'Alex Example',fileIndex:0,page:1},{label:'Date',source:'12.03.2000',translated:'12.03.2000',fileIndex:0,page:1}],inventory=buildSourceInventory({files:[{data:'ZmljdGlvbmFs'}],pageCounts:[1],fields,document});
+ const values=inventory.items.filter(item=>item.targetText);assert.equal(values.length,2);assert.ok(values.every(item=>item.coverageStatus==='mapped'&&item.targetNodeIds[0]===document.blocks[0].id));
+});
+
+test('a repeated source is ambiguous when different proposed target strings match one paragraph',()=>{
+ const document=documentFromLegacyText('Name: Alex Example'),sourceBlocks=[{fileIndex:0,page:1,sourceText:'Fictional repeated name',translated:'Name: Alex Example'},{fileIndex:0,page:2,sourceText:'Fictional repeated name',translated:'Alex Example'}],inventory=buildSourceInventory({files:[{data:'ZmljdGlvbmFs'}],pageCounts:[2],sourceBlocks,document});
+ const items=inventory.items.filter(item=>item.targetText);assert.equal(items.length,2);assert.ok(items.every(item=>item.coverageStatus==='unreviewed'&&item.targetNodeIds.length===0));
+});
+
+test('embedded source PDF text is extracted locally with normalized source coordinates',async()=>{
+ const pdf=await PDFDocument.create(),page=pdf.addPage([600,800]),font=await pdf.embedFont(StandardFonts.Helvetica);page.drawText('Fictional source paragraph',{x:72,y:700,size:14,font});const blocks=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}]);
+ assert.equal(blocks.length,1);assert.equal(blocks[0].sourceText,'Fictional source paragraph');assert.equal(blocks[0].kind,'heading');assert.equal(blocks[0].extractionMethod,'embedded-text');assert.equal(blocks[0].fileIndex,0);assert.equal(blocks[0].page,1);assert.equal(blocks[0].box.length,4);assert.ok(blocks[0].box.every(value=>value>=0&&value<=1));
+ const limited=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}],{maxPages:0});assert.equal(limited.truncated,true);assert.equal(limited.length,0);
+});
+
+test('embedded PDF extraction groups wrapped paragraph lines but keeps headings and tables as separate blocks',async()=>{
+ const pdf=await PDFDocument.create(),page=pdf.addPage([600,800]),font=await pdf.embedFont(StandardFonts.Helvetica);
+ page.drawText('Fictional paragraph line one',{x:60,y:700,size:11,font});page.drawText('continues on the next visual line',{x:60,y:686,size:11,font});page.drawText('and ends on a third line',{x:60,y:672,size:11,font});
+ page.drawText('FICTIONAL CERTIFICATE',{x:60,y:620,size:20,font});
+ page.drawText('Field A',{x:60,y:570,size:11,font});page.drawText('Value A',{x:260,y:570,size:11,font});page.drawText('Field B',{x:60,y:550,size:11,font});page.drawText('Value B',{x:260,y:550,size:11,font});
+ const blocks=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}]);
+ assert.equal(blocks.length,6);assert.deepEqual(blocks.map(block=>block.kind),['paragraph','paragraph','paragraph','heading','table','table']);assert.deepEqual(blocks.slice(0,3).map(block=>block.sourceText),['Fictional paragraph line one','continues on the next visual line','and ends on a third line']);assert.equal(new Set(blocks.slice(0,3).map(block=>block.sourceGroup.id)).size,1);assert.ok(blocks.slice(0,3).every(block=>block.sourceGroup.kind==='paragraph'&&block.sourceGroup.lineCount===3));assert.deepEqual(blocks.slice(0,3).map(block=>block.sourceGroup.lineIndex),[1,2,3]);assert.equal(blocks[3].sourceText,'FICTIONAL CERTIFICATE');assert.match(blocks[4].sourceText,/Field A.*Value A/u);assert.match(blocks[5].sourceText,/Field B.*Value B/u);assert.ok(blocks.every(block=>block.extractionMethod==='embedded-text'));
+});
+
+test('embedded text geometry survives intrinsic rotation plus corrected crop, rotation, and page reorder',async()=>{
+ const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica);
+ for(const angle of [0,90,180,270]){const page=pdf.addPage([600,800]);page.drawText(`SYNTHETIC-PAGE-${angle}`,{x:170,y:320,size:18,font});page.setRotation(degrees(angle));}
+ const originalBytes=Buffer.from(await pdf.save()),pageOrder=[4,2,1,3],crops=Object.fromEntries([1,2,3,4].map(page=>[page,[.05,.05,.9,.9]]));
+ const original=await extractEmbeddedSourceBlocks([{name:'original.pdf',type:'application/pdf',bytes:originalBytes}]),expected=new Map(original.map(item=>[item.sourceText,item]));
+ for(const rotation of [0,90,180,270]){
+  const corrected=await correctScan({name:'fictional.pdf',type:'application/pdf',bytes:originalBytes},{pageOrder,rotation,crops});
+  const working=await extractEmbeddedSourceBlocks([{name:'corrected.pdf',type:'application/pdf',bytes:corrected.bytes}]);
+  const mapped=locationsOnOriginal(working,[{fileIndex:0,pageOrder,rotation,crops}],['application/pdf']),fixtures=mapped.filter(value=>value.sourceText.startsWith('SYNTHETIC-PAGE-'));assert.equal(fixtures.length,4);
+  for(const item of fixtures){
+   const reference=expected.get(item.sourceText);assert.ok(reference,`original source block for ${item.sourceText}`);assert.equal(item.page,reference.page);
+   for(let axis=0;axis<4;axis++)assert.ok(Math.abs(item.box[axis]-reference.box[axis])<.002,`correction ${rotation}° ${item.sourceText} axis ${axis}: ${item.box} vs ${reference.box}`);
+  }
+ }
+});
+
+test('local OCR adds uncertain source lines with bounded page geometry',async()=>{
+ const canvas=createCanvas(1200,500),context=canvas.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,1200,500);context.fillStyle='#000';context.font='bold 76px Arial';context.fillText('FICTIONAL SOURCE TEXT',55,220);
+ const pdf=await PDFDocument.create();pdf.addPage([600,300]);const page=pdf.addPage([600,300]),image=await pdf.embedPng(canvas.toBuffer('image/png'));page.drawImage(image,{x:20,y:20,width:560,height:260});const blocks=await extractLocalOcrSourceBlocks([{name:'fictional-scan.pdf',type:'application/pdf',bytes:Buffer.from(await pdf.save())}],{pageSelection:[{fileIndex:0,page:2}]});
+ assert.ok(blocks.length>=1);assert.equal(blocks.ocrIncomplete,false);assert.match(blocks.map(block=>block.sourceText).join(' '),/FICTIONAL SOURCE TEXT/i);assert.ok(blocks.every(block=>block.page===2&&Array.isArray(block.box)&&block.box.length===4&&block.box.every(value=>Number.isFinite(value)&&value>=0&&value<=1)));assert.ok(blocks.every(block=>block.extractionMethod==='local-ocr'&&block.certainty==='uncertain'&&Number.isFinite(block.confidence)));assert.ok(blocks.every(block=>block.sourceGroup?.kind==='paragraph'&&Number.isInteger(block.sourceGroup.lineIndex)));
+ const inventory=buildSourceInventory({files:[{data:Buffer.from('fictional scan').toString('base64')}],pageCounts:[2],sourceBlocks:blocks,document:documentFromLegacyText('target text')});const ocr=inventory.items.find(item=>item.extractionMethod==='local-ocr');assert.equal(ocr.coverageStatus,'unreviewed');assert.equal(ocr.confidence,blocks[0].confidence);assert.equal(ocr.page,2);assert.equal(inventory.items.filter(item=>item.kind==='other'&&item.label.startsWith('Seite')).length,2);
+});
+
+test('optional local OCR failures stay visible as incomplete review instead of failing the translated document',async()=>{
+ const blocks=await extractLocalOcrSourceBlocks([{name:'broken.pdf',type:'application/pdf',bytes:Buffer.from('not a PDF')}]);assert.equal(blocks.length,0);assert.equal(blocks.ocrIncomplete,true);
+});
+
+test('source mappings are editable, versioned, and invalidate only their affected review checks',()=>{
+ const document=documentFromLegacyText('Translated name\nAn unrelated paragraph'),source={id:'src-1',pageId:'page-1',documentId:'doc-1',kind:'other',label:'Name',fileIndex:0,page:1,box:null,extractionMethod:'model',fieldId:'field-1',sourceText:'Source name',targetText:'Translated name',coverageStatus:'unreviewed',targetNodeIds:[],review:null};
+ const job={id:'job',finishedAt:1,result:{text:'Translated name\nAn unrelated paragraph',document,sourceInventory:{schema:1,items:[source],summary:sourceCoverage([source])},checks:[{id:'field-1',confirmed:true},{id:'other-field',confirmed:true},{id:'completeness',confirmed:true}]}};const review={version:1,busy:false,proposal:null,hasQuestions:false,finalizedVersion:1};
+ const change=applySourceInventoryDecision(job,{version:1,sourceId:'src-1',action:'map',targetNodeIds:[document.blocks[0].id]},review);
+ assert.equal(review.version,2);assert.equal(review.finalizedVersion,null);assert.equal(job.result.sourceInventory.items[0].coverageStatus,'mapped');assert.deepEqual(document.blocks[0].sourceBlockIds,['src-1']);assert.deepEqual(change.invalidatedCheckIds,['field-1']);assert.equal(job.result.checks.find(check=>check.id==='other-field').confirmed,true);assert.equal(job.result.checks.find(check=>check.id==='completeness').confirmed,true);
+ assert.throws(()=>applySourceInventoryDecision(job,{version:1,sourceId:'src-1',action:'unmap'},review),/aktuelle abgeschlossene Fassung/);
+ const unmap=applySourceInventoryDecision(job,{version:2,sourceId:'src-1',action:'unmap'},review);assert.equal(job.result.sourceInventory.items[0].coverageStatus,'unreviewed');assert.deepEqual(document.blocks[0].sourceBlockIds,[]);assert.equal(unmap.invalidatedCheckIds.length,0);
+ assert.throws(()=>applySourceInventoryDecision(job,{version:3,sourceId:'src-1',action:'exclude',reason:'  '},review),/Begründung/);
+ applySourceInventoryDecision(job,{version:3,sourceId:'src-1',action:'exclude',reason:'Not part of this translation.'},review);assert.equal(job.result.sourceInventory.items[0].coverageStatus,'excluded-reviewed');assert.equal(job.result.sourceInventory.items[0].review.reason,'Not part of this translation.');
+});
+
+test('manual source decisions survive a deterministic inventory rebuild',()=>{
+ const files=[{data:Buffer.from('fictional-source').toString('base64')}],document=documentFromLegacyText('Fictional translated name'),sourceBlocks=[{kind:'paragraph',label:'Fictional name',fileIndex:0,page:1,sourceText:'Example name',translated:'Fictional translated name',box:[.1,.1,.4,.1],extractionMethod:'embedded-text'}];
+ const first=buildSourceInventory({files,pageCounts:[1],sourceBlocks,document});const item=first.items.find(value=>value.label==='Fictional name'),job={finishedAt:1,result:{document,sourceInventory:first,checks:[]}},review={version:1,busy:false,proposal:null,hasQuestions:false,finalizedVersion:null};
+ applySourceInventoryDecision(job,{version:1,sourceId:item.id,action:'map',targetNodeIds:[document.blocks[0].id]},review);
+ const rebuilt=buildSourceInventory({files,pageCounts:[1],sourceBlocks,document,previousInventory:job.result.sourceInventory});const mapped=rebuilt.items.find(value=>value.id===item.id);
+ assert.equal(mapped.coverageStatus,'mapped');assert.deepEqual(mapped.targetNodeIds,[document.blocks[0].id]);assert.equal(mapped.review.decision,'map');assert.deepEqual(document.blocks[0].sourceBlockIds,[item.id]);
+});
+
+test('embedded text grouping preserves pre-group inventory IDs and review decisions',async()=>{
+ const pdf=await PDFDocument.create(),page=pdf.addPage([600,800]),font=await pdf.embedFont(StandardFonts.Helvetica);page.drawText('Fictional first line',{x:60,y:700,size:11,font});page.drawText('Fictional second line',{x:60,y:686,size:11,font});const bytes=Buffer.from(await pdf.save()),file={name:'fictional.pdf',type:'application/pdf',data:bytes.toString('base64')},rows=await extractEmbeddedSourceBlocks([{type:file.type,bytes}]),document=documentFromLegacyText('Translated first line\nTranslated second line');
+ const oldStyle=rows.map((row,index)=>{const {sourceGroup,...withoutGroup}=row;return {...withoutGroup,label:`Textzeile ${rows.length-index}`};}),legacy=buildSourceInventory({files:[file],pageCounts:[1],sourceBlocks:oldStyle,document}),legacyLines=legacy.items.filter(item=>item.extractionMethod==='embedded-text'),review={version:1,busy:false,proposal:null,hasQuestions:false,finalizedVersion:1},job={finishedAt:1,result:{document,sourceInventory:legacy,checks:[]}};
+ applySourceInventoryDecision(job,{version:1,sourceId:legacyLines[1].id,action:'map',targetNodeIds:[document.blocks[1].id]},review);
+ const rebuilt=buildSourceInventory({files:[file],pageCounts:[1],sourceBlocks:rows,document,previousInventory:legacy});const preserved=rebuilt.items.find(item=>item.sourceText==='Fictional second line');assert.equal(preserved.id,legacyLines[1].id);assert.equal(preserved.review.version,2);assert.deepEqual(preserved.targetNodeIds,[document.blocks[1].id]);assert.ok(preserved.sourceGroup);
+});
+
+test('revision restore recovers the matching source map and document nodes',async()=>{
+ const document=documentFromLegacyText('Fictional translation'),item={id:'src-revision',documentId:'doc',pageId:'page',kind:'paragraph',label:'Fictional source',fileIndex:0,page:1,box:null,extractionMethod:'model',sourceText:'PRIVATE SOURCE',targetText:'Fictional translation',coverageStatus:'unreviewed',targetNodeIds:[],review:null},job={id:'job',status:'succeeded',finishedAt:1,result:{text:'Fictional translation',document,sourceInventory:{schema:1,items:[item],summary:sourceCoverage([item])},checks:[]}},review={version:1,busy:false,hasQuestions:false,messages:[],requests:[],finalizedVersion:null};job.review=review;
+ const firstTarget=document.blocks[0].id;rememberVersion(job);applySourceInventoryDecision(job,{version:1,sourceId:item.id,action:'map',targetNodeIds:[firstTarget]},review);rememberVersion(job);applySourceInventoryDecision(job,{version:2,sourceId:item.id,action:'unmap'},review);
+ const restored=await acceptRevision(job,{action:'restore',version:3,restoreVersion:2},async(text,base)=>({...base,text}));assert.equal(restored.version,4);assert.deepEqual(job.result.document.blocks[0].sourceBlockIds,[item.id]);assert.equal(job.result.sourceInventory.items[0].review.decision,'map');assert.equal(JSON.stringify(restored.versions).includes('PRIVATE SOURCE'),false);
+});
