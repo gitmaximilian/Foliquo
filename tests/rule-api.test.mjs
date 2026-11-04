@@ -33,6 +33,8 @@ test('rule HTTP flow requires approval, preserves request identity and previews 
  const disabled=await call('/api/personal-rules/proposals',{requestId:randomUUID(),operation:'disable',targetId:rule.id,targetVersion:rule.version});assert.equal(disabled.status,201);
  assert.equal((await call('/api/personal-rules/review',{id:disabled.data.proposal.id,version:1,accept:true})).status,200);
  assert.equal((await call('/api/personal-rules?status=inactive')).data.total,1);assert.equal((await call('/api/personal-rules/preview',{metadata:{targetLanguage:'Deutsch'}})).data.appliedRules.length,0);
+ assert.equal((await call('/api/personal-rules?targetLanguage=English')).data.total,0);
+ assert.equal((await call('/api/personal-rules/clear-reviewed',{confirm:true})).status,200);assert.equal(workspace.data.ruleProposals.length,0);assert.equal(workspace.data.personalRules[0].status,'inactive');
  assert.equal((await call('/api/personal-rules/proposals',{requestId:randomUUID(),definition},{'x-foliquo-csrf':'invalid'})).status,403);assert.equal(requests(),0);
 });
 test('stale batch decisions and failed writes cannot partially publish a rule',async t=>{
@@ -44,4 +46,14 @@ test('stale batch decisions and failed writes cannot partially publish a rule',a
  const rule=workspace.data.personalRules[0],stale=await call('/api/personal-rules/proposals',{requestId:randomUUID(),operation:'disable',targetId:rule.id,targetVersion:rule.version+1});
  assert.equal((await call('/api/personal-rules/review',{id:stale.data.proposal.id,version:1,accept:true})).status,409);assert.equal(workspace.data.personalRules[0].status,'active');
  assert.equal((await call('/api/session')).data.storageError,null,'a stale decision is not a storage failure');
+});
+test('adjusting a pending proposal supersedes it atomically and selected proposals can be approved together',async t=>{
+ const {workspace,call,requests}=await setup(t),original=(await call('/api/personal-rules/proposals',{requestId:randomUUID(),definition})).data.proposal;
+ const adjustment={requestId:randomUUID(),definition:{...definition,title:'Adjusted fictional spacing',effect:{kind:'layout',key:'lineHeight',value:1.2}},supersedes:{id:original.id,version:original.version}};
+ const changed=await call('/api/personal-rules/proposals',adjustment);assert.equal(changed.status,201);assert.equal(workspace.data.personalRules.length,0);assert.equal(workspace.data.ruleProposals.find(item=>item.id===original.id).status,'rejected');
+ assert.equal((await call('/api/personal-rules/proposals',adjustment)).data.replayed,true);
+ const before=structuredClone(workspace.data.ruleProposals);assert.equal((await call('/api/personal-rules/proposals',{...adjustment,requestId:randomUUID()})).status,409);assert.deepEqual(workspace.data.ruleProposals,before);
+ const second=(await call('/api/personal-rules/proposals',{requestId:randomUUID(),definition:{...definition,title:'Fictional margins',effect:{kind:'layout',key:'margin',value:22}}})).data.proposal;
+ const accepted=await call('/api/personal-rules/review',{items:[changed.data.proposal,second].map(item=>({id:item.id,version:item.version,accept:true}))});assert.equal(accepted.status,200);assert.equal(workspace.data.personalRules.length,2);
+ assert.equal((await call('/api/personal-rules/clear-reviewed',{confirm:false})).status,400);assert.equal((await call('/api/personal-rules/clear-reviewed',{confirm:true})).status,200);assert.equal(workspace.data.ruleProposals.length,0);assert.equal(workspace.data.personalRules.length,2);assert.equal(requests(),0);
 });

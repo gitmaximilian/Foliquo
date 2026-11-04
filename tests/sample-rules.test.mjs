@@ -44,4 +44,5 @@ test('explicit edits to a derived rule survive repeated sample synchronization w
  const rule=data.personalRules.find(rule=>rule.effect.kind==='layout'),proposal=proposeRule(data,{operation:'replace',targetId:rule.id,targetVersion:rule.version,definition:{title:'User spacing choice',effect:{kind:'layout',key:'lineHeight',value:1.8},scope:rule.scope,origins:rule.origins,profileIds:rule.profileIds,independent:rule.independent}});
  reviewRuleProposal(data,proposal.id,{version:1,accept:true});const before=structuredClone(data.personalRules);synchronizeSampleRules(data,{now:2000});
  assert.deepEqual(data.personalRules,before);assert.equal(data.personalRules.filter(rule=>rule.effect.kind==='layout').length,1);assert.equal(data.personalRules.find(item=>item.id===rule.id).effect.value,1.8);
+ data.learning=[sample('replacement-sample')];synchronizeSampleRules(data,{now:3000});assert.equal(new Set(data.personalRules.map(item=>item.id)).size,data.personalRules.length);assert.equal(data.personalRules.filter(item=>item.effect.kind==='layout').length,2,'a newly approved source must not overwrite the edited rule from a removed source');
 });

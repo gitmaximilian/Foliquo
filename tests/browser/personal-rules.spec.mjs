@@ -1,0 +1,32 @@
+import {test,expect} from '@playwright/test';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createServer} from 'node:net';
+import {Workspace} from '../../lib/workspace.mjs';
+import {createApp} from '../../server.mjs';
+
+test('rules can be proposed, approved, excluded for one job, edited and switched without provider requests',async({page},testInfo)=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-fictional-rule-ui-')),workspace=await new Workspace(directory).init();
+ const probe=createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));
+ let providerRequests=0;const provider={id:'fixture',selected:'fixture',status:()=>({connected:false,planEnabled:false}),summaries:()=>[{id:'fixture',connected:false}],models:async()=>[],respond:async()=>{providerRequests++;throw new Error('Unexpected provider request');}};
+ const app=createApp({workspace,port,provider,connection:{data:{}}});await new Promise(resolve=>app.listen(port,'127.0.0.1',resolve));const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ try{
+  await page.goto(`http://127.0.0.1:${port}`);expect(errors).toEqual([]);await page.locator('#intro-skip').click();await page.waitForFunction(()=>typeof csrf!=='undefined'&&csrf&&window.TOCRRules);await page.evaluate(()=>view('workspace',{historyMode:'none'}));
+  await page.locator('#rule-library-tab').click();await expect(page.locator('#personal-rules-panel')).toBeVisible();await page.locator('#rule-add').click();
+  const form=page.locator('#personal-rule-form');await form.locator('[name=title]').fill('Fictional spacing rule');await form.locator('[name=number]').fill('1,5');await form.locator('[name=targetLanguage]').selectOption('de');await form.getByRole('button',{name:'Save proposal',exact:true}).click();
+  const proposal=page.locator('#rule-proposals .rule-proposal');await expect(proposal).toHaveCount(1);expect(workspace.data.personalRules).toHaveLength(0);await proposal.getByRole('button',{name:'Adjust',exact:true}).click();await form.locator('[name=title]').fill('Fictional spacing rule');await form.getByRole('button',{name:'Save proposal',exact:true}).click();await expect(proposal).toHaveCount(1);expect(workspace.data.personalRules).toHaveLength(0);await proposal.getByRole('checkbox',{name:'Select proposal',exact:true}).check();await page.locator('#rule-accept-selected').click();
+  const card=page.locator('#rule-list .rule-card');await expect(card).toHaveCount(1);await expect(card.getByRole('checkbox')).toBeChecked();expect(workspace.data.personalRules[0].effect.value).toBe(1.5);
+  await page.evaluate(()=>view('studio',{historyMode:'none'}));await expect(page.locator('#job-rules')).toContainText('1 effective');await page.locator('#job-rules').click();const overview=page.locator('#job-rules-dialog');await expect(overview).toBeVisible();await overview.getByLabel('Use for this job',{exact:true}).uncheck();
+  await expect(page.locator('#job-rules')).toContainText('0 effective');expect(workspace.data.personalRules[0].status).toBe('active');expect(await page.evaluate(()=>documentMetadata().excludedRuleIds)).toEqual([workspace.data.personalRules[0].id]);
+  await overview.getByRole('button',{name:'Manage rules',exact:true}).click();await card.getByRole('checkbox').uncheck();await expect.poll(()=>workspace.data.personalRules[0].status).toBe('inactive');await expect(card.getByRole('checkbox')).toBeEnabled();await expect(card.getByRole('checkbox')).not.toBeChecked();
+  await card.getByRole('button',{name:'Edit',exact:true}).click();await form.locator('[name=number]').fill('1,2');await form.getByRole('button',{name:'Save proposal',exact:true}).click();await proposal.getByRole('button',{name:'Accept rule',exact:true}).click();await expect(card).toContainText('1.2');await expect(card.getByRole('checkbox')).not.toBeChecked();
+  await card.getByRole('checkbox').check();await expect.poll(()=>workspace.data.personalRules[0].status).toBe('active');await expect(card.getByRole('checkbox')).toBeEnabled();await expect(card.getByRole('checkbox')).toBeChecked();await page.evaluate(()=>window.TOCRRules.resetJobOptions());
+  await page.locator('#rule-target-language').selectOption('en');await expect(card).toHaveCount(0);await page.locator('#rule-target-language').selectOption('de');await expect(card).toHaveCount(1);
+  await card.getByRole('button',{name:'Duplicate',exact:true}).click();await form.locator('[name=title]').fill('Fictional margins');await form.locator('[name=property]').selectOption('margin');await form.locator('[name=number]').fill('22');await form.getByRole('button',{name:'Save proposal',exact:true}).click();await expect(proposal).toHaveCount(1);await proposal.getByRole('button',{name:'Discard',exact:true}).click();await expect(proposal).toHaveCount(0);expect(workspace.data.personalRules).toHaveLength(1);
+  await page.setViewportSize({width:375,height:800});
+  for(const [language,label]of [['de','Regeln'],['ar','القواعد']]){await page.evaluate(language=>window.TOCRI18n.setLocale(language),language);await expect(page.locator('#rule-library-tab')).toHaveText(label);await expect(card).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);}
+  await expect(page.locator('html')).toHaveAttribute('dir','rtl');await page.screenshot({path:join(process.cwd(),'outputs',`foli-rules-ar-mobile-${testInfo.project.name}.png`),fullPage:true});
+  await workspace.tail;const reopened=await new Workspace(directory).init();expect(reopened.data.personalRules[0].effect.value).toBe(1.2);expect(reopened.data.personalRules[0].status).toBe('active');expect(providerRequests).toBe(0);expect(errors).toEqual([]);
+ }finally{await page.close();await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});}
+});
