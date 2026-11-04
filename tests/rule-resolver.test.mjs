@@ -22,7 +22,7 @@ test('unknown scope, mismatch, per-job exclusion and explicit override have dist
  assert.throws(()=>resolvePersonalRules(data.personalRules,meta,{layoutOverrides:{fontSize:10}}));
 });
 test('profile controls only dependent sample rules and snapshots retain rule versions and activation decisions',()=>{
- const data=initializeRuleLibrary({learning:[{id:'fictional-sample',active:true,status:'active'}]});
+ const data=initializeRuleLibrary({learning:[{id:'fictional-sample',active:true,status:'active',documentType:'Geburtsurkunde',targetLanguage:'Deutsch'}]});
  const sample=add(data,{profileIds:['fictional-sample'],independent:false,origins:[{kind:'sample',id:'fictional-sample',version:1,method:'observed'}]});
  const independent=add(data,{key:'margin',value:22});const snapshot=createRuleSnapshot(data);
  let result=resolveRuleSnapshot(snapshot,{...meta,useLearning:false});assert.equal(result.decisions.find(d=>d.id===sample.id).state,'profile_inactive');assert.equal(result.decisions.find(d=>d.id===independent.id).state,'effective');
