@@ -1,6 +1,6 @@
 const $=s=>document.querySelector(s),uiText=value=>window.TOCRI18n?.t(value)||value;let files=[],urls=[],example=false,detectedDocument=null,draftTargetLanguage=null;let toastTimer;let studioDraftTimer=null,studioDraftWrite=Promise.resolve(),studioDraftRestoring=false,studioDraftFilesDirty=false,manualSourceChanged=false;const typeNames={license:'Führerschein',birth:'Geburtsurkunde',marriage:'Heiratsurkunde',other:'Urkunde'};let lastAnnouncedFileCount=null;
 function toast(message,action=null){const host=$('#toast');(document.querySelector('dialog[open]')||document.body).append(host);host.replaceChildren(document.createTextNode(message));if(action?.label&&typeof action.onClick==='function'){const button=document.createElement('button');button.type='button';button.className='toast-action';button.textContent=action.label;button.onclick=()=>{host.style.display='none';action.onClick();};host.append(button);}host.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>host.style.display='none',action?12000:5000)}
-const workspaceViews=['studio','documents','guide','review','workspace'];
+const workspaceViews=['studio','documents','guide','review','workspace','foli'];
 function view(name,{historyMode='push'}={}){
  if(!workspaceViews.includes(name))name='studio';
  if(name==='review'&&(typeof reviewJobId==='undefined'||!reviewJobId))name='studio';
@@ -9,7 +9,7 @@ function view(name,{historyMode='push'}={}){
  document.querySelectorAll('[data-page-heading]').forEach(el=>el.hidden=el.dataset.pageHeading!==name);
  for(const n of workspaceViews){$(`#${n}-view`).hidden=n!==name;const nav=document.querySelector(`header nav [data-view="${n}"]`);if(nav){nav.classList.toggle('active',n===name);if(n===name)nav.setAttribute('aria-current','page');else nav.removeAttribute('aria-current');}}
  document.querySelector('.workspace-layout').dataset.view=name;
- $('#breadcrumb').textContent={studio:'Übersetzen',documents:'Bibliothek',guide:'Hinweise',review:'Bearbeiten',workspace:'Anlernen'}[name];
+ $('#breadcrumb').textContent={studio:'Übersetzen',documents:'Bibliothek',guide:'Hinweise',review:'Bearbeiten',workspace:'Anlernen',foli:'Foli'}[name];
  const reviewExtras=$('#review-extras');if(reviewExtras)reviewExtras.hidden=name!=='review';
  if(name==='documents')renderDocuments();if(name==='workspace'&&typeof loadLibrary==='function')void loadLibrary();
  if(historyMode!=='none'){const url=new URL(location.href);url.searchParams.set('view',name);if(name==='review')url.searchParams.set('job',reviewJobId);else url.searchParams.delete('job');if(historyMode==='replace'||url.href!==location.href)history[historyMode==='replace'?'replaceState':'pushState']({view:name},'',url);}

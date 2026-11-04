@@ -16,11 +16,11 @@ Baseline: version 0.12.0, clean worktree at `0a4cd28`. Scope is the private Foli
 | Package | State | Evidence / next step |
 | --- | --- | --- |
 | F01 | Inspected | Plan and AGENTS read; storage, schema, learning approval and context/export boundaries inspected. |
-| F02 | Storage transactions implemented, API wiring pending | Bounded typed rules/proposals, explicit approval, optimistic versions, idempotent repeated approval and inactive/deleted-rule preservation implemented. Workspace schema 5, encrypted persistence and both backup formats include the library. |
+| F02 | Implemented; final upgrade gates pending | Bounded typed rules/proposals, explicit approval, optimistic versions, idempotent repeated approval and inactive/deleted-rule preservation implemented. Workspace schema 5, encrypted persistence and both backup formats include the library. |
 | F03 | Context integration implemented | New schema-2 context snapshots use the canonical resolver; legacy schema-1 snapshots retain prior behavior. Bound job conflict/scope questions and existing terminology questions are connected. |
 | F04 | Rule-management UI implemented; final feature gates pending | Learning tabs, rule filters/edit/duplicate/switch/delete, proposal adjustment and individual/selected approval, and primary-page job overview use the shared API/resolver. Chromium/WebKit focused workflows pass. |
 | F05 | Pipeline foundation implemented | Canonical instructions and layout reach real translation/export; explicit application to old results and visual export review remain required. |
-| F06 | Pending | Foli chat, bounded encrypted conversations and provider proposal flow. |
+| F06 | Chat/provider foundation implemented; final feature acceptance pending | Encrypted bounded history, one metered provider call per turn, explicit typed drafts, shared review cards, cancellation/uncertain retry and existing budget consent are connected. |
 | F07 | In progress | Canonical sample migration is implemented; shared proposal cards, per-rule sample review and full UI/feedback integration remain required. |
 | F08 | Pending | Historical upgrade, complete feature/browser/platform gates and release. |
 
@@ -84,3 +84,14 @@ Foli conversations now have a bounded metadata index and separate immutable AES-
 Streamed backups include authenticated conversation frames and lease their immutable records during concurrent edits. Restore validates all records, reencrypts under the destination key, remaps the importing owner and commits atomically with jobs and metadata. Recovery points include the chat store. Explicit chat exclusion retains the rule library; the legacy synchronous backup refuses silent history loss.
 
 Evidence: all six conversation-store cases pass, including injected disk-full restore rollback, truncated archive, owner isolation, restart, recovery-point rollback and corrupt-record isolation. A focused combined workspace run passed 12/12 including old schemas, legacy/streamed backups and failed restore persistence. No provider or private documents were used. The chat service and UI remain the next integration step.
+
+
+### Foli chat and shared proposal review
+
+Added a dedicated Foli navigation/view with bounded encrypted history, new-chat selection, draft retention, cancellation and independent history deletion. It uses the existing provider/model selectors, model catalog and AI settings. Context contains at most 40 relevant rule summaries, specifically referenced pending proposals and 12 recent messages (32,000 characters); documents and previous translations are never attached. One submitted turn invokes at most one provider request, through the existing usage/budget adapter under `foli_chat`. An interrupted or cancelled dispatched request requires deliberate confirmation before a new request; restart never resends it. Stable request IDs replay without another provider call.
+
+Strict provider JSON validation permits only typed proposal operations and known target versions. The reply and its draft IDs publish in the same durable transaction; failed storage or cancellation cannot publish partial drafts. No provider output approves a rule. Unsupported capabilities and new terminology without an existing glossary record are currently explained rather than falsely applied; complete shared terminology proposal integration remains part of F07.
+
+Chat and Learning use the same proposal-card renderer and approval/adjustment APIs. Adjustments retain a bounded supersession reference so the chat card follows the replacement proposal instead of silently losing it. Accepted/discarded state is read from the persisted library. Local management does not call a provider. The server retains session/owner/CSRF protection and blocks backup restore/archive recovery during active Foli work.
+
+Evidence: focused Foli/rule API/model checks passed 14/14. A follow-up real HTTP budget check verifies an unpriced API request is blocked before provider use and the existing explicit one-request consent permits the next intended turn. Browser Foli plus existing rule-management workflows passed 4/4 in Chromium/WebKit: proposal adjustment and acceptance into the same library, no additional provider usage for review, safe text rendering, encrypted-history reload, cancellation/uncertain state, chat deletion without rule loss, EN/DE/AR and 375px RTL. The fictional Arabic mobile screenshot was visually inspected. Broad final gates, F07, explicit old-result rule application, visual PDF review and actual upgrade remain pending; no feature release yet.
