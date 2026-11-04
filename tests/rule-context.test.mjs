@@ -32,6 +32,10 @@ test('new context omits deactivated sample instructions, shares glossary filteri
  const old=resolveContextSnapshot({...library,schema:1},metadata);assert.equal(old.learningExamples[0].rules.length,1,'old pinned contexts retain their prior interpretation');
  const off=resolveContextSnapshot(library,{...metadata,useLearning:false});assert.equal(off.appliedRules.length,0);assert.equal(off.terms.length,0);
 });
+test('new canonical contexts consider every matching enabled sample instead of silently applying the old top-three hint limit',()=>{
+ const data=initializeRuleLibrary({glossary:[],learning:Array.from({length:4},(_,index)=>({id:`fictional-${index}`,name:`Fictional sample ${index}`,active:true,status:'active',documentType:'Licence',targetLanguage:'Deutsch',rules:[],fieldLabels:[],layout:{lineHeight:index===3?1.8:1.2},analysis:{profileVersion:1,sourceLanguage:'English'}}))}),meta={sourceLanguage:'English',targetLanguage:'Deutsch',documentType:'Licence'},snapshot=createContextLibrarySnapshot({data,context:()=>null},meta),context=resolveContextSnapshot(snapshot,meta);
+ assert.equal(context.ruleResolution.conflicts.length,1);assert.ok(context.ruleResolution.conflicts[0].choices.some(choice=>choice.effect.value===1.8));assert.equal(context.layout,null);const legacy=resolveContextSnapshot({...snapshot,schema:1},meta);assert.equal(legacy.learningExamples.length,3);assert.equal(legacy.layout.lineHeight,1.2);
+});
 test('HTTP translation applies canonical rules once and exports actual Word spacing and a PDF with its original annex',async t=>{
  const directory=await mkdtemp(join(tmpdir(),'foliquo-fictional-rule-export-')),workspace=await new Workspace(directory).init();
  add(workspace.data,{kind:'layout',key:'lineHeight',value:1.5});add(workspace.data,{kind:'style',text:'Use neutral fictional headings.'});
