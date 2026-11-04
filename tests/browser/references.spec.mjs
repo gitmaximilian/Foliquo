@@ -35,6 +35,7 @@ test('reference trace renders safely in English, German, and Arabic',async({page
   }
   expect(pageErrors).toEqual([]);
  }finally{
+  await page.close();
   await new Promise(resolve=>app.close(resolve));
   await workspace.tail;
   await rm(directory,{recursive:true,force:true});

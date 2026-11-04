@@ -3,13 +3,14 @@ import {createServer} from 'node:net';
 import {randomUUID} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import {basename,join} from 'node:path';
-import {readFile,readdir,rm} from 'node:fs/promises';
+import {readFile,readdir,rm,mkdir,writeFile,stat} from 'node:fs/promises';
 import {CURRENT_VERSION} from '../lib/version.mjs';
+import {seedInstalledLegacy,localClient,verifyLegacy,seedPersonalState,verifyPersonalState,seedConversationMessages} from './upgrade-fixtures.mjs';
 import {setTimeout as delay} from 'node:timers/promises';
 
 if (process.platform !== 'win32') throw new Error('This native window smoke check runs on Windows only.');
 const installerDirectory = join(process.cwd(), 'desktop/src-tauri/target/release/bundle/nsis');
-const installerName = (await readdir(installerDirectory)).find(name => name.endsWith('-setup.exe'));
+const installerName = (await readdir(installerDirectory)).find(name => name.includes(`_${CURRENT_VERSION}_`)&&name.endsWith('-setup.exe'));
 if (!installerName) throw new Error('The Windows NSIS installer was not produced.');
 const installDir = join(tmpdir(), 'foliquo-window-install-' + randomUUID());
 const candidateInstaller=join(installerDirectory,installerName),initialInstaller=process.env.FOLIQUO_UPGRADE_FROM_INSTALLER||candidateInstaller;
@@ -45,6 +46,10 @@ const debugPort = await new Promise((resolve, reject) => {
   });
 });
 const dataDir = join(tmpdir(), 'foliquo-window-smoke-' + randomUUID());
+async function findInstalledService(directory){try{if((await stat(join(directory,'server.mjs'))).isFile()&&(await stat(join(directory,'lib/workspace.mjs'))).isFile()&&(await stat(join(directory,'runtime/node.exe'))).isFile())return directory;}catch{}for(const entry of await readdir(directory,{withFileTypes:true}))if(entry.isDirectory()){const found=await findInstalledService(join(directory,entry.name));if(found)return found;}return null;}
+const installedService=await findInstalledService(installDir);if(!installedService)throw new Error('Installed service resources not found.');
+const legacyFixture=seedInstalledLegacy(installedService,dataDir);
+
 const child = spawn(executable, [], {
   cwd: installDir,
   env: {
@@ -154,25 +159,36 @@ try {
   console.log('Windows WebView2 rendered the Foliquo workspace: ' + JSON.stringify(state));
   const seeded=await cdp('Runtime.evaluate',{expression:"(async()=>{const s=await fetch('/api/session').then(r=>r.json());const r=await fetch('/api/preferences',{method:'POST',headers:{'content-type':'application/json','x-foliquo-csrf':s.csrf},body:JSON.stringify({locale:'en',displayName:'Fictional update check',introComplete:true})});if(!r.ok)throw new Error('Could not save fictional upgrade preferences');return r.json();})()",awaitPromise:true,returnByValue:true});
   if(seeded.result?.exceptionDetails)throw new Error('Could not seed the isolated upgrade workspace.');
-  const keyBefore=await readFile(join(dataDir,'workspace.key')),oldRecord=JSON.parse(await readFile(join(dataDir,'service.json'),'utf8'));
-  // Simulate the orphan left by older updaters: terminate only the window,
-  // deliberately leave its Node child, then exercise the new installer hook.
+  const keyBefore=await readFile(join(dataDir,'workspace.key'));
   try{socket?.close();}catch{}
-  const killed=spawnSync('taskkill.exe',['/pid',String(child.pid),'/f'],{stdio:'ignore'});
-  if(killed.status!==0)throw new Error('Could not isolate the orphan-service upgrade fixture.');
-  await Promise.race([new Promise(resolve=>child.once('exit',resolve)),delay(10000)]);
-  const oldHealth=await fetch('http://127.0.0.1:'+oldRecord.port+'/api/health',{signal:AbortSignal.timeout(3000)}).then(r=>r.json());
-  if(oldHealth.instance!==oldRecord.instance)throw new Error('The old service did not remain available for the upgrade fixture.');
-  const upgraded=spawnSync(candidateInstaller,['/UPDATE','/S','/D='+installDir],{cwd:process.cwd(),env:{...process.env,FOLIQUO_DATA_DIR:dataDir,FOLIQUO_LOG_DIR:join(dataDir,'logs')},stdio:'inherit',timeout:360000,windowsHide:true});
-  if(upgraded.error)throw upgraded.error;if(upgraded.status!==0){const serviceUpgradeLog=await readFile(join(dataDir,'logs','desktop-service-upgrade.log'),'utf8').catch(()=>'(no service-upgrade log)');throw new Error('The orphan-service upgrade installer failed with exit code '+upgraded.status+'. '+serviceUpgradeLog.slice(-4000));}
-  if(!keyBefore.equals(await readFile(join(dataDir,'workspace.key'))))throw new Error('The upgrade changed the existing workspace key.');
-  followupChild=spawn(executable,[],{cwd:installDir,env:{...process.env,FOLIQUO_DATA_DIR:dataDir,FOLIQUO_LOG_DIR:join(dataDir,'logs'),FOLIQUO_NO_BROWSER:'1'},stdio:'ignore',windowsHide:false});
-  let upgradedRecord;const upgradeDeadline=Date.now()+60000;
-  while(Date.now()<upgradeDeadline){try{const record=JSON.parse(await readFile(join(dataDir,'service.json'),'utf8')),health=await fetch('http://127.0.0.1:'+record.port+'/api/health',{signal:AbortSignal.timeout(1000)}).then(r=>r.json());if(health.version===CURRENT_VERSION&&health.instance===record.instance&&health.instance!==oldRecord.instance){upgradedRecord=record;break;}}catch{}await delay(300);}
-  if(!upgradedRecord)throw new Error('The upgraded desktop did not start its new bundled service.');
-  const upgradedOrigin='http://127.0.0.1:'+upgradedRecord.port,rootResponse=await fetch(upgradedOrigin),cookie=rootResponse.headers.get('set-cookie').split(';')[0],session=await fetch(upgradedOrigin+'/api/session',{headers:{cookie}}).then(r=>r.json());
-  if(session.version!==CURRENT_VERSION||session.preferences.displayName!=='Fictional update check')throw new Error('The upgraded desktop did not preserve the fictional workspace preferences.');
-  console.log('Desktop installer upgrade preserved the encrypted workspace and replaced an orphaned old service: '+JSON.stringify({from:oldHealth.version,to:CURRENT_VERSION,keyPreserved:true,preferencesPreserved:true}));
+  const intermediate=process.env.FOLIQUO_UPGRADE_INTERMEDIATE_INSTALLER,intermediateVersion=process.env.FOLIQUO_UPGRADE_INTERMEDIATE_VERSION;
+  if(!intermediate||!intermediateVersion||intermediateVersion===CURRENT_VERSION)throw new Error('The upgrade gate requires a distinct feature-bearing intermediate installer.');
+  const steps=[{installer:intermediate,version:intermediateVersion},{installer:candidateInstaller,version:CURRENT_VERSION}],report=[];let activeWindow=child,personalState,retainedCookie,profileSnapshot,intermediateClient;
+  for(const [index,step]of steps.entries()){
+    const oldRecord=JSON.parse(await readFile(join(dataDir,'service.json'),'utf8'));
+    // Kill only our isolated native window, leaving its old service orphaned.
+    const killed=spawnSync('taskkill.exe',['/pid',String(activeWindow.pid),'/f'],{stdio:'ignore'});if(killed.status!==0)throw new Error('Could not isolate the orphan-service upgrade fixture.');
+    if(activeWindow.exitCode===null)await Promise.race([new Promise(resolve=>activeWindow.once('exit',resolve)),delay(10000)]);
+    const oldHealth=await fetch('http://127.0.0.1:'+oldRecord.port+'/api/health',{signal:AbortSignal.timeout(3000)}).then(response=>response.json());if(oldHealth.instance!==oldRecord.instance)throw new Error('The old service did not remain available for the upgrade fixture.');
+    const from=oldHealth.version.split('.').map(Number),to=step.version.split('.').map(Number),firstDifference=to.findIndex((part,index)=>part!==from[index]);if(firstDifference<0||to[firstDifference]<=from[firstDifference])throw new Error('The fixture must perform two increasing version steps.');
+    if(index===0&&oldHealth.version!=='0.12.0')throw new Error('Historical upgrade must start from the real public 0.12.0 installer.');
+    if(index===1){await stopOwnedService();const service=await findInstalledService(installDir);if(!service)throw new Error('Intermediate installed runtime not found.');personalState=seedConversationMessages(service,dataDir,intermediateClient,personalState);}
+    const upgraded=spawnSync(step.installer,['/UPDATE','/S','/D='+installDir],{cwd:process.cwd(),env:{...process.env,FOLIQUO_DATA_DIR:dataDir,FOLIQUO_LOG_DIR:join(dataDir,'logs')},stdio:'inherit',timeout:360000,windowsHide:true});
+    if(upgraded.error)throw upgraded.error;if(upgraded.status!==0){const log=await readFile(join(dataDir,'logs','desktop-service-upgrade.log'),'utf8').catch(()=>'(no service-upgrade log)');throw new Error('Upgrade installer failed: '+upgraded.status+' '+log.slice(-4000));}
+    if(!keyBefore.equals(await readFile(join(dataDir,'workspace.key'))))throw new Error('The upgrade changed the existing workspace key.');
+    followupChild=spawn(executable,[],{cwd:installDir,env:{...process.env,FOLIQUO_DATA_DIR:dataDir,FOLIQUO_LOG_DIR:join(dataDir,'logs'),FOLIQUO_NO_BROWSER:'1'},stdio:'ignore',windowsHide:false});activeWindow=followupChild;
+    let upgradedRecord;const deadline=Date.now()+60000;
+    while(Date.now()<deadline){try{const record=JSON.parse(await readFile(join(dataDir,'service.json'),'utf8')),health=await fetch('http://127.0.0.1:'+record.port+'/api/health',{signal:AbortSignal.timeout(1000)}).then(response=>response.json());if(health.version===step.version&&health.instance===record.instance&&health.instance!==oldRecord.instance){upgradedRecord=record;break;}}catch{}await delay(300);}
+    if(!upgradedRecord)throw new Error('The upgraded desktop did not start the expected bundled service '+step.version);
+    const client=await localClient('http://127.0.0.1:'+upgradedRecord.port,retainedCookie);retainedCookie=client.cookie;
+    if(client.session.version!==step.version||client.session.preferences.displayName!=='Fictional update check')throw new Error('Upgrade did not retain preferences.');
+    const profile=await verifyLegacy(client,legacyFixture);let retained;
+    if(index===0){profileSnapshot=profile;personalState=await seedPersonalState(client);intermediateClient=client;}
+    else{if(JSON.stringify(profile)!==JSON.stringify(profileSnapshot))throw new Error('The feature-candidate upgrade changed the legacy profile.');retained=await verifyPersonalState(client,personalState);}
+    report.push({from:oldHealth.version,to:step.version,keyPreserved:true,orphanServiceReplaced:index===0,preferencesPreserved:true,legacyProfilePreserved:true,sourceBytesPreserved:true,budgetPreserved:true,usagePreserved:true,...(retained||{})});
+    console.log('Verified real installer upgrade: '+JSON.stringify(report.at(-1)));
+  }
+  const reportDirectory=join(process.cwd(),'release-desktop/final');await mkdir(reportDirectory,{recursive:true});await writeFile(join(reportDirectory,'UPGRADE-REPORT-Windows-x64.json'),JSON.stringify({fictional:true,providerRequests:0,steps:report},null,2)+'\n');
 
 } finally {
   try { socket?.close(); } catch {}
