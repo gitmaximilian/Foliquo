@@ -4,6 +4,11 @@ import {normalizeGlossaryEntry,selectGlossary} from '../lib/glossary.mjs';
 
 const term=(source,target,options={})=>normalizeGlossaryEntry({id:`term-${options.id||target}`,name:source,source,target,...options});
 
+test('equivalent language names share the same conflict group',()=>{
+ const result=selectGlossary([term('fictional register','Register A',{targetLanguage:'Deutsch'}),term('fictional register','Register B',{targetLanguage:'German'})],{targetLanguage:'de'});
+ assert.equal(result.terms.length,0);assert.equal(result.conflicts.length,1);assert.equal(result.conflicts[0].entries.length,2);
+});
+
 test('legacy terms remain approved for any source language and document type',()=>{
  const legacy=term('fictional source','legacy target',{targetLanguage:'Deutsch'});
  assert.equal(legacy.sourceLanguage,'any');assert.equal(legacy.documentType,'any');assert.equal(legacy.status,'approved');

@@ -17,8 +17,12 @@ Baseline: version 0.12.0, clean worktree at `0a4cd28`. Scope is the private Foli
 | --- | --- | --- |
 | F01 | Inspected | Plan and AGENTS read; storage, schema, learning approval and context/export boundaries inspected. |
 | F02 | Storage transactions implemented, API wiring pending | Bounded typed rules/proposals, explicit approval, optimistic versions, idempotent repeated approval and inactive/deleted-rule preservation implemented. Workspace schema 5, encrypted persistence and both backup formats include the library. |
-| F03 | Resolver foundation implemented, integration pending | Four focused tests pass: partial-order scope precedence, explicit job overrides/exclusions, pending scope, conflicts, origin neutrality and frozen rule/profile state. |
-| F04–F08 | Pending | Views, pipeline/export, chat, sample integration, upgrade and release gates remain required. |
+| F03 | Context integration implemented | New schema-2 context snapshots use the canonical resolver; legacy schema-1 snapshots retain prior behavior. Bound job conflict/scope questions and existing terminology questions are connected. |
+| F04 | Pending | Rule views, primary-page controls and API wiring. |
+| F05 | Pipeline foundation implemented | Canonical instructions and layout reach real translation/export; explicit application to old results and visual export review remain required. |
+| F06 | Pending | Foli chat, bounded encrypted conversations and provider proposal flow. |
+| F07 | In progress | Canonical sample migration is implemented; shared proposal cards, per-rule sample review and full UI/feedback integration remain required. |
+| F08 | Pending | Historical upgrade, complete feature/browser/platform gates and release. |
 
 No feature completion or release is claimed. Existing 0.12.0 artifacts are unchanged.
 
@@ -45,3 +49,11 @@ Existing active/previously effective sample settings now synchronize into the ca
 The bounded rule capacity now covers all permitted legacy sample collections (60 samples × up to 80 rules, 240 observations, 100 terms, layout and field order), with room for independent rules. Managed sample terminology uses the existing glossary records and a higher bounded schema capacity, but cannot bypass the rule resolver or be silently detached through ordinary glossary editing/deletion. Ordinary manual glossary capacity is unchanged. Source document bytes are excluded from the save-time conversion snapshot.
 
 Focused verification: rule/sample/resolver/glossary tests 20/20, plus existing context/learning matching/layout/feedback/finished-output checks 17/17. The existing provider-mocked finished-output workflow still passes. The translation context still uses the legacy interpretation until the next integration change; no canonical rule is sent in parallel, and the UI/chat/release remain pending. Full gates were last run at the preceding storage checkpoint, not claimed for this migration change.
+
+### Canonical context and real export integration
+
+New jobs freeze schema-2 context libraries and resolve approved manual/sample rules through one path. Ranked sample selection reuses existing feedback ordering without applying a second rule list. Effective instructions, field order, rule IDs and exact versions are retained with results; disabled sample instructions cannot reappear through legacy provider hints. Rule scope and same-rank conflicts are resolved by bound, localized per-job questions before translation, without misleading source/unreadable controls. Source extraction now requests source language within its existing request; unknown required scopes ask rather than silently omit a rule. Old schema-1 snapshots retain their original layout precedence and learning behavior.
+
+Canonical terms use the existing glossary selector with rule activation gating. Language aliases now share one matching/conflict group. Approved rules override template/profile defaults according to the agreed new-plan priority; legacy snapshots keep the prior priority. New sample rule feedback IDs remain eligible for ranking summaries.
+
+Evidence: focused context, learning feedback/layout and segmented translation/review runtime checks passed 20/20, including uncertain retries and restart. Follow-up context/glossary/export checks passed 12/12 after adding alias-conflict and version-trace assertions. The fictional HTTP export test makes exactly one extraction and one translation request, sees each approved wording rule once, verifies actual DOCX `w:line=360` for 1.5 spacing and verifies a multi-page PDF retains its source annex. Independent visual PDF review is still pending. Full repository/browser/platform gates will run at an integrated feature checkpoint; no feature completion or new release is claimed.

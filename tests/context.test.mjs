@@ -24,6 +24,7 @@ test('job context is immutable, versioned, and excludes reference source content
  assert.doesNotMatch(JSON.stringify(snapshot),/PRIVATE ORIGINAL NAME|PRIVATE FINISHED TRANSLATION|PRIVATE BINARY SOURCE/);
  assert.equal(snapshot.base.examples[0].structure.source.lineCount,1);
  assert.equal(original.contextVersion.length,32);
+ assert.equal(resolveContextSnapshot({...snapshot,schema:1},meta).layout.margin,24,'legacy snapshots retain their original template precedence');
  assert.ok(snapshot.base.referenceFingerprints[0].hashes.length>0);
  const trace=referenceTrace('PRIVATE FINISHED TRANSLATION',original.examples,original.referenceFingerprints,workspace.key)[0];
  assert.equal(trace.matchedLineCount,1);assert.doesNotMatch(JSON.stringify(trace),/PRIVATE FINISHED TRANSLATION|[a-f0-9]{64}/);
@@ -38,7 +39,7 @@ test('job context is immutable, versioned, and excludes reference source content
  const resumed=resolveContextSnapshot(snapshot,meta);
  assert.equal(resumed.contextVersion,original.contextVersion);
  assert.equal(resumed.template.version,1);assert.equal(resumed.template.fields.length,1);
- assert.equal(resumed.layout.margin,24);assert.equal(resumed.terms[0].target,'Dokumentnummer');
+ assert.equal(resumed.layout.margin,25);assert.equal(resumed.terms[0].target,'Dokumentnummer');
  assert.equal(resumed.dossierFacts[0].value,'Alex Example');assert.deepEqual(resumed.learningExamples[0].rules,original.learningExamples[0].rules);
  assert.doesNotMatch(JSON.stringify(resumed),/PRIVATE ORIGINAL NAME|PRIVATE FINISHED TRANSLATION|PRIVATE BINARY SOURCE/);
 });
