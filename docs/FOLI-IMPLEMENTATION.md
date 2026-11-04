@@ -75,3 +75,12 @@ The button beside Translate remains available even before file selection. It use
 Verification: the full manual rule UI flow passed Chromium and WebKit, including explicit approval, one-job exclusion without global mutation, permanent disable, edit while inactive, re-enable, proposal adjustment, selected approval, language filtering, duplicate/discard, localized labels, 375px width, Arabic RTL and reload of the durable rule. Existing learning-profile editing passed in both engines. The expanded rule UI flow then passed 2/2 after its additions. Provider request count stayed zero. A fictional Arabic mobile screenshot was visually inspected. API/sample follow-ups passed 8/8, including atomic supersession/history clearing and no ID collision when a removed sample is replaced after its rule was manually edited.
 
 No new release yet. Foli conversations/provider proposals, deeper sample proposal integration, explicit rule application to old results, visual PDF review, historical upgrade and integrated final gates remain open.
+
+
+### Encrypted conversation persistence and recovery
+
+Foli conversations now have a bounded metadata index and separate immutable AES-GCM records, owner-scoped under the existing workspace session model. New records publish only after the encrypted manifest commits; failed or stale writes keep the previous conversation. Ordinary concurrent saves retain the latest index. Startup marks unfinished replies as uncertain without replaying provider requests; a damaged chat can be isolated without disabling rules or the workspace. Deleting chat history preserves accepted rules.
+
+Streamed backups include authenticated conversation frames and lease their immutable records during concurrent edits. Restore validates all records, reencrypts under the destination key, remaps the importing owner and commits atomically with jobs and metadata. Recovery points include the chat store. Explicit chat exclusion retains the rule library; the legacy synchronous backup refuses silent history loss.
+
+Evidence: all six conversation-store cases pass, including injected disk-full restore rollback, truncated archive, owner isolation, restart, recovery-point rollback and corrupt-record isolation. A focused combined workspace run passed 12/12 including old schemas, legacy/streamed backups and failed restore persistence. No provider or private documents were used. The chat service and UI remain the next integration step.
