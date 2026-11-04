@@ -4,10 +4,10 @@
  const locale=()=>window.currentInterfaceLanguage||'en',t=key=>copy[key]?.[{en:0,de:1,ar:2}[locale()]??0]||key;
  const node=(tag,text='',className='')=>{const el=document.createElement(tag);el.textContent=text;el.className=className;return el;},button=(key,action,className='secondary')=>{const el=node('button',t(key),className);el.type='button';el.dataset.foliCopy=key;el.onclick=action;return el;};
  const api=async(path,data)=>{const response=await localRequest(path,data);return response.json();};
- let current=null,selectedId=null,active=false,timer,refreshing=false,selection=0,pendingSend=null,renderKey='';const drafts=new Map();
+ let referenced=[],current=null,selectedId=null,active=false,timer,refreshing=false,selection=0,pendingSend=null,renderKey='';const drafts=new Map();
  const heading=node('div','','card-heading'),title=node('h1');title.dataset.foliCopy='title';heading.append(title,button('rules',()=>window.TOCRRules?.openManager()));host.append(heading);
  const intro=node('p');intro.dataset.foliCopy='intro';host.append(intro);
- const toolbar=node('div','','foli-toolbar'),select=node('select');select.id='foli-conversations';toolbar.append(select,button('newChat',()=>void perform(async()=>{saveDraft();selection++;current=null;selectedId=null;pendingSend=null;input.value=drafts.get('new')||'';renderKey='';render();void refresh();input.focus();})),button('settings',event=>window.openAISettings?.(event.currentTarget)));host.append(toolbar);
+ const toolbar=node('div','','foli-toolbar'),select=node('select');select.id='foli-conversations';toolbar.append(select,button('newChat',()=>void perform(async()=>{saveDraft();selection++;referenced=[];current=null;selectedId=null;pendingSend=null;input.value=drafts.get('new')||'';renderKey='';render();void refresh();input.focus();})),button('settings',event=>window.openAISettings?.(event.currentTarget)));host.append(toolbar);
  const examples=node('div','','foli-examples');for(const key of ['example1','example2','example3'])examples.append(button(key,()=>{input.value=t(key);saveDraft();input.focus();},'text-button'));host.append(examples);
  const messages=node('div','','foli-messages');messages.id='foli-messages';messages.setAttribute('role','log');messages.setAttribute('aria-live','polite');messages.setAttribute('aria-relevant','additions');host.append(messages);
  const status=node('p','','muted');status.id='foli-status';status.setAttribute('role','status');host.append(status);
@@ -37,18 +37,19 @@
    if(selectedId){const result=await api(`/api/foli/conversations/${selectedId}`);if(ticket!==selection)return;current=result.conversation;}render();
   }catch(error){errorHost.textContent=error.message||t('error');}finally{refreshing=false;clearTimeout(timer);if(active&&busy())timer=setTimeout(()=>void refresh(),1000);}
  }
- select.onchange=()=>void perform(async()=>{saveDraft();selection++;selectedId=select.value||null;current=null;pendingSend=null;input.value=drafts.get(selectedId||'new')||'';renderKey='';await refresh();});
+ select.onchange=()=>void perform(async()=>{saveDraft();selection++;referenced=[];selectedId=select.value||null;current=null;pendingSend=null;input.value=drafts.get(selectedId||'new')||'';renderKey='';await refresh();});
  input.oninput=()=>{saveDraft();pendingSend=null;};input.onkeydown=event=>{if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();form.requestSubmit();}};
  form.onsubmit=event=>{event.preventDefault();void perform(async()=>{
   const text=input.value.trim();if(!text||busy())return;const provider=document.querySelector('#provider-choice')?.value,model=document.querySelector('#model')?.value;if(!model){errorHost.textContent=t('connection');return;}
   send.disabled=true;try{
    if(current?.turn?.status==='interrupted_unknown'&&!confirm(t('retryConfirm')))return;
    if(!current){current=(await api('/api/foli/conversations',{})).conversation;selectedId=current.id;drafts.set(selectedId,text);drafts.delete('new');}
-   if(!pendingSend||pendingSend.text!==text||pendingSend.provider!==provider||pendingSend.model!==model)pendingSend={requestId:crypto.randomUUID(),version:current.version,text,provider,model,locale:locale(),...(current.turn?.status==='interrupted_unknown'?{confirmedRetry:true}:{})};
+   if(!pendingSend||pendingSend.text!==text||pendingSend.provider!==provider||pendingSend.model!==model)pendingSend={requestId:crypto.randomUUID(),version:current.version,text,provider,model,locale:locale(),...(referenced.length?{referenceIds:referenced}:{}),...(current.turn?.status==='interrupted_unknown'?{confirmedRetry:true}:{})};
    if(current.turn?.errorCode==='BUDGET_UNKNOWN_ESTIMATE'){if(!confirm(t('unknownBudget')))return;await api('/api/usage/consent-once',{confirm:true,provider,model,scopeId:`foli-${pendingSend.requestId}`});}
    const result=await api(`/api/foli/conversations/${selectedId}/messages`,pendingSend);current=result.conversation;pendingSend=null;input.value='';saveDraft();render();await refresh();
   }finally{send.disabled=busy();}
  });};
+ window.TOCRFoli={openProposal:id=>{view('foli');referenced=[id];input.value=locale()==='de'?`Bitte erkläre mir den Regelvorschlag ${id} und seinen Geltungsbereich.`:locale()==='ar'?`اشرح اقتراح القاعدة ${id} ونطاق تطبيقه.`:`Explain rule proposal ${id} and its scope.`;saveDraft();input.focus();}};
  window.addEventListener('translateocr-view-change',event=>{active=event.detail.view==='foli';clearTimeout(timer);if(active)void refresh();});
  window.addEventListener('translateocr-locale',localize);window.addEventListener('foliquo-rules-changed',()=>{if(active)void renderProposals().catch(error=>{errorHost.textContent=error.message;});});
  localize();

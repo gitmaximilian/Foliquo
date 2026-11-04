@@ -4,3 +4,4 @@
 /* The rule overview remains available before any files are selected. */
 #studio-view:not(.has-files) .translation-composer .action-row:has(#job-rules){display:flex}
 #studio-view:not(.has-files) .translation-composer .action-row #translate{display:none}
+.learning-entry{grid-template-columns:minmax(0,1fr)}.learning-canonical-rules{min-width:0;overflow-wrap:anywhere}.learning-entry-actions .learning-active{white-space:normal;min-width:0;align-items:flex-start;flex:1 1 100%}.learning-active input{flex:0 0 auto}.learning-canonical-rules details{min-width:0}.learning-canonical-rules .rule-card{margin-block:10px}
