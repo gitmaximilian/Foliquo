@@ -204,6 +204,6 @@ jobs:
           cd release
           sha256sum -c SHA256SUMS
           cd ..
-          gh release create "$tag" --verify-tag --draft --title "Foliquo Community $tag" --notes-file "docs/RELEASE-${tag#v}.md" release/*.tar.gz release/*-Setup.exe release/SHA256SUMS release/Foliquo-Packaging-*.zip release/windows-signature.json
-          gh release edit "$tag" --draft=false
+          gh release create "$tag" --verify-tag --draft --latest=false --title "Foliquo Community $tag" --notes-file "docs/RELEASE-${tag#v}.md" release/*.tar.gz release/*-Setup.exe release/SHA256SUMS release/Foliquo-Packaging-*.zip release/windows-signature.json
+          gh release edit "$tag" --draft=false --latest=false
           echo 'Published verified platform assets. Homebrew tap update and WinGet review/indexing are separate steps.' >> "$GITHUB_STEP_SUMMARY"

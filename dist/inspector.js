@@ -57,7 +57,7 @@ async function renderQuestionOriginal(job){
    const current=++generation;note.textContent='';questionSourceViewer?.destroy();questionSourceViewer=null;host.replaceChildren(textElement('p',window.TOCRI18n?.t('Original wird geladen …')||'Original wird geladen …'));
    try{
     const index=Number(select.value),metadata=result.files[index];if(!metadata)throw new Error('Missing source');if(cachedSourceIndex!==index){const response=await localRequest(`/api/jobs/${id}/source/${index}`);cachedSourceFile={...metadata,bytes:new Uint8Array(await response.arrayBuffer())};cachedSourceIndex=index;}const file=cachedSourceFile;
-    const {canvas,pages}=await sourceCanvas(file,Math.max(1,Number(pageInput.value)||1));
+    const {canvas,pages,textItems}=await sourceCanvas(file,Math.max(1,Number(pageInput.value)||1));
     if(current!==generation||clarificationJobId!==id)return;
     pageInput.max=pages;pageInput.value=Math.min(Math.max(1,Number(pageInput.value)||1),pages);canvas.dataset.noTranslate='';canvas.dataset.sourcePage=String(pageInput.value);canvas.dataset.sourceName=file.name;
     questionSourceViewer=createSourceViewer(host);questionSourceViewer.setCanvas(canvas,location?.box||null,{textItems});

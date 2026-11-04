@@ -1,0 +1,11 @@
+import {test,expect} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
+
+test('updates offer manual installation on unsupported desktops and recover from a missing bridge or install failure',async({page})=>{
+ await page.route('http://foliquo.test/',route=>route.fulfill({contentType:'text/html',body:'<button id="update-check">Check</button><p id="update-status"></p><a id="update-download" hidden>Download</a><span id="app-version"></span>'}));
+ await page.route('**/api/update-check',route=>route.fulfill({json:{current:'0.11.11',latest:'99.0.0',updateAvailable:true,url:'https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v99.0.0'}}));
+ await page.goto('http://foliquo.test/');await page.clock.install();await page.evaluate(()=>{window.__FOLIQUO_DESKTOP__=true;window.__FOLIQUO_UPDATER__=false;});await page.addScriptTag({content:await readFile(new URL('../../dist/updates.js',import.meta.url),'utf8')});
+ const check=page.locator('#update-check'),download=page.locator('#update-download'),status=page.locator('#update-status');await check.click();await expect(download).toHaveAttribute('href','https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v99.0.0');await expect(page.locator('dialog')).toHaveCount(0);
+ await page.evaluate(()=>{window.__FOLIQUO_UPDATER__=true;});await check.click();await expect(page.locator('dialog')).toBeVisible();await page.locator('dialog .primary').click();await expect(check).toBeDisabled();await page.clock.fastForward(12001);await expect(status).toContainText('Automatisches Update startet nicht');await expect(download).toHaveAttribute('href',/https:/);await expect(check).toBeEnabled();
+ await check.click();await expect(download).toHaveAttribute('href','foliquo-update://install');await download.click();await page.evaluate(()=>window.dispatchEvent(new CustomEvent('foliquo-desktop-updater',{detail:{state:'checking'}})));await page.clock.fastForward(12001);await expect(status).not.toContainText('startet nicht');await expect(check).toBeDisabled();await page.evaluate(()=>window.dispatchEvent(new CustomEvent('foliquo-desktop-updater',{detail:{state:'failed',reason:'permission'}})));await expect(status).toContainText('manuell ersetzen');await expect(download).toHaveAttribute('href',/https:/);await expect(check).toBeEnabled();
+});

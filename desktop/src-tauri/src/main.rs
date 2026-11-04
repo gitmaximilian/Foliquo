@@ -7,6 +7,7 @@ use std::{
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::Mutex,
+    io::Write,
     thread,
     time::Duration,
 };
@@ -168,13 +169,48 @@ fn emit_updater_state(app: &AppHandle, payload: serde_json::Value) {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+fn report_update_failure(app: &AppHandle, stage: &str, error: &tauri_plugin_updater::Error) {
+    eprintln!("Foliquo updater {stage} failed: {error}");
+    let logs = env::var_os("FOLIQUO_LOG_DIR").map(PathBuf::from).or_else(|| app.path().app_log_dir().ok());
+    if let Some(logs) = logs {
+        let _ = fs::create_dir_all(&logs);
+        if let Ok(mut log) = OpenOptions::new().create(true).append(true).open(logs.join("desktop-updater.log")) {
+            let _ = writeln!(log, "{:?} {stage}: {error}", std::time::SystemTime::now());
+        }
+    }
+    let reason = match error {
+        tauri_plugin_updater::Error::Io(error) if error.kind() == std::io::ErrorKind::PermissionDenied => "permission",
+        tauri_plugin_updater::Error::TargetNotFound(_) | tauri_plugin_updater::Error::TargetsNotFound(_) => "platform",
+        _ => "failed",
+    };
+    emit_updater_state(app, serde_json::json!({"state":"failed","reason":reason,"stage":stage}));
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn request_update(app: AppHandle) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static UPDATING: AtomicBool = AtomicBool::new(false);
+    if UPDATING.swap(true, Ordering::SeqCst) { return; }
+    emit_updater_state(&app, serde_json::json!({"state":"checking"}));
     tauri::async_runtime::spawn(async move {
-        let updater = match app.updater() {
+        struct ResetUpdate;
+        impl Drop for ResetUpdate {
+            fn drop(&mut self) { UPDATING.store(false, Ordering::SeqCst); }
+        }
+        let _reset = ResetUpdate;
+        #[cfg(target_os = "macos")]
+        if env::current_exe().ok().is_some_and(|path| path.starts_with("/Volumes/Foliquo") || path.to_string_lossy().contains("/AppTranslocation/")) {
+            emit_updater_state(&app, serde_json::json!({"state":"failed","reason":"install-location"}));
+            return;
+        }
+        let exit_app = app.clone();
+        let updater = match app.updater_builder().on_before_exit(move || {
+            if let Some(owned) = exit_app.try_state::<OwnedService>() { owned.stop(); }
+            exit_app.cleanup_before_exit();
+        }).build() {
             Ok(updater) => updater,
             Err(error) => {
-                eprintln!("Foliquo updater setup failed: {error}");
-                emit_updater_state(&app, serde_json::json!({"state":"failed"}));
+                report_update_failure(&app, "setup", &error);
                 return;
             }
         };
@@ -185,8 +221,7 @@ fn request_update(app: AppHandle) {
                 return;
             }
             Err(error) => {
-                eprintln!("Foliquo updater check failed: {error}");
-                emit_updater_state(&app, serde_json::json!({"state":"failed"}));
+                report_update_failure(&app, "check", &error);
                 return;
             }
         };
@@ -207,13 +242,15 @@ fn request_update(app: AppHandle) {
             move || emit_updater_state(&install_app, serde_json::json!({"state":"installing","version":install_version})),
         ).await;
         if let Err(error) = result {
-            eprintln!("Foliquo updater installation failed: {error}");
-            emit_updater_state(&app, serde_json::json!({"state":"failed"}));
+            report_update_failure(&app, "install", &error);
             return;
         }
         emit_updater_state(&app, serde_json::json!({"state":"installed","version":version}));
         #[cfg(target_os = "macos")]
-        app.restart();
+        {
+            if let Some(owned) = app.try_state::<OwnedService>() { owned.stop(); }
+            app.restart();
+        }
     });
 }
 
@@ -233,7 +270,7 @@ fn main() {
             };
             if let Ok((port, _)) = &startup {
                 let origin = format!("http://127.0.0.1:{port}");
-                builder = builder.initialization_script(format!("if (location.origin === {}) window.__FOLIQUO_DESKTOP__ = true;", serde_json::to_string(&origin)?));
+                builder = builder.initialization_script(format!("if (location.origin === {}) {{ window.__FOLIQUO_DESKTOP__ = true; window.__FOLIQUO_UPDATER__ = {}; }}", serde_json::to_string(&origin)?, cfg!(any(target_os = "macos", target_os = "windows"))));
             } else if let Err(message) = &startup {
                 builder = builder.initialization_script(format!("window.__FOLIQUO_START_ERROR__ = {};", serde_json::to_string(message)?));
             }

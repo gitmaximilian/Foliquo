@@ -53,3 +53,11 @@ Windows and macOS apps check for updates when Foliquo starts and periodically wh
 Versions v0.11.8 and newer can update to v0.11.11 from inside Foliquo. Users of earlier versions must first install v0.11.8 manually because it introduced the updater. Updates preserve the private workspace. Use the release’s `SHA256SUMS` file to verify direct downloads. Windows and macOS packages remain unsigned and do not imply Microsoft Store, Mac App Store, or Flathub approval.
 
 The latest source and build workflow are on the [`main` branch](https://github.com/gitmaximilian/Foliquo/tree/main). Each platform build publishes a report alongside its checksums. The packages include the required upstream license and notice files; see [third-party notices](THIRD-PARTY.md).
+
+### Update troubleshooting
+
+If an automatic update fails, download the matching installer from the desktop release and replace the application. Keep the existing per-user Foliquo data folder; replacing the application does not require deleting it. Linux Flatpak installations use a newer local Flatpak bundle for updates.
+
+On macOS, copy Foliquo from its disk image into Applications, close the disk-image copy, and open the installed copy before updating. A disk-image or translocated copy cannot be replaced reliably. If startup reports an incompatible running service after an older update, close the other Foliquo window or stop its browser service before reopening the new application.
+
+The next desktop build records updater failures in `desktop-updater.log` in the application log directory (or the directory selected by `FOLIQUO_LOG_DIR`). This local log distinguishes checking from installation failures. The interface provides a manual download when automatic installation cannot start or the install location is not writable. No documents or account credentials are included in update checks.
