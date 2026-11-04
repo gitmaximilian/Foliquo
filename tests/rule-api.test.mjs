@@ -57,3 +57,20 @@ test('adjusting a pending proposal supersedes it atomically and selected proposa
  const accepted=await call('/api/personal-rules/review',{items:[changed.data.proposal,second].map(item=>({id:item.id,version:item.version,accept:true}))});assert.equal(accepted.status,200);assert.equal(workspace.data.personalRules.length,2);
  assert.equal((await call('/api/personal-rules/clear-reviewed',{confirm:false})).status,400);assert.equal((await call('/api/personal-rules/clear-reviewed',{confirm:true})).status,200);assert.equal(workspace.data.ruleProposals.length,0);assert.equal(workspace.data.personalRules.length,2);assert.equal(requests(),0);
 });
+
+test('new terminology stays a draft until rule and glossary commit together, including adjustment and restore',async t=>{
+ const {workspace,call,requests}=await setup(t),glossaryDraft={source:'Date of issue',target:'Ausstellungsdatum',note:'Fictional reusable term'};
+ const created=await call('/api/personal-rules/proposals',{requestId:randomUUID(),definition:{title:'Fictional terminology',effect:{kind:'terminology',glossaryId:'new'},scope:{targetLanguage:'Deutsch'}},glossaryDraft});
+ assert.equal(created.status,201);const first=created.data.proposal;assert.equal(workspace.data.glossary.length,0);assert.equal(workspace.data.personalRules.length,0);
+ const adjusted=await call('/api/personal-rules/proposals',{requestId:randomUUID(),definition:{...first.definition,title:'Reviewed fictional terminology'},glossaryDraft:{...glossaryDraft,target:'Datum der Ausstellung'},supersedes:{id:first.id,version:first.version}});assert.equal(adjusted.status,201);
+ const current=adjusted.data.proposal,followed=await call('/api/personal-rules/proposals?status=all&ids='+first.id);assert.equal(followed.data.items[0].id,current.id);assert.equal(followed.data.items[0].requestedId,first.id);
+ const write=workspace.writeMetadata.bind(workspace);workspace.writeMetadata=async()=>{throw Object.assign(new Error('Fictional full disk'),{code:'ENOSPC'});};
+ assert.equal((await call('/api/personal-rules/review',{id:current.id,version:current.version,accept:true})).status,400);assert.equal(workspace.data.glossary.length,0);assert.equal(workspace.data.personalRules.length,0);assert.equal(workspace.data.ruleProposals.find(item=>item.id===current.id).status,'pending');
+ workspace.writeMetadata=write;assert.equal((await call('/api/personal-rules/review',{id:current.id,version:current.version,accept:true})).status,200);
+ assert.equal(workspace.data.glossary.length,1);assert.equal(workspace.data.glossary[0].target,'Datum der Ausstellung');assert.equal(workspace.data.glossary[0].ruleManaged,true);assert.equal(workspace.data.personalRules[0].effect.glossaryId,workspace.data.glossary[0].id);
+ const restarted=await new Workspace(workspace.directory).init();assert.equal(restarted.data.glossary[0].id,workspace.data.glossary[0].id);
+ const {createContextLibrarySnapshot,resolveContextSnapshot}=await import('../lib/context.mjs');const meta={targetLanguage:'Deutsch',sourceLanguage:'English',documentType:'Fictional certificate'};
+ const resolved=resolveContextSnapshot(createContextLibrarySnapshot(restarted,meta,'fictional-job','owner'),meta);assert.equal(resolved.terms[0].target,'Datum der Ausstellung');
+ const excluded={...meta,excludedRuleIds:[workspace.data.personalRules[0].id]},without=resolveContextSnapshot(createContextLibrarySnapshot(restarted,excluded,'fictional-job','owner'),excluded);assert.equal(without.terms.length,0);
+ const archive=workspace.backup('fictional-test-passphrase'),restored=await new Workspace(workspace.directory+'-restore').init();t.after(()=>rm(restored.directory,{recursive:true,force:true}));restored.restore(archive,'fictional-test-passphrase');await restored.save();assert.equal(restored.data.personalRules[0].id,workspace.data.personalRules[0].id);assert.equal(restored.data.glossary[0].id,workspace.data.glossary[0].id);assert.equal(requests(),0);
+});

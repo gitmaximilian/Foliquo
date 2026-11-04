@@ -56,6 +56,7 @@ test('structured replies cannot target absent versions, create actions or broade
  const context={rules:[{id:'known',version:2}],profiles:[],glossary:[]},origin={kind:'chat',id:randomUUID()},data={personalRules:[]};
  for(const proposals of [[{operation:'delete',targetId:'known',targetVersion:1}],[{operation:'execute',definition}],[{operation:'create',definition:{...definition,origins:[{kind:'manual',id:'fake'}]}}],[{operation:'create',definition:{...definition,effect:{kind:'terminology',glossaryId:'absent'}}}]])assert.throws(()=>parseFoliReply(JSON.stringify({answer:'draft',proposals}),{context,origin,data}));
  assert.equal(parseFoliReply(JSON.stringify({answer:'Which spacing do you mean?',proposals:[]}),{context,origin,data}).proposals.length,0);
+ const term=parseFoliReply(JSON.stringify({answer:'Review this term.',proposals:[{operation:'create',definition:{title:'Fictional term',effect:{kind:'terminology',glossaryId:'new'},scope:{targetLanguage:'de'}},glossaryDraft:{source:'Date of issue',target:'Ausstellungsdatum'}}]}),{context,origin,data}).proposals[0];assert.match(term.definition.effect.glossaryId,/^rule-term-/);assert.equal(term.glossaryDraft.source,'Date of issue');assert.equal(data.personalRules.length,0);
 });
 
 test('Foli HTTP uses the existing session, CSRF, metered provider and owner checks',async t=>{
