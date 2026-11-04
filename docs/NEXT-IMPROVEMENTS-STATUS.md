@@ -695,3 +695,8 @@ This document tracks implementation separately from automated verification and e
 - Targeted verification: Chromium and WebKit clarification/update flows 4/4; segmented malformed-output runtime 1/1; glossary runtime 1/1; macOS native `cargo check --locked` passed (upstream Tao warnings only); syntax/whitespace passed. Previous head `a26fb12` passed Ubuntu and macOS CI; Windows failed because a glossary test ended while its job was still running, then removed its temporary workspace. That test now waits for an explicit terminal state with a 60-second limit. Fresh Windows/native verification is pending. No release or version was changed.
 
 - Segment request instructions now consistently request local page/file coordinates, matching the existing mapper to original pages. Previously they requested original page numbers and the mapper could add the offset a second time. The targeted six-page runtime checks the prompt contract and original page references.
+
+### Clarification follow-up: retained PDF bytes and stable loading, 4 November 2026
+
+- PDF.js transfers its input buffer to the worker. The clarification cache now retains its own bytes so repeated page navigation does not reuse a detached buffer. Loading also preserves the viewer's height: blurring the page input could otherwise shrink/recenter the dialog during a mouse click and swallow the next source-jump action.
+- The same targeted browser flow now goes directly to the marked second page, returns to page one, switches to an image, and jumps back to the PDF's marked second page. Chromium and WebKit passed 2/2. No additional provider calls were made; all documents are fictional.
