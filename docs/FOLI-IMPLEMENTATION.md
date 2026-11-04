@@ -17,7 +17,8 @@ Baseline: version 0.12.0, clean worktree at `0a4cd28`. Scope is the private Foli
 | --- | --- | --- |
 | F01 | Inspected | Plan and AGENTS read; storage, schema, learning approval and context/export boundaries inspected. |
 | F02 | Foundation implemented, API transactions pending | Bounded typed rules/proposals, explicit approval, optimistic versions, idempotent repeated approval and inactive/deleted-rule preservation implemented. Workspace schema 5, encrypted persistence and both backup formats include the library. |
-| F03–F08 | Pending | Resolver, views, pipeline/export, chat, sample integration, upgrade and release gates remain required. |
+| F03 | Resolver foundation implemented, integration pending | Four focused tests pass: partial-order scope precedence, explicit job overrides/exclusions, pending scope, conflicts, origin neutrality and frozen rule/profile state. |
+| F04–F08 | Pending | Views, pipeline/export, chat, sample integration, upgrade and release gates remain required. |
 
 No feature completion or release is claimed. Existing 0.12.0 artifacts are unchanged.
 
@@ -26,3 +27,7 @@ No feature completion or release is claimed. Existing 0.12.0 artifacts are uncha
 Targeted local checks passed: 10/10 rule and existing learning-selection cases, followed by 8/8 focused rule/schema migration cases after adding stream backup and write-failure checks. Fictional encrypted schema-4 data migrates with a byte-identical recovery copy and unchanged key/profile/approval state. Rules survive restart, TOCRBACK1 restore and TOCRBACK2 stream restore. Invalid rule writes and injected ENOSPC leave the committed manifest unchanged. Existing schema-1/schema-2 migration checks pass with the current schema constant. No user workspace or live provider was accessed.
 
 Full repository gates, UI, resolver/context integration, sample conversion and release remain pending. The rule API still needs transaction rollback and concurrency integration before exposing mutations.
+
+### Resolver boundary
+
+`rule-resolver.mjs` is a single pure applicability/precedence implementation for the later server API and translation pipeline. Conditions override broader conditions only by containment, rather than arbitrary condition counts. Conflicting incomparable rules do not produce a layout value. Changes stay as sparse layout properties, and fixed typography/annex properties are rejected. Snapshot tests verify profile switches, per-job exceptions and rule versions. It is not yet wired into provider or renderer requests; the existing learning path remains unchanged until canonical sample conversion can replace it without duplication.
