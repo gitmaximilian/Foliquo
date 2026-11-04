@@ -164,7 +164,7 @@ try {
   const oldHealth=await fetch('http://127.0.0.1:'+oldRecord.port+'/api/health',{signal:AbortSignal.timeout(3000)}).then(r=>r.json());
   if(oldHealth.instance!==oldRecord.instance)throw new Error('The old service did not remain available for the upgrade fixture.');
   const upgraded=spawnSync(candidateInstaller,['/UPDATE','/S','/D='+installDir],{cwd:process.cwd(),env:{...process.env,FOLIQUO_DATA_DIR:dataDir,FOLIQUO_LOG_DIR:join(dataDir,'logs')},stdio:'inherit',timeout:360000,windowsHide:true});
-  if(upgraded.error)throw upgraded.error;if(upgraded.status!==0)throw new Error('The orphan-service upgrade installer failed with exit code '+upgraded.status+'.');
+  if(upgraded.error)throw upgraded.error;if(upgraded.status!==0){const serviceUpgradeLog=await readFile(join(dataDir,'logs','desktop-service-upgrade.log'),'utf8').catch(()=>'(no service-upgrade log)');throw new Error('The orphan-service upgrade installer failed with exit code '+upgraded.status+'. '+serviceUpgradeLog.slice(-4000));}
   if(!keyBefore.equals(await readFile(join(dataDir,'workspace.key'))))throw new Error('The upgrade changed the existing workspace key.');
   followupChild=spawn(executable,[],{cwd:installDir,env:{...process.env,FOLIQUO_DATA_DIR:dataDir,FOLIQUO_LOG_DIR:join(dataDir,'logs'),FOLIQUO_NO_BROWSER:'1'},stdio:'ignore',windowsHide:false});
   let upgradedRecord;const upgradeDeadline=Date.now()+60000;

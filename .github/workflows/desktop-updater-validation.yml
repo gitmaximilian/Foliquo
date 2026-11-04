@@ -53,17 +53,12 @@ jobs:
           $previous = Join-Path $env:RUNNER_TEMP 'Foliquo-previous-setup.exe'
           Invoke-WebRequest 'https://github.com/gitmaximilian/Foliquo/releases/download/desktop-v0.11.11/Foliquo_0.11.11_x64-setup.exe' -OutFile $previous
           if ((Get-FileHash $previous -Algorithm SHA256).Hash.ToLower() -ne '1fe09a395ace8312f7e25e3cbf2d6ad191b3b2707d1a518f202a4fd4dca1996c') { throw 'Previous installer checksum mismatch.' }
+          Invoke-WebRequest 'https://github.com/gitmaximilian/Foliquo/releases/download/desktop-v0.11.11/Foliquo_0.11.11_x64-setup.exe.sig' -OutFile "$previous.sig"
+          node scripts/check-updater-signatures.mjs $previous 0.11.11
+          if ($LASTEXITCODE -ne 0) { throw 'Previous installer updater signature mismatch.' }
           "FOLIQUO_UPGRADE_FROM_INSTALLER=$previous" >> $env:GITHUB_ENV
       - name: Verify the Windows window renders Foliquo
         if: runner.os == 'Windows'
         run: node scripts/smoke-desktop-window.mjs
-      - name: Verify platform updater signature
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            version="$(node -p "JSON.parse(require('fs').readFileSync('package.json')).version")"
-            test -f "desktop/src-tauri/target/release/bundle/nsis/Foliquo_${version}_x64-setup.exe.sig"
-          else
-            test -f desktop/src-tauri/target/release/bundle/macos/Foliquo.app.tar.gz.sig
-          fi
+      - name: Verify platform updater signature and signed version
+        run: node scripts/check-updater-signatures.mjs
