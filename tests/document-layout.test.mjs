@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {unzipSync,strFromU8} from 'fflate';
 import {createDocumentModel,validateDocumentModel} from '../lib/document-model.mjs';
-import {documentFromLegacyText} from '../lib/document-adapter.mjs';
+import {documentFromLegacyText,documentToLegacyText} from '../lib/document-adapter.mjs';
 import {createTranslationWord} from '../lib/word.mjs';
+import {modelLayoutIssues} from '../lib/document-layout.mjs';
+import {layoutSettings} from '../lib/workspace.mjs';
 import {createTranslationPDF} from '../lib/documents.mjs';
 
 const table=(id,values,properties={})=>({id,type:'table',relativeColumnWidths:[30,70],rows:values.map((row,r)=>row.map((text,c)=>({id:`${id}-${r}-${c}`,text,sourceBlockIds:[`source-${id}-${r}`]}))),keepRows:true,properties});
@@ -30,4 +32,15 @@ test('automatic table widths follow the job layout while an explicit width remai
 });
 test('stale text/model combinations cannot silently export the wrong content',async()=>{
  const document=documentFromLegacyText('Fictional original result');assert.throws(()=>createTranslationWord('Different fictional result',{document}),/passen nicht zusammen/);await assert.rejects(()=>createTranslationPDF('Different fictional result',[],{document}),/passen nicht zusammen/);
+});
+
+test('combined oversized headers are not repeated and their limitation is reported as an estimate',()=>{
+ const model=createDocumentModel({blocks:[table('large-header',[['Header A','X'.repeat(1600)],['Header B','Y'.repeat(1600)],['Body','DEMO-BODY']],{headerRows:2})]}),output=xml(model),issues=modelLayoutIssues(model,layoutSettings());
+ assert.doesNotMatch(output,/w:tblHeader/);assert.match(output,/DEMO-BODY/);assert.ok(issues.some(issue=>issue.code==='oversized-table-header'&&issue.estimated===true));
+});
+
+test('explicit columns retain logical reading order and constrain tables to their column width',()=>{
+ const props=index=>({columnGroup:'fictional-columns',columnCount:2,columnIndex:index,columnWidth:index===0?70:30}),model=createDocumentModel({blocks:[{id:'intro',type:'paragraph',content:'Fictional introduction'},{id:'left',type:'paragraph',content:'LEFT_MARKER',properties:props(0)},{...table('left-table',[['Entry','Value']]),properties:props(0)},{id:'right',type:'paragraph',content:'RIGHT_MARKER',properties:props(1)},{id:'after',type:'paragraph',content:'AFTER_COLUMNS'}]}),saved=JSON.stringify(model),output=xml(model),text=documentToLegacyText(model);
+ assert.match(output,/<w:cols w:num="2"/);assert.match(output,/<w:br w:type="column"/);assert.ok(text.indexOf('LEFT_MARKER')<text.indexOf('RIGHT_MARKER'));assert.ok(output.indexOf('RIGHT_MARKER')<output.indexOf('AFTER_COLUMNS'));assert.ok(Number(output.match(/<w:tblW w:w="(\d+)"/)[1])<7000);assert.equal(JSON.stringify(model),saved);const end=createDocumentModel({blocks:[model.blocks[1],model.blocks[3]]}),ending=xml(end);assert.equal((ending.match(/<w:sectPr>/g)||[]).length,1);assert.match(ending,/<w:cols w:num="2"/);
+ const bad=[{id:'a',type:'paragraph',content:'a',properties:props(0)},{id:'b',type:'paragraph',content:'b',properties:props(1)},{id:'c',type:'paragraph',content:'c',properties:props(0)}];assert.throws(()=>createDocumentModel({blocks:bad}),/Dokumentstruktur/);assert.throws(()=>createDocumentModel({blocks:bad.slice(0,1)}),/Dokumentstruktur/);
 });

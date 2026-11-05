@@ -2000,3 +2000,5 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .review-guide{display:grid;gap:10px;margin-block:16px}.review-guide details>summary{cursor:pointer;min-height:44px;padding-block:10px}.review-guide-check{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--color-border);padding:10px 0}.review-guide-check>p{flex-basis:100%;margin:0}.review-guide-check>strong{flex:1 1 240px;overflow-wrap:anywhere}.review-guide-check>small{font-weight:600}.review-guide-check button{min-height:44px}.review-rule-trace{overflow-wrap:anywhere}.review-trace-row{padding-inline:12px;border-inline-start:2px solid var(--color-border)}.review-final-summary{max-width:min(680px,94vw)}.review-final-summary .check-label{align-items:start;margin-block:16px}.review-guide-pending{padding:10px;border:1px solid var(--color-border);border-radius:8px}
 
 .review-guide-check-list{max-height:25rem;overflow:auto;overscroll-behavior:contain}
+
+.font-report{overflow-wrap:anywhere}
