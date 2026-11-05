@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {ruleTraceSnapshot} from '../lib/reviews.mjs';
 import {initializeRuleLibrary,proposeRule,reviewRuleProposal} from '../lib/personal-rules.mjs';
 import {createRuleApplicationPreview,resolveRuleApplicationPreview,ruleApplicationPreviewDTO,stageRuleLayoutApplication} from '../lib/rule-application.mjs';
 
@@ -9,6 +10,7 @@ test('new-rule application resolves a frozen conflict explicitly and never chang
  assert.throws(()=>resolveRuleApplicationPreview(job,{version:1,previewId:preview.id,answers:[{context:'unbound',answer:'1'}]},()=>[]));
  workspace.data.personalRules[1].effect.value=1.9;const resolved=resolveRuleApplicationPreview(job,{version:1,previewId:preview.id,answers:[{context:checked.questions[0].context,answer:'2'}]},()=>[]);assert.equal(resolved.questions.length,0);assert.equal(resolved.payload.contextSnapshot.layout.lineHeight,1.2);assert.equal(ruleApplicationPreviewDTO(job,resolved).requiresProvider,false);
  await stageRuleLayoutApplication(job,resolved.payload.contextSnapshot,async(text,base)=>({...base,pdf:'new-pdf',word:'new-word'}),{version:1,requestId:'fictional-request'});assert.equal(job.result.word,'old-word');assert.equal(job.review.proposal.result.context.layout.lineHeight,1.2);assert.equal(job.review.versions[0].context.layout.lineHeight,1);assert.equal(job.review.rulePreview,undefined);
+ const trace=ruleTraceSnapshot({result:job.review.proposal.result});assert.equal(trace.available,true);assert.equal(trace.appliedRules[0].effect.value,1.2);assert.equal(trace.decisions.find(item=>item.id===trace.appliedRules[0].id).state,'effective');assert.equal(trace.libraryVersion,preview.payload.contextLibrarySnapshot.rules.libraryVersion);workspace.data.personalRules[1].title='Changed global title';assert.notEqual(trace.decisions.find(item=>item.id===trace.appliedRules[0].id).title,workspace.data.personalRules[1].title);assert.equal(ruleTraceSnapshot(job).available,false,'legacy current result must not borrow the new proposal trace');
 });
 test('failed local exports and stale previews cannot create a revision or mutate the current result',async()=>{
  const {workspace,job}=setup(),preview=createRuleApplicationPreview(workspace,job,1);assert.throws(()=>resolveRuleApplicationPreview(job,{version:2,previewId:preview.id},()=>[]));const original=structuredClone(job.result);
