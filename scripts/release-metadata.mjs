@@ -62,8 +62,17 @@ await writeFile(join(tap,'Formula','foliquo.rb'),`class Foliquo < Formula
     ENV["FOLIQUO_PORT"] = free_port.to_s
     pid = fork { exec bin/"foliquo" }
     begin
-      sleep 3
-      assert_match "foliquo", shell_output("curl --fail --silent http://127.0.0.1:#{ENV.fetch("FOLIQUO_PORT")}/api/health")
+      health_url = "http://127.0.0.1:#{ENV.fetch("FOLIQUO_PORT")}/api/health"
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 60
+      loop do
+        IO.popen(["curl", "--fail", "--silent", "--max-time", "1", health_url], err: File::NULL, &:read)
+        break if Process.last_status.success?
+
+        assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC), :<, deadline,
+                        "The Foliquo service did not become ready within 60 seconds"
+        sleep 0.2
+      end
+      assert_match "foliquo", shell_output("curl --fail --silent #{health_url}")
       system bin/"foliquo"
       system bin/"foliquo", "stop"
       Process.wait pid
