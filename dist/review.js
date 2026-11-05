@@ -25,7 +25,7 @@ function renderReviewControls(){
  const progress=reviewData?.revisionProgress,interrupted=progress?.state==='interrupted',busy=reviewUnavailable||!reviewData||reviewData.busy||reviewSubmitting||reviewData.proposal||interrupted;$('#review-busy').hidden=!reviewData?.busy&&!reviewSubmitting;$('#review-send').disabled=busy;$('#review-prompt').disabled=busy;
  $('#review-revision-controls').hidden=!progress;$('#review-revision-progress').textContent=progress?reviewCopy('{complete} von {total} Abschnitten gespeichert.',{complete:progress.complete,total:progress.total}):'';$('#review-revision-warning').textContent=interrupted?reviewCopy(progress.unknown?'Ein unterbrochener Aufruf kann bei Fortsetzung erneut Kontingent oder API-Kosten verbrauchen. Mit „Fortsetzen“ bestätigst du die Wiederholung.':'Gespeicherte Abschnitte bleiben erhalten.'):progress?.state==='needs_input'?reviewCopy('Bitte beantworte die Rückfrage für diesen Abschnitt.'):'';
  $('#review-revision-resume').hidden=!interrupted;$('#review-revision-discard').hidden=!['interrupted','needs_input'].includes(progress?.state);$('#review-revision-cancel').hidden=!reviewData?.busy||!progress;$('#review-revision-resume').disabled=reviewUnavailable||reviewSubmitting;$('#review-revision-discard').disabled=reviewUnavailable||reviewSubmitting||Boolean(reviewData?.busy);$('#review-revision-cancel').disabled=reviewUnavailable||!reviewData?.busy;
- const blocked=reviewUnavailable||!reviewData?.result;for(const id of ['review-final-pdf','review-final-word','review-final-both'])$("#"+id).disabled=blocked;
+ const blocked=reviewUnavailable||!reviewData?.result||window.TOCRSourceInventory?.isSaving||window.TOCRReviewGuide?.isSaving;for(const id of ['review-final-pdf','review-final-word','review-final-both'])$("#"+id).disabled=blocked;
  $('#review-version').textContent=reviewData?reviewCopy('Version {version}',{version:reviewData.version}):reviewCopy('Wird geladen');
  $('#review-final-status').textContent=reviewUnavailable?reviewCopy('Dieser Auftrag ist abgelaufen. Bitte zurückgehen und die Dateien erneut hochladen.'):!reviewData?.result?reviewCopy('Die Übersetzung wird geladen …'):reviewCopy('Version {version}',{version:reviewData.version});
  window.TOCRRuleApplication?.update(reviewData);renderLearningOffer(reviewData);
@@ -59,7 +59,7 @@ function renderReview(snapshot){
   $('#review-preview-note').textContent=reviewCopy(snapshot.result.context?.layout?.includeOriginals===false?'PDF ohne Originalanhang · Word mit derselben bearbeitbaren Übersetzung':'PDF mit Originalseiten · Word mit derselben bearbeitbaren Übersetzung');$('#review-names').textContent=snapshot.names.join(' · ');$('#review-text').textContent=snapshot.result.text;
  if(reviewPreviewVersion!==snapshot.version){reviewPreviewVersion=snapshot.version;if(snapshot.previewTransport==='download-stream')void loadReviewPDF(snapshot.jobId,snapshot.version);else void setReviewPDF(snapshot.result.pdf);}queueResultCache.delete(reviewJobId);
  }
- if(typeof renderInspector==='function')renderInspector(snapshot);if(typeof renderStudio==='function')renderStudio(snapshot);if(typeof renderWorkflow==='function')renderWorkflow(snapshot);
+ if(typeof renderInspector==='function')renderInspector(snapshot);if(typeof renderStudio==='function')renderStudio(snapshot);if(typeof renderWorkflow==='function')renderWorkflow(snapshot);window.TOCRReviewGuide?.render(snapshot);
  renderReviewControls();
 }
 async function loadReview(preview=false){
@@ -107,6 +107,7 @@ function reviewPreviewMode(mode){$('#review-pdf').hidden=mode!=='pdf';$('#review
 $('#review-show-pdf').onclick=()=>reviewPreviewMode('pdf');$('#review-show-text').onclick=()=>reviewPreviewMode('text');
 async function downloadFinal(format){
  if(reviewUnavailable||!reviewData?.result)return;const id=reviewJobId,version=reviewData.version;
+ if(window.TOCRReviewGuide&&!await window.TOCRReviewGuide.confirmFinal(reviewData))return;if(id!==reviewJobId||version!==reviewData.version){$('#review-error').textContent=reviewCopy('Bitte die aktuelle Vorschau laden, bevor du final herunterlädst.');return;}
  try{const response=await localRequest(`/api/jobs/${id}/review/finalize`,{version,format,certification:$('#certification-confirm').checked});downloadBlob(await response.blob(),`foliquo-v${version}.${format==='bundle'?'zip':format==='pdf'?'pdf':'docx'}`);toast(reviewCopy('Finale Version {version} wird heruntergeladen.',{version}));await loadReview();}catch(error){$('#review-error').textContent=error.message;}
 }
 $('#review-final-pdf').onclick=()=>downloadFinal('pdf');$('#review-final-word').onclick=()=>downloadFinal('word');$('#review-final-both').onclick=()=>downloadFinal('bundle');

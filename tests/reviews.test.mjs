@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import {PDFDocument} from 'pdf-lib';
 import {unzipSync,strFromU8} from 'fflate';
 import {normalizeDates,normalizeTranslation,parseFinalTranslation,translationInstructions} from '../lib/translation-policy.mjs';
-import {applyReview,reviewSnapshot,finalReview} from '../lib/reviews.mjs';
+import {applyReview,reviewSnapshot,finalReview,ruleTraceSnapshot,reviewSummarySnapshot} from '../lib/reviews.mjs';
 import {createApp} from '../server.mjs';
+import {confirmChecks} from '../lib/verification.mjs';
 import {applySourceInventoryDecision} from '../lib/source-inventory.mjs';
 test('review snapshot exposes the compact source inventory without exposing original files',()=>{
  const inventory={schema:1,items:[{id:'page-1',page:1,coverageStatus:'unreviewed',sourceText:'PRIVATE ORIGINAL TEXT'}],summary:{total:1,reviewed:0,mapped:0,open:1,percent:0,label:'zugeordnete/geprüfte Quellbereiche'}};
@@ -50,4 +51,15 @@ test('HTTP editing chat preserves original pages, blocks stale/final downloads w
  assert.match(seen[1].input[0].content[0].text,/currentTranslation/);assert.match(seen[1].input[0].content[0].text,/Omar Hassan/);assert.match(JSON.stringify(seen[1]),/Bereits geklärt/);
  state=await post(base+'/edit',{prompt:'Ändere den Namen nochmal.',version:2,requestId:'question'}).then(r=>r.json());assert.equal(state.version,2);assert.equal(state.hasQuestions,true);assert.equal(state.busy,false);assert.equal((await post(base+'/finalize',{version:2,format:'word'})).status,200,'an optional follow-up question does not lock the completed version');
  state=await post(base+'/edit',{prompt:'Omar Hassan ist richtig, beibehalten.',version:2,requestId:'answer'}).then(r=>r.json());assert.equal(state.version,3);assert.equal(state.hasQuestions,false);assert.ok(state.messages.some(m=>m.text.includes('Welche Schreibweise')));const word=await post(base+'/finalize',{version:3,format:'word'});assert.equal(word.status,200);assert.equal(word.headers.get('content-type'),'application/vnd.openxmlformats-officedocument.wordprocessingml.document');assert.match(word.headers.get('content-disposition'),/foliquo-final-v3\.docx/);assert.match(strFromU8(unzipSync(new Uint8Array(await word.arrayBuffer()))['word/document.xml']),/Omar Hassan/);
+});
+
+test('review summary is version-bound human acknowledgement and changed checks reopen it',()=>{
+ const job={id:'fictional-review-summary',status:'succeeded',result:{text:'Fictional date',pdf:'old-pdf',word:'old-word',checks:[{id:'date',kind:'date',severity:'critical',confirmed:false},{id:'complete',kind:'manual',confirmed:false}]},review:{version:1}},original=job.result;
+ assert.equal(reviewSummarySnapshot(job).criticalOpen,1);assert.equal(reviewSummarySnapshot(job).userReviewed,false);
+ finalReview(job,1);assert.equal(job.result,original);assert.equal(job.review.finalReviewSummary.version,1);assert.equal(job.review.finalReviewSummary.userReviewed,true);assert.equal(job.review.finalReviewSummary.open,2);
+ confirmChecks(job,{version:1,ids:['date']},job.review);assert.equal(reviewSummarySnapshot(job).userReviewed,false);assert.equal(reviewSummarySnapshot(job).criticalOpen,0);assert.equal(reviewSummarySnapshot(job).open,1);assert.throws(()=>finalReview(job,2));
+});
+test('terminology rule trace retains the frozen pair and cannot mutate stored context',()=>{
+ const context={terms:[{id:'fictional-term',source:'Fictional source',target:'Saved target',version:2}],appliedRules:[{id:'fictional-rule',version:3,effect:{kind:'terminology',glossaryId:'fictional-term'}}],ruleResolution:{decisions:[{id:'fictional-rule',version:3,title:'Saved title',state:'effective',scope:{targetLanguage:'en'}}]}},job={result:{context}};
+ const trace=ruleTraceSnapshot(job);assert.deepEqual(trace.appliedRules[0].terminologyPair,{source:'Fictional source',target:'Saved target',version:2});trace.decisions[0].scope.targetLanguage='de';trace.appliedRules[0].terminologyPair.target='Changed outside result';assert.equal(context.terms[0].target,'Saved target');assert.equal(context.ruleResolution.decisions[0].scope.targetLanguage,'en');
 });
