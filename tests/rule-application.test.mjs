@@ -28,3 +28,10 @@ test('reapplication retains pinned template defaults and can resolve rules after
  const {workspace,job}=setup();workspace.data.templates=[];workspace.context=()=>({layout:{margin:35},template:null,profile:null,terms:[],examples:[]});job.result.context={...job.result.context,templateId:'removed-fictional-template',template:{id:'removed-fictional-template',version:1,fields:[]},baseLayout:{margin:22,lineHeight:1.1}};
  const preview=createRuleApplicationPreview(workspace,job,1);assert.deepEqual(preview.payload.contextLibrarySnapshot.base.layout,{margin:22,lineHeight:1.1});assert.equal(preview.payload.contextLibrarySnapshot.base.template.version,1);assert.equal(job.result.context.layout.lineHeight,1);
 });
+
+
+test('explicit reapplication reads current facts only for the pinned person and tolerates a removed dossier',()=>{
+ const {workspace,job}=setup();workspace.data.dossiers=[{id:'fictional-case',owner:job.owner,version:4,entities:[{id:'alex',name:'Alex',version:1},{id:'bea',name:'Bea',version:1}],facts:[{id:'preferred-alex',key:'personName',label:'Name',entityId:'alex',value:'New Alex',version:2,confirmed:true},{id:'preferred-bea',key:'personName',label:'Name',entityId:'bea',value:'Bea Example',version:1,confirmed:true}]}];job.result.context={...job.result.context,dossierId:'fictional-case',dossierEntityId:'alex',dossierFacts:[{id:'preferred-alex',entityId:'alex',value:'Old Alex',confirmed:true}]};
+ const preview=createRuleApplicationPreview(workspace,job,1);assert.deepEqual(preview.payload.contextSnapshot.dossierFacts.map(f=>f.value),['New Alex']);assert.equal(job.result.context.dossierFacts[0].value,'Old Alex');
+ workspace.data.dossiers=[];const removed=createRuleApplicationPreview(workspace,job,1);assert.equal(removed.payload.contextSnapshot.dossierId,'');assert.deepEqual(removed.payload.contextSnapshot.dossierFacts,[]);assert.equal(job.result.context.dossierFacts[0].value,'Old Alex');
+});

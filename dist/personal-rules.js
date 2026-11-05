@@ -141,7 +141,7 @@
  }
 
  window.TOCRRules={describeEffect:describe,displayTitle:ruleTitle,languageName,documentTypeName:value=>t(value),removeSampleLabel:()=>t('removeSample'),useSampleLabel:()=>t('useSample'),sampleStatus:entry=>t(entry.active?'sampleEnabled':'sampleDisabled'),openRule,openSample,confirmSourceRemoval,mountSample,proposalCard,jobOptions,openOverview:showOverview,openManager:()=>{state.focusId='';view('workspace');setTab('rules');},refresh:()=>{void refresh();schedulePreview();},resetJobOptions:()=>{state.excluded.clear();if(state.learningBaseline!==undefined){state.learning=state.learningBaseline;const existing=$('#use-learning');if(existing)existing.checked=state.learning;delete state.learningBaseline;}schedulePreview();},proposalsChanged:()=>void refresh()};
- document.addEventListener('change',event=>{if(event.target.id==='use-learning')delete state.learningBaseline;if(event.target.matches('#source-language,#target-language,#context-template,#context-profile,#context-dossier,#use-learning'))schedulePreview();});
+ document.addEventListener('change',event=>{if(event.target.id==='use-learning')delete state.learningBaseline;if(event.target.matches('#source-language,#target-language,#context-template,#context-profile,#context-dossier,#context-dossier-entity,#use-learning'))schedulePreview();});
  window.addEventListener('translateocr-ready',schedulePreview);window.addEventListener('translateocr-view-change',event=>{if(event.detail.view==='studio')schedulePreview();if(event.detail.view==='workspace'&&state.tab==='rules')void refresh();});window.addEventListener('translateocr-locale',()=>{localize();schedulePreview();});
  localize();setTab('samples');schedulePreview();
 })();
