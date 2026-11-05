@@ -1,1 +1,29 @@
 #foli-view{max-width:900px;margin-inline:auto;min-width:0}#foli-view[hidden]{display:none}.foli-toolbar,.foli-examples{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-block:12px}.foli-toolbar select{flex:1;min-width:140px;max-width:100%}.foli-messages{display:grid;gap:18px;margin-block:24px}.foli-message{padding:18px;border:1px solid var(--border,#d9dce2);border-radius:14px;min-width:0;overflow-wrap:anywhere}.foli-message>p{white-space:pre-wrap;line-height:1.6}.foli-user{margin-inline-start:8%;background:var(--surface-muted,rgba(120,120,140,.07))}.foli-assistant{margin-inline-end:3%}.foli-form textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:100px}.foli-proposals{display:grid;gap:12px}.foli-proposals:empty{display:none}#foli-view .rule-actions{flex-wrap:wrap}#foli-status:empty,#foli-error:empty{display:none}@media(max-width:600px){.foli-toolbar{gap:8px}.foli-message{padding:12px}.foli-user,.foli-assistant{margin-inline:0}.foli-toolbar select{flex-basis:100%}#foli-view .card-heading{align-items:flex-start;gap:12px}#foli-view h1{font-size:1.5rem}}
+
+#foli-view{height:var(--foli-height,calc(100dvh - 64px));display:flex;flex-direction:column;min-height:0;overflow:auto;gap:8px}
+#foli-view>.card-heading{flex-shrink:0;margin:0;align-items:center}#foli-view h1{font-size:1.6rem;line-height:1.3;margin:0}
+#foli-view>.foli-intro{margin:0;font-size:.9rem}#foli-view.has-messages>.foli-intro{display:none}
+#foli-view>.foli-toolbar{flex-shrink:0;margin:0}.foli-toolbar select{flex:1 1 140px}
+.foli-examples{margin:0;gap:4px}.foli-examples button{font-size:.85rem}
+.foli-messages{flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;overflow-anchor:none;align-content:start;gap:12px;margin:0;padding:4px;scrollbar-gutter:stable}
+.foli-message{padding:12px 14px;border-color:var(--color-border);background:var(--color-surface);border-radius:var(--radius-card)}
+.foli-user{background:var(--color-surface-muted)}.foli-message>p{margin-block:6px;line-height:1.5}
+.foli-proposals .rule-card{margin:8px 0 0}.foli-proposals .rule-actions{gap:6px}
+.foli-form{flex-shrink:0;margin:0!important;padding:10px 12px!important;border-color:var(--color-border);background:var(--color-surface-elevated)}
+.foli-form>label{font-size:.85rem}.foli-form textarea{min-height:56px;max-height:140px;resize:vertical;margin-block:4px}
+.foli-form .foli-toolbar{margin:0;gap:8px}.foli-form .foli-toolbar button{min-height:44px}
+#foli-status,#foli-error{flex-shrink:0;font-size:.85rem;line-height:1.35;margin:0}#foli-view>.foli-privacy{flex-shrink:0;font-size:.75rem;line-height:1.35;margin:0}
+.foli-latest{flex-shrink:0;align-self:center;min-height:36px;font-size:.85rem}
+.foli-tools{position:relative;flex-shrink:0}.foli-tools>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;padding:8px 12px;border:1px solid var(--color-border-control);border-radius:var(--radius-control);font-size:.85rem}
+.foli-tools-body{position:absolute;inset-inline-end:0;top:calc(100% + 4px);z-index:8;min-width:200px;padding:8px;background:var(--color-surface-elevated);border:1px solid var(--color-border);border-radius:var(--radius-card);box-shadow:var(--shadow-menu);display:grid;gap:8px}
+.foli-confirmation{border:1px solid var(--color-border);border-radius:var(--radius-control);padding:6px 10px;background:var(--color-surface-muted);margin-top:8px}
+.foli-confirmation>summary{cursor:pointer;min-height:36px;padding-block:6px;font-weight:600;font-size:.9rem}.foli-confirmation>p{margin-block:8px;font-size:.85rem}
+#foli-view.composing>.card-heading,#foli-view.composing>.foli-toolbar,#foli-view.composing>.foli-privacy,#foli-view.composing>.foli-intro,#foli-view.composing>.foli-examples{display:none}
+#foli-view.composing .foli-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;padding:6px!important}
+#foli-view.composing .foli-form>label{display:none}#foli-view.composing textarea{height:48px;min-height:48px;max-height:48px;resize:none;margin:0}
+#foli-view.composing .foli-form .foli-toolbar{gap:4px}#foli-view.composing #foli-status,#foli-view.composing #foli-error{max-height:48px;overflow:auto}
+@media(max-width:600px){#foli-view .card-heading{align-items:center}#foli-view h1{font-size:1.4rem}.foli-toolbar select{flex:1 1 140px;min-width:100px}.foli-toolbar>button{padding-inline:10px}.foli-tools>summary{padding-inline:8px}.foli-message{padding:10px}.foli-messages{scrollbar-gutter:auto}.foli-form{padding:8px!important}.foli-form textarea{max-height:100px}.foli-user,.foli-assistant{margin-inline:0}}
+
+#foli-status,#foli-error{max-height:72px;overflow:auto}#foli-view.compact>.card-heading,#foli-view.compact>.foli-intro,#foli-view.compact>.foli-examples,#foli-view.compact>.foli-privacy{display:none}#foli-view.compact #foli-status,#foli-view.compact #foli-error{max-height:48px}
+
+.foli-tools>summary{min-width:44px;justify-content:center;font-size:1.25rem;font-weight:700}

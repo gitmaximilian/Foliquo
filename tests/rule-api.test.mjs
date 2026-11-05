@@ -27,6 +27,7 @@ test('rule HTTP flow requires approval, preserves request identity and previews 
  const proposal=created.data.proposal,accepted=await call('/api/personal-rules/review',{id:proposal.id,version:proposal.version,accept:true});assert.equal(accepted.status,200);assert.equal(accepted.data.results[0].rule.effect.value,1.5);
  assert.equal((await call('/api/personal-rules/review',{id:proposal.id,version:proposal.version,accept:true})).data.results[0].replayed,true);
  const rules=(await call('/api/personal-rules?kind=layout&q=spacing')).data;assert.equal(rules.total,1);const rule=rules.items[0];
+ assert.deepEqual((await call('/api/personal-rules?id='+encodeURIComponent(rule.id))).data.items,[rule]);assert.equal((await call('/api/personal-rules?id=fictional-missing')).data.total,0);assert.equal((await call('/api/personal-rules?id='+ 'x'.repeat(101))).status,400);
  assert.equal((await new Workspace(workspace.directory).init()).data.personalRules[0].id,rule.id);
  const preview=await call('/api/personal-rules/preview',{metadata:{targetLanguage:'Deutsch',sourceLanguage:'Englisch'}});assert.equal(preview.status,200);assert.equal(preview.data.layoutPatch.lineHeight,1.5);
  const excluded=await call('/api/personal-rules/preview',{metadata:{targetLanguage:'Deutsch',excludedRuleIds:[rule.id]}});assert.equal(excluded.status,200);assert.equal(excluded.data.layoutPatch.lineHeight,undefined);assert.equal(excluded.data.decisions[0].state,'excluded');assert.equal(workspace.data.personalRules[0].status,'active');
