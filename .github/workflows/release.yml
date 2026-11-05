@@ -23,7 +23,9 @@ jobs:
           - os: windows-2022
             target: Windows-x64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # The Intel runner needs ~24 minutes for the full serial suite alone.
+    # Keep every gate; allow the following package/export steps to complete.
+    timeout-minutes: ${{ matrix.os == 'macos-15-intel' && 60 || 30 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7

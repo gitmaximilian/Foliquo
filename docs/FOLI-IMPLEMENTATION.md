@@ -157,3 +157,19 @@ Two audit gaps were closed before packaging. The backup API/UI now exposes the e
 ### Platform CI follow-up
 
 PR #8 at `0915ca7` passed the full Linux and macOS jobs. Windows passed 411/412 tests; its only failure was the dispatched-cancellation assertion in the segmented rule-application fixture. The test waited for `busy`, which also covers pre-dispatch document preparation; Windows can still be in that stage after the old fixed polling loop. Cancelling before dispatch correctly reports zero uncertain requests. The fixture now waits for an explicit signal from the mock provider before cancelling, and fails if the revision ends before reaching that signal. It still requires exactly one uncertain dispatched request and unchanged result files. The targeted local runtime case passes. No product cancellation behavior or assertion was weakened; current-head CI and actual Windows installer execution remain pending.
+
+
+### Current-head cross-platform acceptance
+
+PR run [41941274769](https://github.com/gitmaximilian/Foliquo/actions/runs/41941274769) passed on all three operating systems at `5582c7c`. Linux and macOS each passed 412 tests; Windows passed 411 with one platform-specific skip and zero failures. Every job also passed its required storage/recovery gates, offline benchmark (three cases, zero regressions/requests), twelve acceptance cases and demo build. The provider-dispatched cancellation assertion now passes on Windows.
+
+The unpublished native candidate run [41941280478](https://github.com/gitmaximilian/Foliquo/actions/runs/41941280478) has completed Apple Silicon and Linux. Both bundled-runtime logs confirm fictional PDF export and encrypted retained rules/chat/profile/budget, platform data paths and the same key, with zero provider requests. Apple Silicon updater signature verification reports version 0.13.0, verified true. Intel macOS and the real two-step Windows installation are still running; these completed jobs do not substitute for their results. Source candidate run [41941911519](https://github.com/gitmaximilian/Foliquo/actions/runs/41941911519) is also running. Neither 0.13.0 tag nor public release has been created.
+
+Intel macOS subsequently completed native run `41941280478` successfully as well. Its log confirms the fictional PDF export, retained encrypted rules/chat/profiles/budget/data paths/key, zero provider requests, and updater signature version 0.13.0 verified true. All Mac/Linux packaged-runtime requirements have executed; Windows and final release publication remain pending.
+
+
+### Real Windows upgrade and Intel source timeout
+
+Native run `41941280478` completed the actual installed Windows sequence: public 0.12.0 → unpublished 0.12.99 → 0.13.0. The first step verified replacement of an orphan service; both steps preserved the same key, preferences, legacy profile/approvals, source bytes, budget and historical usage. The second step retained the exact accepted rule ID/version (version 1) and conversation ID/version (version 2, including both fictional messages). The packaged Windows runtime independently passed encrypted retained-state/data-path and fictional export checks with zero provider requests. Final updater signature verification reports 0.13.0 verified true. The workflow emits the machine-readable Windows upgrade report with its artifacts.
+
+Source run `41941911519` passed Apple Silicon, Linux and Windows packaging. Intel macOS passed all 412 tests (1,414 seconds), the benchmark, demo build and all twelve acceptance cases, then hit the 30-minute job budget before dependency audit/package execution. No test failed, but that cancelled job is not a successful package gate. The source workflow now allows 60 minutes for Intel only, retaining every gate and the other platforms' existing limits. Final tagged source packaging and Homebrew checks must still execute successfully.
