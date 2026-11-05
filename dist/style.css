@@ -2002,3 +2002,5 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .review-guide-check-list{max-height:25rem;overflow:auto;overscroll-behavior:contain}
 
 .font-report{overflow-wrap:anywhere}
+
+.document-column-dialog{width:min(720px,94vw)}.document-column-dialog form{display:grid;gap:12px}.document-column-dialog label{display:grid;gap:4px;min-width:0}.document-column-dialog select{width:100%;min-width:0;max-width:100%}

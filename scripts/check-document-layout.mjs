@@ -1,5 +1,5 @@
 // Fictional technical fixtures through the real Word -> PDF production path.
-// Extend this set as P06 adds uncertainty handling and editor acceptance.
+// Includes columns, pagination, separate areas and explicit handwriting decisions.
 import {mkdir,writeFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import assert from 'node:assert/strict';
@@ -23,9 +23,14 @@ const fixtures=[
  {name:'separate-blocks',blocks:[{id:'title',type:'heading',content:'FICTIONAL SEPARATE BLOCKS'},table('first',[['Column A','Column B'],['Literal | pipe','DEMO-ALPHA']],{headerRows:1}),table('second',[['Other column','Other value'],['Fictional field','DEMO-BETA']],{headerRows:1}),{id:'stamp',type:'stamp',content:'FICTIONAL AUTHORITY\nDEMO-STAMP'},{id:'signature',type:'paragraph',content:'[Unterschrift: unleserlich]',properties:{role:'signature'}},{id:'handwriting',type:'paragraph',content:'[Handschriftlich: unleserlich]',properties:{role:'handwriting'}}],tokens:['DEMO-ALPHA','DEMO-BETA','DEMO-STAMP'],maxTranslationPages:1}
 ];
 fixtures.push({...fixtures[0],name:'columns-at-end',blocks:fixtures[0].blocks.slice(1,-1),tokens:fixtures[0].tokens.slice(0,-1)});
+fixtures.push({name:'handwriting',blocks:[{id:'hand-confirmed',type:'paragraph',content:'[Handschriftlich: FICTIONAL_CONFIRMED_ADDITION]',properties:{role:'handwriting',handwritingState:'confirmed'}},{id:'hand-unreadable',type:'paragraph',content:'[Handschriftlich: unleserlich]',properties:{role:'handwriting',handwritingState:'unreadable'}}],tokens:['FICTIONAL_CONFIRMED_ADDITION'],maxTranslationPages:1});
+fixtures.push({...fixtures[0],name:'columns-rtl',direction:'rtl',targetLanguage:'Arabisch',blocks:fixtures[0].blocks.map(block=>({...block,content:block.content+' — نص تجريبي'}))});
+const uncertain=createDocumentModel({blocks:[{id:'uncertain',type:'paragraph',content:'Unconfirmed fictional reading',properties:{role:'handwriting',handwritingState:'uncertain'}}]});
+assert.throws(()=>createTranslationWord(uncertain),error=>error.code==='ERR_DOCUMENT_HANDWRITING_UNCERTAIN');
+await assert.rejects(()=>createTranslationPDF(uncertain,[]),error=>error.code==='ERR_DOCUMENT_HANDWRITING_UNCERTAIN');
 const reports=[];
 for(const fixture of fixtures){
- const document=createDocumentModel({blocks:fixture.blocks}),saved=JSON.stringify(document),metadata={targetLanguage:'Deutsch',language:'Deutsch',fictionalLayoutPreview:true,layout:{lineHeight:1.3}};
+ const document=createDocumentModel({blocks:fixture.blocks,direction:fixture.direction||'auto'}),saved=JSON.stringify(document),metadata={targetLanguage:fixture.targetLanguage||'Deutsch',language:'Deutsch',fictionalLayoutPreview:true,layout:{lineHeight:1.3}};
  const word=createTranslationWord(document,metadata),pdf=await createTranslationPDF(document,[{name:'fictional-original.pdf',type:'application/pdf',bytes:originalBytes}],metadata),loaded=await PDFDocument.load(pdf),translationPages=loaded.getPageCount()-1;
  const blocks=await extractEmbeddedSourceBlocks([{name:fixture.name+'.pdf',type:'application/pdf',bytes:pdf}]),translated=blocks.filter(block=>block.page<=translationPages),text=translated.map(block=>block.sourceText).join(' ');
  for(const token of fixture.tokens)assert.equal(text.split(token).length-1,1,`${fixture.name}: missing or duplicated ${token}`);

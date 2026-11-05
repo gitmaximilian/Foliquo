@@ -6,6 +6,7 @@ import {documentFromLegacyText,documentToLegacyText} from '../lib/document-adapt
 import {createTranslationWord} from '../lib/word.mjs';
 import {modelLayoutIssues} from '../lib/document-layout.mjs';
 import {layoutSettings} from '../lib/workspace.mjs';
+import {editedResult} from '../lib/protection.mjs';
 import {createTranslationPDF} from '../lib/documents.mjs';
 
 const table=(id,values,properties={})=>({id,type:'table',relativeColumnWidths:[30,70],rows:values.map((row,r)=>row.map((text,c)=>({id:`${id}-${r}-${c}`,text,sourceBlockIds:[`source-${id}-${r}`]}))),keepRows:true,properties});
@@ -43,4 +44,20 @@ test('explicit columns retain logical reading order and constrain tables to thei
  const props=index=>({columnGroup:'fictional-columns',columnCount:2,columnIndex:index,columnWidth:index===0?70:30}),model=createDocumentModel({blocks:[{id:'intro',type:'paragraph',content:'Fictional introduction'},{id:'left',type:'paragraph',content:'LEFT_MARKER',properties:props(0)},{...table('left-table',[['Entry','Value']]),properties:props(0)},{id:'right',type:'paragraph',content:'RIGHT_MARKER',properties:props(1)},{id:'after',type:'paragraph',content:'AFTER_COLUMNS'}]}),saved=JSON.stringify(model),output=xml(model),text=documentToLegacyText(model);
  assert.match(output,/<w:cols w:num="2"/);assert.match(output,/<w:br w:type="column"/);assert.ok(text.indexOf('LEFT_MARKER')<text.indexOf('RIGHT_MARKER'));assert.ok(output.indexOf('RIGHT_MARKER')<output.indexOf('AFTER_COLUMNS'));assert.ok(Number(output.match(/<w:tblW w:w="(\d+)"/)[1])<7000);assert.equal(JSON.stringify(model),saved);const end=createDocumentModel({blocks:[model.blocks[1],model.blocks[3]]}),ending=xml(end);assert.equal((ending.match(/<w:sectPr>/g)||[]).length,1);assert.match(ending,/<w:cols w:num="2"/);
  const bad=[{id:'a',type:'paragraph',content:'a',properties:props(0)},{id:'b',type:'paragraph',content:'b',properties:props(1)},{id:'c',type:'paragraph',content:'c',properties:props(0)}];assert.throws(()=>createDocumentModel({blocks:bad}),/Dokumentstruktur/);assert.throws(()=>createDocumentModel({blocks:bad.slice(0,1)}),/Dokumentstruktur/);
+});
+
+
+test('unresolved handwriting cannot be flattened by normalization or exported',async()=>{
+ const document=createDocumentModel({blocks:[{id:'hand',type:'paragraph',content:'Fictional date 7.3.1998',properties:{role:'handwriting',handwritingState:'uncertain'}}]}),before=JSON.stringify(document),job={targetLanguage:'Deutsch',result:{text:'Previously reviewed result',document:documentFromLegacyText('Previously reviewed result')}};
+ assert.throws(()=>editedResult(job,{document}),error=>error.code==='ERR_DOCUMENT_HANDWRITING_UNCERTAIN');
+ assert.throws(()=>createTranslationWord(document),error=>error.code==='ERR_DOCUMENT_HANDWRITING_UNCERTAIN');
+ await assert.rejects(()=>createTranslationPDF(document,[]),error=>error.code==='ERR_DOCUMENT_HANDWRITING_UNCERTAIN');
+ assert.equal(job.result.text,'Previously reviewed result');assert.equal(JSON.stringify(document),before);
+ document.blocks[0].properties.handwritingState='confirmed';const saved=editedResult(job,{document});assert.equal(saved.document.blocks[0].properties.handwritingState,'confirmed');assert.equal(saved.document.blocks[0].content,'Fictional date 07.03.1998');assert.equal(JSON.stringify(document),before.replace('uncertain','confirmed'));
+ document.blocks[0].content='[Handschriftlich: unleserlich]';document.blocks[0].properties.handwritingState='unreadable';assert.match(xml(editedResult(job,{document}).document),/Handschriftlich: unleserlich/);
+});
+
+test('structured date normalization preserves columns and source references',()=>{
+ const properties=index=>({columnGroup:'dates',columnCount:2,columnIndex:index}),document=createDocumentModel({blocks:[{id:'a',type:'paragraph',content:'Fictional 7.3.1998',sourceBlockIds:['original-date'],properties:properties(0)},{id:'b',type:'paragraph',content:'Fictional 8.4.1999',properties:properties(1)}]}),before=JSON.stringify(document),result=editedResult({targetLanguage:'Deutsch',result:{text:''}},{document});
+ assert.equal(result.document.blocks[0].id,'a');assert.deepEqual(result.document.blocks[0].sourceBlockIds,['original-date']);assert.deepEqual(result.document.blocks[1].properties,properties(1));assert.match(result.text,/07.03.1998/);assert.match(result.text,/08.04.1999/);assert.equal(JSON.stringify(document),before);
 });
