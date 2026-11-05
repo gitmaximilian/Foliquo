@@ -5,6 +5,7 @@ import {unzipSync,strFromU8} from 'fflate';
 import {normalizeDates,normalizeTranslation,parseFinalTranslation,translationInstructions} from '../lib/translation-policy.mjs';
 import {applyReview,reviewSnapshot,finalReview} from '../lib/reviews.mjs';
 import {createApp} from '../server.mjs';
+import {applySourceInventoryDecision} from '../lib/source-inventory.mjs';
 test('review snapshot exposes the compact source inventory without exposing original files',()=>{
  const inventory={schema:1,items:[{id:'page-1',page:1,coverageStatus:'unreviewed',sourceText:'PRIVATE ORIGINAL TEXT'}],summary:{total:1,reviewed:0,mapped:0,open:1,percent:0,label:'zugeordnete/geprüfte Quellbereiche'}};
  const job={id:'job',status:'succeeded',review:{version:2,versions:[{version:1,document:{blocks:[]},sourceInventory:inventory}]},result:{text:'Fictional translation',pdf:'cGRm',word:'ZG9jeA==',sourceInventory:inventory,previews:[{name:'private.pdf',data:'cHJpdmF0ZQ=='}]}};
@@ -14,7 +15,7 @@ test('review snapshot exposes the compact source inventory without exposing orig
 test('legacy review snapshots do not present ambiguous automatic mappings as reviewed',()=>{
  const items=[1,2].map(page=>({id:`source-${page}`,page,sourceText:'PRIVATE SOURCE',targetText:page===1?'Name: Fictional name':'Fictional name',coverageStatus:'mapped',targetNodeIds:['target-1'],review:null})),inventory={schema:1,items,summary:{total:2,reviewed:2,mapped:2,open:0,percent:100}},document={blocks:[{id:'target-1',type:'paragraph',content:'Name: Fictional name',sourceBlockIds:[]}]},job={id:'job',status:'succeeded',review:{version:1},result:{context:{},sourceInventory:inventory,document}};
  let snapshot=reviewSnapshot(job).sourceInventory;assert.deepEqual(snapshot.items.map(item=>item.coverageStatus),['unreviewed','unreviewed']);assert.equal(snapshot.summary.open,2);assert.ok(snapshot.items.every(item=>item.targetNodeIds.length===0));assert.equal(items[0].coverageStatus,'mapped','reading a review does not overwrite the saved inventory');assert.equal(JSON.stringify(snapshot).includes('PRIVATE SOURCE'),false);
- items[0].review={decision:'map',version:1};document.blocks[0].sourceBlockIds=['source-1'];snapshot=reviewSnapshot(job).sourceInventory;assert.deepEqual(snapshot.items.map(item=>item.coverageStatus),['mapped','unreviewed']);assert.equal(snapshot.summary.reviewed,1);
+ items[0].review={decision:'map',version:1};document.blocks[0].sourceBlockIds=['source-1'];snapshot=reviewSnapshot(job).sourceInventory;assert.equal(snapshot.items[0].review.stale,true,'legacy unbound decisions require current-version confirmation');applySourceInventoryDecision(job,{version:1,sourceId:items[0].id,action:'map',targetNodeIds:['target-1']},job.review);snapshot=reviewSnapshot(job).sourceInventory;assert.deepEqual(snapshot.items.map(item=>item.coverageStatus),['mapped','unreviewed']);assert.equal(snapshot.summary.reviewed,1);
 });
 test('Dates use dots everywhere and German terminology applies without altering other target languages',()=>{
  assert.equal(normalizeDates('7.3.1998; 07 03 1998; 1998-03-07; 7/3/1998'),'07.03.1998; 07.03.1998; 07.03.1998; 07.03.1998');

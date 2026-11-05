@@ -8,6 +8,10 @@ import {correctScan} from '../lib/scans.mjs';
 import {extractLocalOcrSourceBlocks} from '../lib/learning-analysis.mjs';
 import {documentFromLegacyText} from '../lib/document-adapter.mjs';
 import {acceptRevision,rememberVersion} from '../lib/revisions.mjs';
+import {Workspace} from '../lib/workspace.mjs';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 
 test('source inventory creates deterministic page IDs, links extracted fields, and leaves unreviewed page content open',()=>{
  const files=[{data:Buffer.from('fictional input').toString('base64')}],fields=[{label:'Document number',source:'DEMO-482',translated:'Dokumentnummer DEMO-482',fileIndex:0,page:2,box:[.1,.2,.3,.1]}],document=documentFromLegacyText('Dokumentnummer DEMO-482\nWeitere Übersetzung');
@@ -60,7 +64,7 @@ test('a repeated source is ambiguous when different proposed target strings matc
 
 test('embedded source PDF text is extracted locally with normalized source coordinates',async()=>{
  const pdf=await PDFDocument.create(),page=pdf.addPage([600,800]),font=await pdf.embedFont(StandardFonts.Helvetica);page.drawText('Fictional source paragraph',{x:72,y:700,size:14,font});const blocks=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}]);
- assert.equal(blocks.length,1);assert.equal(blocks[0].sourceText,'Fictional source paragraph');assert.equal(blocks[0].kind,'heading');assert.equal(blocks[0].extractionMethod,'embedded-text');assert.equal(blocks[0].fileIndex,0);assert.equal(blocks[0].page,1);assert.equal(blocks[0].box.length,4);assert.ok(blocks[0].box.every(value=>value>=0&&value<=1));
+ assert.equal(blocks.length,1);assert.equal(blocks[0].sourceText,'Fictional source paragraph');assert.equal(blocks[0].kind,'heading');assert.equal(blocks[0].extractionMethod,'embedded-text');assert.equal(blocks[0].fileIndex,0);assert.equal(blocks[0].page,1);assert.equal(blocks[0].box.length,4);assert.ok(blocks[0].box[1]>.09&&blocks[0].box[1]<.15,'embedded PDF coordinates use the visible top-left origin');assert.ok(blocks[0].box.every(value=>value>=0&&value<=1));
  const limited=await extractEmbeddedSourceBlocks([{type:'application/pdf',bytes:Buffer.from(await pdf.save())}],{maxPages:0});assert.equal(limited.truncated,true);assert.equal(limited.length,0);
 });
 
@@ -132,6 +136,27 @@ test('source decisions bind exact source and mapped text while unrelated edits r
  assert.equal(persisted.items.find(item=>item.id===items[0].id).coverageStatus,'mapped','display validation does not mutate stored history');
  const replaced=buildSourceInventory({files:[{data:Buffer.from('different fictional original').toString('base64')}],pageCounts:[2],sourceBlocks,document,previousInventory:persisted});
  assert.ok(replaced.items.every(item=>!item.review),'matching text in different original bytes cannot inherit a decision');
+});
+
+test('encrypted restart retains source decisions and reopens only a changed mapped target',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-fictional-source-review-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const workspace=await new Workspace(directory).init(),files=[{name:'fictional.txt',type:'text/plain',data:Buffer.from('Fictional original bytes').toString('base64')}],document=documentFromLegacyText('Fictional translated paragraph'),sourceBlocks=[{kind:'paragraph',fileIndex:0,page:1,sourceText:'Fictional source paragraph',translated:'Fictional translated paragraph'},{kind:'stamp',fileIndex:0,page:2,sourceText:'Fictional stamp',translated:''}],inventory=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document}),job={id:'fictional-source-review',owner:'fictional-owner',createdAt:1,finishedAt:2,status:'succeeded',result:{text:'Fictional translated paragraph',document,sourceInventory:inventory,previews:files,checks:[]},review:{version:1}};
+ const paragraph=inventory.items.find(item=>item.sourceText==='Fictional source paragraph'),stamp=inventory.items.find(item=>item.kind==='stamp');
+ applySourceInventoryDecision(job,{version:1,sourceId:paragraph.id,action:'map',targetNodeIds:[document.blocks[0].id]},job.review);
+ applySourceInventoryDecision(job,{version:2,sourceId:stamp.id,action:'exclude',reason:'Fictional scope excludes this stamp.'},job.review);
+ workspace.data.jobs=[job];await workspace.save();
+ const restarted=await new Workspace(directory).init(),saved=restarted.data.jobs.find(item=>item.id===job.id),before=reviewableSourceInventory(saved.result.sourceInventory,saved.result.document);
+ assert.equal(before.items.find(item=>item.id===paragraph.id).coverageStatus,'mapped');assert.equal(before.items.find(item=>item.id===stamp.id).coverageStatus,'excluded-reviewed');
+ saved.result.document.blocks[0].content='Changed fictional translation';saved.result.text='Changed fictional translation';saved.review.version++;await restarted.save();
+ const reopened=await new Workspace(directory).init(),changedJob=reopened.data.jobs.find(item=>item.id===job.id),after=reviewableSourceInventory(changedJob.result.sourceInventory,changedJob.result.document);
+ assert.equal(after.items.find(item=>item.id===paragraph.id).review.stale,true);assert.equal(after.items.find(item=>item.id===stamp.id).coverageStatus,'excluded-reviewed');assert.equal(changedJob.result.previews[0].data,files[0].data);
+});
+
+test('legacy embedded-text boxes are displayed and reconfirmed in top-left coordinates',()=>{
+ const document=documentFromLegacyText('Fictional translation'),item={id:'legacy-source',documentId:'legacy-original',pageId:'legacy-page',page:1,kind:'paragraph',extractionMethod:'embedded-text',box:[.1,.8,.4,.05],sourceText:'Fictional source',coverageStatus:'unreviewed',targetNodeIds:[]},inventory={schema:1,items:[item]},job={result:{document,sourceInventory:inventory,checks:[]}},review={version:1};
+ const display=reviewableSourceInventory(inventory,document);assert.ok(Math.abs(display.items[0].box[1]-.15)<1e-9);assert.equal(item.box[1],.8,'read-only migration preserves historical records');
+ applySourceInventoryDecision(job,{version:1,sourceId:item.id,action:'map',targetNodeIds:[document.blocks[0].id]},review);
+ assert.equal(item.coordinateSpace,'top-left');assert.ok(Math.abs(item.box[1]-.15)<1e-9);assert.equal(reviewableSourceInventory(inventory,document).items[0].coverageStatus,'mapped');
 });
 
 test('embedded text grouping preserves pre-group inventory IDs and review decisions',async()=>{
