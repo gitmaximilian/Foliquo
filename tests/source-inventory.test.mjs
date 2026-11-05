@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PDFDocument,StandardFonts,degrees} from 'pdf-lib';
 import {createCanvas} from '@napi-rs/canvas';
-import {applySourceInventoryDecision,buildSourceInventory,extractEmbeddedSourceBlocks,sourceCoverage} from '../lib/source-inventory.mjs';
+import {applySourceInventoryDecision,buildSourceInventory,extractEmbeddedSourceBlocks,sourceCoverage,reviewableSourceInventory} from '../lib/source-inventory.mjs';
 import {locationsOnOriginal} from '../lib/source-geometry.mjs';
 import {correctScan} from '../lib/scans.mjs';
 import {extractLocalOcrSourceBlocks} from '../lib/learning-analysis.mjs';
@@ -117,6 +117,21 @@ test('manual source decisions survive a deterministic inventory rebuild',()=>{
  applySourceInventoryDecision(job,{version:1,sourceId:item.id,action:'map',targetNodeIds:[document.blocks[0].id]},review);
  const rebuilt=buildSourceInventory({files,pageCounts:[1],sourceBlocks,document,previousInventory:job.result.sourceInventory});const mapped=rebuilt.items.find(value=>value.id===item.id);
  assert.equal(mapped.coverageStatus,'mapped');assert.deepEqual(mapped.targetNodeIds,[document.blocks[0].id]);assert.equal(mapped.review.decision,'map');assert.deepEqual(document.blocks[0].sourceBlockIds,[item.id]);
+});
+
+test('source decisions bind exact source and mapped text while unrelated edits remain reviewed',()=>{
+ const files=[{data:Buffer.from('fictional original').toString('base64')}],document=documentFromLegacyText('First translated paragraph\nSecond translated paragraph'),sourceBlocks=[1,2].map(page=>({kind:'paragraph',label:`Fictional paragraph ${page}`,fileIndex:0,page,sourceText:`Fictional original paragraph ${page}`,translated:page===1?'First translated paragraph':'Second translated paragraph'}));
+ const inventory=buildSourceInventory({files,pageCounts:[2],sourceBlocks,document}),job={result:{document,sourceInventory:inventory,checks:[]}},review={version:1};
+ const items=inventory.items.filter(item=>item.sourceText);
+ for(let i=0;i<items.length;i++)applySourceInventoryDecision(job,{version:review.version,sourceId:items[i].id,action:'map',targetNodeIds:[document.blocks[i].id]},review);
+ const persisted=JSON.parse(JSON.stringify(inventory));
+ assert.equal(reviewableSourceInventory(persisted,document).items.find(item=>item.id===items[0].id).coverageStatus,'mapped');
+ document.blocks[0].content='Changed translated paragraph';
+ const displayed=reviewableSourceInventory(persisted,document),changed=displayed.items.find(item=>item.id===items[0].id),unchanged=displayed.items.find(item=>item.id===items[1].id);
+ assert.equal(changed.coverageStatus,'unreviewed');assert.equal(changed.review.stale,true);assert.equal(unchanged.coverageStatus,'mapped');
+ assert.equal(persisted.items.find(item=>item.id===items[0].id).coverageStatus,'mapped','display validation does not mutate stored history');
+ const replaced=buildSourceInventory({files:[{data:Buffer.from('different fictional original').toString('base64')}],pageCounts:[2],sourceBlocks,document,previousInventory:persisted});
+ assert.ok(replaced.items.every(item=>!item.review),'matching text in different original bytes cannot inherit a decision');
 });
 
 test('embedded text grouping preserves pre-group inventory IDs and review decisions',async()=>{
