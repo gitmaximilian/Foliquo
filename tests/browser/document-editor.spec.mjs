@@ -20,10 +20,10 @@ test('structured document editor changes table layout, supports undo and saves a
   await expect(page.locator('#review-edit-open')).toBeVisible();await page.locator('#review-edit-open').click();await expect(page.locator('#direct-edit-dialog')).toBeVisible();
   await page.getByRole('button',{name:'Structure',exact:true}).click();await expect(page.locator('#structured-editor')).toBeVisible();const moveDown=page.locator('.structured-block').first().getByRole('button',{name:'Move down'});await moveDown.focus();await page.keyboard.press('Enter');
   expect(await page.evaluate(()=>window.directEditPayload().document.blocks[1].sourceBlockIds)).toContain('fictional-source-anchor');
-  const firstWidth=page.getByRole('spinbutton',{name:'Column width 1 as a percentage'}).first();await firstWidth.fill('25');await firstWidth.press('Tab');
+  const firstWidth=page.getByRole('spinbutton',{name:'Column width 1 as a percentage'}).first();await firstWidth.fill('25');await firstWidth.press('Tab');const headerRows=page.getByRole('spinbutton',{name:'Repeated header rows'}).first();await headerRows.fill('1');await headerRows.press('Tab');await page.getByRole('checkbox',{name:'Keep rows together where possible'}).first().uncheck();
   await page.getByRole('button',{name:'Add table row'}).first().click();await page.locator('#document-undo').click();await page.locator('#document-redo').click();
   await page.locator('#direct-save').click();await expect(page.locator('#review-version')).toHaveText('Version 2',{timeout:15000});
-  const stored=workspace.data.jobs.find(job=>job.id===id).result.document;expect(stored.schema).toBe(1);expect(stored.blocks.find(block=>block.type==='table').relativeColumnWidths[0]).toBeCloseTo(25,0);expect(stored.blocks.find(block=>block.id===anchoredBlock.id).sourceBlockIds).toContain('fictional-source-anchor');
+  const stored=workspace.data.jobs.find(job=>job.id===id).result.document;expect(stored.schema).toBe(1);expect(stored.blocks.find(block=>block.type==='table').properties).toMatchObject({widthsExplicit:true,headerRows:1});expect(stored.blocks.find(block=>block.type==='table').keepRows).toBe(false);expect(stored.blocks.find(block=>block.type==='table').relativeColumnWidths[0]).toBeCloseTo(25,0);expect(stored.blocks.find(block=>block.id===anchoredBlock.id).sourceBlockIds).toContain('fictional-source-anchor');
   expect(externalRequests).toEqual([]);expect(pageErrors).toEqual([]);
  }finally{await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});}
 });
