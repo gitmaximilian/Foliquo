@@ -5,3 +5,31 @@
 #studio-view:not(.has-files) .translation-composer .action-row:has(#job-rules){display:flex}
 #studio-view:not(.has-files) .translation-composer .action-row #translate{display:none}
 .learning-entry{grid-template-columns:minmax(0,1fr)}.learning-canonical-rules{min-width:0;overflow-wrap:anywhere}.learning-entry-actions .learning-active{white-space:normal;min-width:0;align-items:flex-start;flex:1 1 100%}.learning-active input{flex:0 0 auto}.learning-canonical-rules details{min-width:0}.learning-canonical-rules .rule-card{margin-block:10px}
+
+/* Shared application tokens also apply to dialogs outside the main landmark. */
+.rule-dialog{font-family:var(--font-ui);color:var(--color-text);background:var(--color-surface-elevated);border:1px solid var(--color-border);border-radius:var(--radius-dialog);box-shadow:var(--shadow-dialog);margin:auto}
+.rule-dialog::backdrop{background:rgb(23 43 58 / .32)}
+.rule-dialog h2{font-size:var(--text-h2-size,1.25rem);line-height:1.35;margin:0}
+.rule-dialog summary,.rule-entry summary,.learning-review-disclosure>summary,.learning-analysis-disclosure>summary{cursor:pointer;min-height:44px;padding-block:10px;font-weight:600}
+.rule-tabs{gap:4px;padding:4px;background:var(--color-surface-muted);border:1px solid var(--color-border);border-radius:var(--radius-control);width:fit-content}
+.rule-tabs button.secondary{background:transparent;border-color:transparent;color:var(--color-text-secondary);opacity:1}
+.rule-tabs button.secondary[aria-selected=true],.rule-tabs button.secondary[aria-selected=true]:hover{background:var(--color-selected);color:var(--color-accent);border-color:var(--color-accent-border)}
+.rule-tabs button.secondary[aria-selected=false]:hover{background:var(--color-surface-hover);color:var(--color-text)}
+.rule-filters{display:grid;gap:8px;margin:12px 0}
+.rule-filter-primary{display:flex;gap:10px;flex-wrap:wrap}.rule-filter-primary input{flex:1 1 240px}.rule-filter-primary select{flex:0 1 180px}
+.rule-filter-options{display:flex;gap:10px;flex-wrap:wrap;padding-block:10px}.rule-filter-options>*{flex:1 1 180px}
+.rule-filter-advanced>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;color:var(--color-text-secondary)}
+.rule-filter-advanced>summary::before{content:'+'}.rule-filter-advanced[open]>summary::before{content:'−'}
+.rule-filter-status{margin:0;font-size:.85rem}#rule-reset-filters{justify-self:start}
+.rule-list{gap:8px;margin:12px 0}.rule-entry{margin:0;padding:8px 14px;border-color:var(--color-border);background:var(--color-surface)}
+.rule-entry-main{min-width:0}.rule-entry-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}.rule-entry-heading h3{margin:0;overflow-wrap:anywhere;line-height:1.3}
+.rule-entry-heading .rule-switch{white-space:nowrap;flex-shrink:0;min-height:44px;margin:0}.rule-entry-scope{margin:0!important;font-size:.82rem}.rule-entry-origin{font-size:.78rem;margin:0!important;color:var(--color-text-muted)}
+.rule-entry-details>summary{font-size:.8rem;color:var(--color-text-secondary);min-height:28px;padding-block:4px}.rule-entry-details[open]{margin-top:8px}.rule-entry-details p{margin-block:6px}
+.personal-rules-panel>.card-heading{margin-bottom:8px}.personal-rules-panel>.muted{margin-block:6px}
+.learning-entry{padding:14px!important;gap:8px}.learning-entry-head small{display:block;color:var(--color-text-muted)}.learning-analysis-status{margin-block:0!important}.learning-entry-actions{gap:8px}
+.learning-review-disclosure>summary{color:var(--color-accent)}.learning-review-body{padding-block:8px}.learning-review-body>p{margin-top:0}
+.learning-review-body>details{margin-block:8px}.learning-review-body .rule-list{margin-block:8px}.learning-review-body .rule-card{margin-block:0}.learning-analysis-disclosure>summary{color:var(--color-text-secondary)}
+@media(min-width:900px){.rule-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;align-items:center}.rule-entry-details{min-width:150px}.rule-entry-details[open]{grid-column:1/-1}.rule-entry-origin{display:inline-block;margin-inline-end:12px!important}}
+@media(max-width:480px){.rule-filter-primary>*{width:100%;flex-basis:100%!important}.rule-entry-heading{align-items:flex-start}.rule-entry-heading .rule-switch{font-size:.85rem}.rule-filter-options>*{width:100%;flex-basis:100%}.rule-tabs{max-width:100%}}
+
+.rule-entry-meta{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline}.personal-rules-panel #rule-error:empty{display:none}
