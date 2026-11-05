@@ -82,3 +82,22 @@ test('source removal requires a reviewed choice and a failed save preserves the 
  const request={id,remove:true,confirm:true,ruleChoice:'independent',ruleVersions:impact.data.rules.map(({id,version})=>({id,version}))},write=workspace.writeMetadata.bind(workspace);workspace.writeMetadata=async()=>{throw Object.assign(new Error('Fictional full disk'),{code:'ENOSPC'});};assert.equal((await call('/api/learning/update',request)).status,400);assert.equal(workspace.data.learning.length,1);assert.equal(workspace.data.personalRules[0].independent,false);workspace.writeMetadata=write;
  assert.equal((await call('/api/learning/update',request)).status,200);assert.equal(workspace.data.learning.length,0);assert.equal(workspace.data.personalRules[0].independent,true);assert.deepEqual(workspace.data.personalRules[0].profileIds,[]);const reopened=await new Workspace(workspace.directory).init();assert.equal(reopened.data.learning.length,0);assert.equal(reopened.data.personalRules[0].origins[0].id,id);assert.equal(reopened.data.sampleProposalHistory.length,0);
 });
+
+test('source activation is separate, version-bound, atomic and cannot enable disabled rules',async t=>{
+ const {workspace,call,requests}=await setup(t),id=randomUUID();
+ workspace.data.learning.push({id,name:'Fictional source',canonicalRules:true,version:1,status:'pending_review',active:false,documentType:'Fictional certificate',targetLanguage:'German',rules:[],fieldLabels:[],sources:[],analysis:{complete:true,pageCount:1,profileVersion:1,sourceLanguage:'English',layout:{lineHeight:1.5},observations:[],terminology:[]}});
+ await workspace.save();const proposal=workspace.data.ruleProposals[0];
+ assert.equal((await call('/api/personal-rules/review',{id:proposal.id,version:proposal.version,accept:true})).status,200);
+ const rule=workspace.data.personalRules[0];assert.equal(workspace.data.learning[0].active,false);
+ const input={ruleId:rule.id,ruleVersion:rule.version,sourceId:id,sourceVersion:workspace.data.learning[0].version,confirm:true};
+ assert.equal((await call('/api/personal-rules/activate-source',{...input,confirm:false})).status,400);
+ assert.equal((await call('/api/personal-rules/activate-source',{...input,sourceVersion:0})).status,409);
+ const saved=JSON.stringify(workspace.data),write=workspace.writeMetadata.bind(workspace);
+ workspace.writeMetadata=async()=>{throw Object.assign(new Error('Fictional full disk'),{code:'ENOSPC'});};
+ assert.equal((await call('/api/personal-rules/activate-source',input)).status,400);assert.equal(JSON.stringify(workspace.data),saved);workspace.writeMetadata=write;
+ assert.equal((await call('/api/personal-rules/activate-source',input)).status,200);assert.equal(workspace.data.learning[0].active,true);assert.equal(workspace.data.personalRules[0].version,rule.version);
+ const disabled=await call('/api/personal-rules/proposals',{requestId:randomUUID(),operation:'disable',targetId:rule.id,targetVersion:rule.version});
+ await call('/api/personal-rules/review',{id:disabled.data.proposal.id,version:disabled.data.proposal.version,accept:true});
+ assert.equal((await call('/api/personal-rules/activate-source',{...input,ruleVersion:workspace.data.personalRules[0].version,sourceVersion:workspace.data.learning[0].version})).status,400);
+ assert.equal(workspace.data.personalRules[0].status,'inactive');assert.equal(requests(),0);
+});

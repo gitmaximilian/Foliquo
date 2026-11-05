@@ -91,3 +91,19 @@ test('rule transactions publish only after durable save, serialize approvals and
  assert.deepEqual(workspace.data.personalRules,before,'failed approval never reaches live state');
  workspace.writeMetadata=write;await workspace.save();assert.deepEqual((await new Workspace(directory).init()).data.personalRules,before);
 });
+
+test('durable source activation survives already queued ordinary saves and failed writes',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-fictional-source-transaction-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const workspace=await new Workspace(directory).init();
+ workspace.data.learning.push({id:'fictional-source',name:'Fictional source',canonicalRules:true,version:1,status:'active',active:false,documentType:'Certificate',targetLanguage:'German',rules:[],fieldLabels:[],sources:[],analysis:{complete:true,pageCount:1,profileVersion:1,sourceLanguage:'English',observations:[],terminology:[],layout:{}}});await workspace.save();
+ const write=workspace.writeMetadata.bind(workspace);let entered,release;
+ const waiting=new Promise(resolve=>{entered=resolve;}),gate=new Promise(resolve=>{release=resolve;});
+ workspace.writeMetadata=async snapshot=>{entered();await gate;return write(snapshot);};
+ const activation=workspace.save({sourceOperation:(_rules,sources)=>{sources[0].active=true;sources[0].version++;}});await waiting;
+ assert.equal(workspace.data.learning[0].active,false,'activation is invisible before durable commit');
+ workspace.data.settings.displayName='Fictional concurrent preference';const ordinary=workspace.save();release();await activation;await ordinary;
+ const reopened=await new Workspace(directory).init();assert.equal(reopened.data.learning[0].active,true);assert.equal(reopened.data.learning[0].version,2);assert.equal(reopened.data.settings.displayName,'Fictional concurrent preference');
+ workspace.writeMetadata=async()=>{throw Object.assign(new Error('Fictional denied write'),{code:'EACCES'});};
+ await assert.rejects(()=>workspace.save({sourceOperation:(_rules,sources)=>{sources[0].active=false;sources[0].version++;}}),{code:'EACCES'});
+ assert.equal(workspace.data.learning[0].active,true);assert.equal(workspace.data.learning[0].version,2);
+});
