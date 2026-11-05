@@ -3,6 +3,7 @@ import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createServer} from 'node:net';
+import {Readable} from 'node:stream';
 import {Workspace} from '../../lib/workspace.mjs';
 import {createApp} from '../../server.mjs';
 
@@ -18,10 +19,11 @@ async function openIsolatedWorkspace(page){
  await expect(page.locator('#storage-recovery-info')).toContainText(/same disk/i,{timeout:15000});
  await page.evaluate(()=>document.querySelector('#guide-storage-dialog').showModal());
  await page.locator('#backup-passphrase').fill('fictional backup password');
- return {directory,workspace,app};
+ return {directory,workspace,app,page};
 }
 
-async function closeIsolatedWorkspace({directory,workspace,app}){
+async function closeIsolatedWorkspace({directory,workspace,app,page}){
+ await page.close();
  await new Promise(resolve=>app.close(resolve));
  await workspace.tail;
  await rm(directory,{recursive:true,force:true});
@@ -42,6 +44,8 @@ test('backup download streams to the native save destination when available',asy
     return {createWritable:async()=>new WritableStream({write(chunk){window.__backupChunks.push(Array.from(new Uint8Array(chunk)));},close(){window.__backupClosed=true;}})};
    };
   });
+  await page.evaluate(async()=>{await localRequest('/api/foli/conversations',{title:'Fictional private chat'});const {proposal}=await localRequest('/api/personal-rules/proposals',{requestId:crypto.randomUUID(),definition:{title:'Fictional retained rule',effect:{kind:'layout',key:'lineHeight',value:1.5},scope:{}}}).then(response=>response.json());await localRequest('/api/personal-rules/review',{id:proposal.id,version:1,accept:true});});
+  await expect(page.locator('#backup-include-chats')).toBeChecked();await page.locator('#backup-include-chats').uncheck();
   await page.locator('#backup-download').click();
   await page.waitForFunction(()=>window.__backupClosed);
   const saved=await page.evaluate(()=>({chunks:window.__backupChunks.flat(),options:window.__backupPickerCalls,password:document.querySelector('#backup-passphrase').value}));
@@ -49,7 +53,7 @@ test('backup download streams to the native save destination when available',asy
   expect(saved.options).toHaveLength(1);
   expect(saved.options[0].suggestedName).toBe('foliquo-backup.enc');
   expect(bytes.subarray(0,9).toString()).toBe('TOCRBACK2');
-  expect(bytes.length).toBeGreaterThan(40);
+  expect(bytes.length).toBeGreaterThan(40);const restored=await new Workspace(join(isolated.directory,'restored')).init();await restored.restoreStream(Readable.from(bytes),'fictional backup password');await restored.save();expect(restored.data.foliConversations).toHaveLength(0);expect(restored.data.personalRules[0].effect.value).toBe(1.5);expect(isolated.workspace.data.foliConversations).toHaveLength(1);
   expect(saved.password).toBe('');
   expect(pageErrors).toEqual([]);
  }finally{await closeIsolatedWorkspace(isolated);}

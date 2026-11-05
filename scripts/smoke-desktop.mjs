@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import {fileURLToPath,pathToFileURL} from 'node:url';
+import {seedInstalledLegacy,localClient,verifyLegacy,seedPersonalState,verifyStoredPersonal} from './upgrade-fixtures.mjs';
 
 const root=fileURLToPath(new URL('..',import.meta.url));
 const generated=join(root,'desktop/generated');
@@ -14,6 +15,7 @@ const office=process.platform==='win32'?join(generated,'office/LibreOffice/progr
 const workspace=await mkdtemp(join(tmpdir(),'foliquo-desktop-smoke-'));
 const port=await new Promise((resolve,reject)=>{const server=createServer();server.once('error',reject);server.listen(0,'127.0.0.1',()=>{const value=server.address().port;server.close(()=>resolve(value));});});
 const origin=`http://127.0.0.1:${port}`;
+const legacyFixture=seedInstalledLegacy(service,workspace),keyBefore=await readFile(join(workspace,'workspace.key'));
 const child=spawn(node,[join(service,'server.mjs')],{cwd:service,env:{...process.env,FOLIQUO_PORT:String(port),FOLIQUO_DATA_DIR:workspace,TRANSLATEOCR_SOFFICE:office,FOLIQUO_NO_BROWSER:'1'},stdio:['ignore','pipe','pipe']});
 let exited=false;const startupOutput=[];for(const [name,stream] of [['stdout',child.stdout],['stderr',child.stderr]]){stream.setEncoding('utf8');stream.on('data',chunk=>{startupOutput.push(`${name}: ${chunk}`);if(startupOutput.length>40)startupOutput.shift();});}child.once('error',error=>{exited=true;startupOutput.push(`spawn error: ${error.message}`);});child.once('exit',(code,signal)=>{exited=true;startupOutput.push(`process exit: code=${code}, signal=${signal}`);});
 try{
@@ -39,7 +41,10 @@ try{
   }
   throw new Error(`Bundled PDF export failed: ${response.status} ${bytes.subarray(0,300).toString()}${detail}`);
  }
- console.log(`Bundled Node, LibreOffice, session and fictional PDF export passed on ${process.platform}/${process.arch}.`);
+ const client=await localClient(origin,cookie);await verifyLegacy(client,legacyFixture);const personal=await seedPersonalState(client);
+ const record=JSON.parse(await readFile(join(workspace,'service.json'),'utf8'));await fetch(`${origin}/api/lifecycle/stop`,{method:'POST',headers:{authorization:`Bearer ${record.token}`},signal:AbortSignal.timeout(5000)});for(let attempt=0;attempt<50&&!exited;attempt++)await delay(100);if(!exited)throw new Error('The bundled service did not stop before persistence verification.');
+ const persistence=verifyStoredPersonal(service,workspace,client,personal);if(!keyBefore.equals(await readFile(join(workspace,'workspace.key'))))throw new Error('The packaged runtime changed the saved workspace key.');
+ console.log(`Bundled Node, LibreOffice, session and fictional PDF export passed on ${process.platform}/${process.arch}.`);console.log('Packaged encrypted persistence: '+JSON.stringify({...persistence,keyPreserved:true,providerRequests:0}));
 }finally{
  try{const record=JSON.parse(await readFile(join(workspace,'service.json'),'utf8'));await fetch(`${origin}/api/lifecycle/stop`,{method:'POST',headers:{authorization:`Bearer ${record.token}`},signal:AbortSignal.timeout(3000)});}catch{}
  for(let attempt=0;attempt<20&&!exited;attempt++)await delay(100);

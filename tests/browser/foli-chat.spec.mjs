@@ -1,0 +1,26 @@
+import {test,expect} from '@playwright/test';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createServer} from 'node:net';
+import {Workspace} from '../../lib/workspace.mjs';
+import {createApp} from '../../server.mjs';
+
+test('Foli shares reviewed rules with the library, retains history and supports cancellation and RTL',async({page},testInfo)=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-fictional-foli-ui-')),workspace=await new Workspace(directory).init();
+ const probe=createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));let calls=0,hold=false;
+ const provider={id:'chatgpt',selected:'chatgpt',status:()=>({connected:true,planEnabled:true}),summaries:()=>[{id:'chatgpt',connected:true,planEnabled:true}],models:async()=>[{id:'fictional-model',label:'Fictional model'}],respond:async(request,signal,progress,usage)=>{calls++;if(hold){await new Promise((resolve,reject)=>{if(signal.aborted)reject(new Error('aborted'));else signal.addEventListener('abort',()=>reject(new Error('aborted')),{once:true});});}usage({inputTokens:100,outputTokens:40},{complete:true});return JSON.stringify({answer:'Review the proposed spacing. <script>throw new Error("unsafe")</script>',proposals:[{operation:'create',definition:{title:'Fictional chat spacing',effect:{kind:'layout',key:'lineHeight',value:'1,5'},scope:{targetLanguage:'de'}}}]});}};
+ const app=createApp({workspace,port,provider,connection:{data:{}}});await new Promise(resolve=>app.listen(port,'127.0.0.1',resolve));const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ try{
+  await page.goto(`http://127.0.0.1:${port}`);await page.locator('#intro-skip').click();await page.waitForFunction(()=>typeof csrf!=='undefined'&&csrf&&window.TOCRRules);await page.waitForFunction(()=>document.querySelector('#model').value==='fictional-model');
+  await page.locator('header [data-view=foli]').click();await expect(page.locator('#foli-view')).toBeVisible();const input=page.locator('#foli-input');await input.fill('Für deutsche Übersetzungen Zeilenabstand 1,5.');await page.locator('#foli-view button[type=submit]').click();
+  const card=page.locator('#foli-messages .rule-proposal');await expect(card).toBeVisible();expect(workspace.data.personalRules).toHaveLength(0);expect(calls).toBe(1);expect(await page.locator('#foli-messages script').count()).toBe(0);
+  await card.getByRole('button',{name:'Adjust',exact:true}).click();const editor=page.locator('#personal-rule-form');await editor.locator('[name=title]').fill('Fictional chat spacing');await editor.getByRole('button',{name:'Save proposal',exact:true}).click();await expect(card).toHaveCount(1);await expect(card).toBeVisible();
+  await card.getByRole('button',{name:'Accept rule',exact:true}).click();await expect(page.locator('#foli-messages')).toContainText('Accepted');expect(workspace.data.personalRules).toHaveLength(1);const ruleId=workspace.data.personalRules[0].id;
+  await page.locator('#foli-view').getByRole('button',{name:'Open rules',exact:true}).click();await expect(page.locator('#rule-list')).toContainText('Fictional chat spacing');await page.evaluate(()=>view('studio',{historyMode:'none'}));await expect(page.locator('#job-rules')).toContainText('1 effective');expect(calls).toBe(1);
+  await page.locator('header [data-view=foli]').click();await page.reload();await expect(page.locator('#foli-view')).toBeVisible();await expect(page.locator('#foli-conversations option')).toHaveCount(2);await page.locator('#foli-conversations').selectOption(workspace.data.foliConversations[0].id);await expect(page.locator('#foli-messages')).toContainText('Accepted');
+  hold=true;await input.fill('Make another proposal.');await page.locator('#foli-view button[type=submit]').click();await expect(page.locator('#foli-cancel')).toBeVisible();await page.locator('#foli-cancel').click();await expect(page.locator('#foli-status')).toContainText('may already have used quota');expect(calls).toBe(2);expect(workspace.data.personalRules[0].id).toBe(ruleId);expect(workspace.data.ruleProposals).toHaveLength(2);
+  await input.fill('Keep this unsent draft.');await page.setViewportSize({width:375,height:800});for(const language of ['de','ar']){await page.evaluate(language=>window.TOCRI18n.setLocale(language),language);await expect(input).toHaveValue('Keep this unsent draft.');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);}await expect(page.locator('html')).toHaveAttribute('dir','rtl');await page.screenshot({path:join(process.cwd(),'outputs',`foli-chat-ar-mobile-${testInfo.project.name}.png`),fullPage:true});
+  page.once('dialog',dialog=>dialog.accept());await page.locator('#foli-delete').click();await expect(page.locator('#foli-conversations option')).toHaveCount(1);expect(workspace.data.personalRules[0].id).toBe(ruleId);expect(errors).toEqual([]);
+ }finally{await page.close();await app.flushWorkspace();await new Promise(resolve=>app.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});}
+});

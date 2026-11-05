@@ -4,7 +4,7 @@ This document tracks implementation separately from automated verification and e
 
 ## Current release checkpoint — 4 November 2026
 
-Version 0.12.0 is prepared; the public version remains 0.11.11 until coordinated publication. The original package table below records earlier partial milestones; this checkpoint and the dated follow-ups describe the current implementation.
+Version 0.12.0 was published on 4 November 2026 after both coordinated tag pipelines passed. The original package table below records earlier partial milestones; this checkpoint and the dated follow-ups describe the current implementation.
 
 | Packages | Current technical result | Evidence boundary |
 | --- | --- | --- |
@@ -18,11 +18,19 @@ Version 0.12.0 is prepared; the public version remains 0.11.11 until coordinated
 | P11 | Resumable translation/revision, related-page hints, explicit uncertain retries, usage and budgets implemented. | Group hints can be incomplete; old jobs without valid text maps retain the legacy revision path. |
 | P12 | Page/layout analysis, opt-in learning, editable/scoped approved profiles, versioned feedback and explicit layout choices implemented. | Personal configuration does not train model weights; independent learning-benefit studies remain pending. |
 | P14 | Excluded by user instruction (rank 7). | Operating-system signing/notarization and installer trust are not added as release blockers for this task. |
-| P15 | Source distribution gates and historical Windows upgrade passed; coordinated tag builds/drafts are next. | No 0.12.0 public release yet. Website content is staged; Cloudflare needs a personal sign-in step. |
+| P15 | Source and desktop 0.12.0 releases published after all tag gates passed. Public updater metadata and its three asset URLs verified. | Homebrew 0.12.0 is merged after public-URL checks on both architectures. Website ZIP/source is ready; production deployment needs the owner’s Cloudflare sign-in. WinGet submission is excluded by the user. |
 
 Source distribution [41798384737](https://github.com/gitmaximilian/Foliquo/actions/runs/41798384737) passed all four platform builds, metadata, both Homebrew checks and official WinGet manifest validation. Historical Windows upgrade [41800425731](https://github.com/gitmaximilian/Foliquo/actions/runs/41800425731) verified real updater signatures for 0.11.11 and 0.12.0 and reported `from: 0.11.11`, `to: 0.12.0`, unchanged workspace key and retained preferences after replacing an orphaned old service. Complete source CI for the signature/alias changes passed in [41800354214](https://github.com/gitmaximilian/Foliquo/actions/runs/41800354214).
 
-The plan permits shipping technically verified functions with unmeasured benefits clearly disclosed. Human studies are not marked completed and no numerical quality/learning improvement is advertised. Release drafts will be promoted only after both source and desktop tag workflows pass.
+The plan permits shipping technically verified functions with unmeasured benefits clearly disclosed. Human studies are not marked completed and no numerical quality/learning improvement is advertised. Both release drafts were promoted after the source and desktop tag workflows passed.
+
+### Active publication follow-up — 4 November 2026
+
+- PR #7 merged into main at `c46383f90bfa173080f0ff8d63d6cc5d3f30548b`. Immutable source and desktop 0.12.0 tags point to that commit. Both releases are now public.
+- Desktop tag build 41804075264 passed Windows (including historical upgrade), Apple Silicon and Linux. Intel failed during DMG collection without a detailed command error on attempt 1. Identical-source attempt 2 passed all collection, checksum, updater cryptographic verification and release staging steps. The complete workflow is successful.
+- Source tag build [41804075073](https://github.com/gitmaximilian/Foliquo/actions/runs/41804075073) now passed all platform builds, actual Windows installation, metadata, official manifest validation and both Homebrew architecture checks on attempt 2. The first Windows actual-installer step exceeded the 30-minute ceiling; the same-code retry passed. Successful platform artifacts were retained. The verified 0.12.0 source release is public; its packaging ZIP was downloaded and checked against its release SHA256SUMS before preparing the tap update.
+- User explicitly removed WinGet submission and waiting for Microsoft from the current release scope. Homebrew, GitHub releases/update metadata and the staged website remain in scope. Rank 7 remains excluded.
+- Cloudflare publication requires the owner's personal sign-in. Save this step for the final handoff; continue all other authorized release work independently.
 
 ## Baseline
 
@@ -760,3 +768,11 @@ The plan permits shipping technically verified functions with unmeasured benefit
 
 - Source and desktop tag workflows now stage verified draft releases. The release operator promotes the source draft without changing GitHub Latest, then the desktop draft as Latest, only after both gate sets pass. This permits parallel builds while keeping incomplete updates private. Existing releases and tags are never overwritten.
 - Package-manager preparation ignores desktop tags instead of starting a source-package job that cannot handle them. README links the latest published desktop release; the installation guide is prepared for 0.12.0. Cloudflare publication remains separately pending the protected personal sign-in step.
+
+### Public 0.12.0 release — 4 November 2026
+
+- Published [desktop-v0.12.0](https://github.com/gitmaximilian/Foliquo/releases/tag/desktop-v0.12.0) as GitHub Latest and [v0.12.0](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.12.0) as the separate browser/CLI release, both at `c46383f90bfa173080f0ff8d63d6cc5d3f30548b`. Existing tags/releases were preserved.
+- Desktop workflow [41804075264](https://github.com/gitmaximilian/Foliquo/actions/runs/41804075264), attempt 2, and source workflow [41804075073](https://github.com/gitmaximilian/Foliquo/actions/runs/41804075073), attempt 2, completed successfully. The main commit’s source CI [41803922072](https://github.com/gitmaximilian/Foliquo/actions/runs/41803922072) also passed.
+- Downloaded desktop metadata and platform reports match their published SHA256SUMS and the release commit. The public `/releases/latest/download/latest.json` exactly matches the verified manifest, advertises 0.12.0 and three supported updater targets; all three artifact URLs return HTTP 200.
+- Apple Silicon public DMG: 511,812,000 bytes (488.10 MiB); ZIP: 482,431,994 bytes (460.08 MiB). The upload-ready website ZIP and local website source use the new version, matching links and rounded sizes, checked in English and German through Yab. Production is still the prior deployment pending personal sign-in. Website source backups are retained beside the ZIP outside this repository.
+- Homebrew PR [#3](https://github.com/gitmaximilian/homebrew-tap/pull/3) was merged at `5a4df93571f5a7732e5b757fbe0aca62dada843e` after [public-URL CI 41841024518](https://github.com/gitmaximilian/homebrew-tap/actions/runs/41841024518) passed on both architectures. The main-branch formula was fetched and its two 0.12.0 URLs/SHA256 values confirmed. The duplicate push-triggered check was cancelled while retaining the PR checks. No WinGet submission or Microsoft waiting is part of this release task.
