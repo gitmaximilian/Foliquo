@@ -68,7 +68,7 @@ function renderDocuments(){
   const types=document.createElement('select');types.id='library-types';types.setAttribute('aria-label','Dokumenttyp filtern');
   const resetFilter=()=>{documentHistory.jobs=[];documentHistory.total=0;documentHistory.nextOffset=0;documentHistory.hasMore=false;documentHistory.loaded=false;documentHistory.loading=false;documentHistory.error='';documentHistory.request++;};
   search.oninput=()=>{libraryFilters.query=search.value;resetFilter();renderDocumentRows();clearTimeout(documentSearchTimer);documentSearchTimer=setTimeout(()=>void loadDocumentHistory(),240);};types.onchange=()=>{libraryFilters.type=types.value;resetFilter();void loadDocumentHistory();};toolbar.append(search,types);
-  const host=document.createElement('div');host.id='library-results';host.className='library-results';host.setAttribute('aria-live','polite');target.replaceChildren(toolbar,host);
+  const host=document.createElement('div');host.id='library-results';host.className='library-results';host.setAttribute('aria-live','polite');target.replaceChildren(toolbar,host);window.TOCRContentSearch?.mount(toolbar);
  }
  const types=$('#library-types'),groups=[...new Set([...documentHistory.types,...jobs.map(documentGroup)])].sort();const groupSignature=JSON.stringify(groups);if(types.dataset.groups!==groupSignature){types.replaceChildren(new Option(uiText('Alle Dokumenttypen'),'') ,...groups.map(group=>new Option(uiText(group),group)));types.dataset.groups=groupSignature;}if(!groups.includes(libraryFilters.type))libraryFilters.type='';types.value=libraryFilters.type;window.syncDocumentTypePickers?.();
  renderDocumentRows();if(!documentHistory.loaded&&!documentHistory.loading)void loadDocumentHistory();
