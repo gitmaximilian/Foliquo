@@ -4,16 +4,16 @@ This ledger tracks the complete 17-item plan dated 5 November 2026. Work starts 
 
 | Package | Agreed requirements | State |
 | --- | --- | --- |
-| P01 | U1 compact learning; U3 compact rules; U4 clear states; U7 localization; U10 consistent controls | Implemented; focused acceptance passed; integrated/release gates pending |
-| P02 | U2 usable chat layout and persisted proposal confirmations | Implemented; focused acceptance passed; integrated/release gates pending |
-| P03 | U5 actual local layout examples; U6 explicit sample activation | Implemented; focused acceptance passed; integrated/release gates pending |
-| P04 | G2 visual, version-bound source coverage | Implemented; focused acceptance passed; integrated/release gates pending |
-| P05 | G3 critical facts; G7 unified review; U9 frozen rule traces | Implemented; focused acceptance passed; integrated/release gates pending |
-| P06 | G4 complex document model/export improvements | Implemented; focused export/editor acceptance passed; integrated/release gates pending |
-| P07 | G5 explicit, multi-person dossier relationships | Implemented; focused case/relationship acceptance passed; integrated/release gates pending |
-| P08 | G6 bounded local page scan checks and reversible corrections | Implemented; focused page/correction acceptance passed; integrated/release gates pending |
-| P09 | G8 confirmed local batch grouping proposals | Implemented; focused grouping/retry/restart acceptance passed; integrated/release gates pending |
-| P10 | G9 bounded, encrypted, rebuildable content search | Implemented; focused search/recovery/scale/browser acceptance passed; integrated/release gates pending |
+| P01 | U1 compact learning; U3 compact rules; U4 clear states; U7 localization; U10 consistent controls | Implemented; focused acceptance passed; integrated acceptance passed; final publication audit pending |
+| P02 | U2 usable chat layout and persisted proposal confirmations | Implemented; focused acceptance passed; integrated acceptance passed; final publication audit pending |
+| P03 | U5 actual local layout examples; U6 explicit sample activation | Implemented; focused acceptance passed; integrated acceptance passed; final publication audit pending |
+| P04 | G2 visual, version-bound source coverage | Implemented; focused acceptance passed; integrated acceptance passed; final publication audit pending |
+| P05 | G3 critical facts; G7 unified review; U9 frozen rule traces | Implemented; focused acceptance passed; integrated acceptance passed; final publication audit pending |
+| P06 | G4 complex document model/export improvements | Implemented; focused export/editor acceptance passed; integrated acceptance passed; final publication audit pending |
+| P07 | G5 explicit, multi-person dossier relationships | Implemented; focused case/relationship acceptance passed; integrated acceptance passed; final publication audit pending |
+| P08 | G6 bounded local page scan checks and reversible corrections | Implemented; focused page/correction acceptance passed; integrated acceptance passed; final publication audit pending |
+| P09 | G8 confirmed local batch grouping proposals | Implemented; focused grouping/retry/restart acceptance passed; integrated acceptance passed; final publication audit pending |
+| P10 | G9 bounded, encrypted, rebuildable content search | Implemented; focused search/recovery/scale/browser acceptance passed; integrated acceptance passed; final publication audit pending |
 
 Excluded: U8 additional in-chat usage display, G1 independent linguistic study, G10 reviewed starter profiles, WinGet submission, OS signing/notarization and Cloudflare. Existing accounting/budgets remain intact.
 
@@ -221,3 +221,8 @@ Reading the actual 0.13.0 source exposed its missing source-review binding diges
 The 0.14.0 source/desktop tags remain immutable and unpublished. Platform tests identified an unproven version-1 legacy source decision; old human decisions always incremented version 1. The read-only compatibility path now additionally requires version >= 2 and, for mappings, the saved reverse node links. Valid 0.13.0 decisions are retained while automatic/incomplete mappings reopen. All 28 focused source/review/upgrade checks pass. The integrated browser run passed 51/52 and its asynchronous edited-proposal case passes both engines after explicit visible-draft synchronization (no product behavior or acceptance assertion weakened). Candidate metadata is now 0.14.1; final full checks, native upgrades, packages and publication remain pending.
 
 Final local 0.14.1 mandatory commands pass: 478/478 tests, three fictional offline benchmark cases with zero regressions/requests, EN/DE/AR demos, and all four acceptance steps including actual structured exports. Evidence: `outputs/workflow-integrated-0.14.1-*` and the versioned acceptance report. Remote platform/installed/package gates are next; nothing has been publicly released.
+
+
+## Platform and real installed update gates passed
+
+Release commit `8a0def6` passes the source run 42870037207 on all four platforms and real Homebrew prepublication tests on both Mac architectures. Downloaded source assets pass all six checksums and agree with the archive/platform/formula metadata. Main integration run 42871087724 passes on Windows/macOS/Linux, including existing archive/backup/recovery memory gates and genuine isolated ENOSPC preservation. Desktop run 42870036330 passes all four native jobs. The Windows native gate performs the real signed-installer 0.13.0 → 0.13.99 → 0.14.1 sequence and verifies original bytes, key, IDs, rules, chats, dossier/facts/job, review/final decisions, frozen rules, legacy profile, usage/budget and the intermediate paused search index with zero provider calls. Exact job IDs and scope are in WORKFLOW-ACCEPTANCE.md. Final desktop download audit, public releases/feed, main integration and Homebrew publication remain pending. Nothing new is public yet.

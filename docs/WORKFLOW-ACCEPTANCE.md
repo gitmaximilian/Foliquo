@@ -49,11 +49,11 @@ Excluded: U8 extra Foli accounting display; G1 independent professional linguist
 | Search archive duration/peak RSS | Passed; 1,001 fictional records including 20 MiB text, bounded pages/steps and predeclared memory budgets |
 | Search browser acceptance | Chromium/WebKit passed; EN/DE/AR, keyboard, dark/mobile, original/version checks |
 | Installed-upgrade fixture contract | Local encrypted/API/restart contract passes with rules, chat messages, dossier/fact/job, confirmed source/check/final decisions and paused search |
-| Real installed public 0.13.0 upgrade | Pending native execution. Harness now pins the public installer SHA-256 and tests 0.13.0 → unpublished 0.13.99 → 0.14.1 |
-| Native Mac/Windows/Linux packages and bundled runtime/data paths | Pending candidate builds and reports |
-| Source packages and actual package-manager install checks | Pending candidate builds and Homebrew checks |
-| Updater signatures, manifest versions/URLs and complete checksums | Pending candidate artifacts; public keys unchanged |
-| Public desktop/source releases and current update feed | Not published |
+| Real installed public 0.13.0 upgrade | Passed: real public 0.13.0 → unpublished 0.13.99 → 0.14.1; native Windows job 130021516287 |
+| Native Mac/Windows/Linux packages and bundled runtime/data paths | All four platform builds and bundled service/persistence/signature gates passed; final desktop draft download audit pending |
+| Source packages and actual package-manager install checks | All four source packages passed; real Homebrew audit/install/test/reinstall/uninstall passed on ARM and Intel; six downloaded source assets match SHA256SUMS |
+| Updater signatures, manifest versions/URLs and complete checksums | Platform signature gates passed against unchanged public keys; final desktop draft/manifest/download audit pending |
+| Public desktop/source releases and current update feed | Source is a verified unpublished draft; desktop draft staging is in progress; public latest remains 0.13.0 |
 | Homebrew publication and public-asset verification | Not published |
 
 The installed baseline is downloaded from the existing public `desktop-v0.13.0` release, checked against SHA-256 `8eacccae4c74a99425e296b7284c0261c59f62f4cdfb8d8d8997518333cf835c` and its updater signature. Full fictional workflow records are seeded using that installed runtime's own modules before its first launch, then checked before/after both upgrade steps. Search is enabled/paused in the intermediate candidate and must survive the final update. This describes the prepared gate, not an already completed native result.
@@ -65,3 +65,15 @@ The 0.13.0 source-review format has no binding digest. A read-only compatibility
 ## Candidate correction before publication
 
 The immutable 0.14.0 tags reached the platform gates but were not published. Full platform tests caught a legacy-source fixture that must remain unreviewed: result version 1 cannot contain a human source decision because the old operation increments the version. Candidate 0.14.1 accepts an unbound legacy decision only from version 2 or later, with an allowed action and a matching current/frozen version; mapped decisions additionally require the actual saved reverse node links. The review read does not mutate saved records. The corrected source/review/installed-fixture set passes 28/28 locally. The browser sweep passed 51/52; the remaining proposal-edit case clicked its replaced draft before refresh. After waiting for the changed draft ID/text, that case passes in both Chromium and WebKit (2/2); its assertions and the product version guard are retained. The obsolete source run was cancelled after its other three jobs failed; no native package/public release was produced. Final local integrated checks on 0.14.1 pass: 478 tests, benchmark, demo build and all four acceptance steps. Platform/installed/package/publication gates remain pending.
+
+## Platform evidence before publication
+
+The exact release commit is `8a0def6e3c18263492a661fcc902ef2bd615e00f` (`v0.14.1`, `desktop-v0.14.1`). [Source distribution run 42870037207](https://github.com/gitmaximilian/Foliquo/actions/runs/42870037207) passed all four builds, metadata, both real native Homebrew checks and existing local package-manifest validation. Downloaded source assets verify all six SHA256SUMS entries; the three archive manifests announce the intended 0.14.1 platform/architecture and the Homebrew formula contains the actual ARM/Intel archive hashes. No WinGet submission occurred.
+
+[Main integration run 42871087724](https://github.com/gitmaximilian/Foliquo/actions/runs/42871087724) passes on Linux, macOS and Windows, including first-use setup, all 478 tests, archive/backup/recovery memory budgets, near-cap 255 MiB legacy restore, genuine isolated full-volume atomic-replacement checks, and mandatory benchmark/demo/acceptance. The real ENOSPC checks preserve the previous object and leave no temporary objects on ext4, APFS and NTFS. These are fictional technical checks, not linguistic evidence.
+
+[Desktop run 42870036330](https://github.com/gitmaximilian/Foliquo/actions/runs/42870036330) has passed prechecks and all four native build jobs: ARM 130021516354, Intel 130021516311, Linux 130021516379 and Windows 130021516287. Each bundled runtime exports a fictional PDF and verifies encrypted rules, chats, profiles, budget, key, data paths, workflow state and search setup. ARM/Intel updater signatures verify. Windows additionally verifies the public baseline signature, intermediate signature and final signature, renders the actual 0.13.0 native workspace, then performs two real installer upgrades.
+
+Both Windows upgrade steps retain the same workspace key, source bytes, legacy profile, preferences, budget, usage, pre-existing independent rule, Foli messages, dossier/fact/job IDs, version-2 source/check/final decisions and frozen rule context. The first step replaces the deliberately orphaned old service; the intermediate step enables/pauses search. The final step retains that completed paused index and its result version, plus an additional rule and chat created on the intermediate runtime. The report records zero provider requests. The actual report will also be included as `UPGRADE-REPORT-Windows-x64.json` in the desktop assets.
+
+Final downloaded desktop checksum/signature/manifest checks, source/desktop publication, public feed verification, main integration and Homebrew publication/public-asset checks remain open. All releases are still unpublished at this checkpoint.
