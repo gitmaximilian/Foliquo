@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {acceptRevision} from '../lib/revisions.mjs';
+import {ruleTraceSnapshot,finalReview,reviewSummarySnapshot} from '../lib/reviews.mjs';
 import {initializeRuleLibrary,proposeRule,reviewRuleProposal} from '../lib/personal-rules.mjs';
 import {createRuleApplicationPreview,resolveRuleApplicationPreview,ruleApplicationPreviewDTO,stageRuleLayoutApplication} from '../lib/rule-application.mjs';
 
@@ -9,6 +11,14 @@ test('new-rule application resolves a frozen conflict explicitly and never chang
  assert.throws(()=>resolveRuleApplicationPreview(job,{version:1,previewId:preview.id,answers:[{context:'unbound',answer:'1'}]},()=>[]));
  workspace.data.personalRules[1].effect.value=1.9;const resolved=resolveRuleApplicationPreview(job,{version:1,previewId:preview.id,answers:[{context:checked.questions[0].context,answer:'2'}]},()=>[]);assert.equal(resolved.questions.length,0);assert.equal(resolved.payload.contextSnapshot.layout.lineHeight,1.2);assert.equal(ruleApplicationPreviewDTO(job,resolved).requiresProvider,false);
  await stageRuleLayoutApplication(job,resolved.payload.contextSnapshot,async(text,base)=>({...base,pdf:'new-pdf',word:'new-word'}),{version:1,requestId:'fictional-request'});assert.equal(job.result.word,'old-word');assert.equal(job.review.proposal.result.context.layout.lineHeight,1.2);assert.equal(job.review.versions[0].context.layout.lineHeight,1);assert.equal(job.review.rulePreview,undefined);
+ const trace=ruleTraceSnapshot({result:job.review.proposal.result});assert.equal(trace.available,true);assert.equal(trace.appliedRules[0].effect.value,1.2);assert.equal(trace.decisions.find(item=>item.id===trace.appliedRules[0].id).state,'effective');assert.equal(trace.libraryVersion,preview.payload.contextLibrarySnapshot.rules.libraryVersion);workspace.data.personalRules[1].title='Changed global title';assert.notEqual(trace.decisions.find(item=>item.id===trace.appliedRules[0].id).title,workspace.data.personalRules[1].title);assert.equal(ruleTraceSnapshot(job).available,false,'legacy current result must not borrow the new proposal trace');
+ const rebuild=async(text,base)=>({...base,text,pdf:`pdf-${base.context.layout.lineHeight}`,word:`word-${base.context.layout.lineHeight}`});
+ await acceptRevision(job,{action:'reject',version:1},rebuild);assert.equal(job.result.word,'old-word');assert.equal(job.review.version,1);
+ await stageRuleLayoutApplication(job,resolved.payload.contextSnapshot,rebuild,{version:1,requestId:'fictional-second-request'});
+ await acceptRevision(job,{action:'accept',version:1,accepted:[]},rebuild);assert.equal(job.review.version,2);assert.equal(job.result.pdf,'pdf-1.2');assert.equal(job.result.word,'word-1.2');assert.equal(ruleTraceSnapshot(job).appliedRules[0].effect.value,1.2);finalReview(job,2);
+ await acceptRevision(job,{action:'restore',version:2,restoreVersion:1},rebuild);assert.equal(job.result.word,'word-1');assert.equal(job.review.finalizedVersion,null);assert.equal(ruleTraceSnapshot(job).available,false);
+ await acceptRevision(job,{action:'restore',version:3,restoreVersion:2},rebuild);assert.equal(job.result.pdf,'pdf-1.2');assert.equal(ruleTraceSnapshot(job).appliedRules[0].effect.value,1.2);assert.equal(reviewSummarySnapshot(job).userReviewed,false);
+
 });
 test('failed local exports and stale previews cannot create a revision or mutate the current result',async()=>{
  const {workspace,job}=setup(),preview=createRuleApplicationPreview(workspace,job,1);assert.throws(()=>resolveRuleApplicationPreview(job,{version:2,previewId:preview.id},()=>[]));const original=structuredClone(job.result);
@@ -17,4 +27,11 @@ test('failed local exports and stale previews cannot create a revision or mutate
 test('reapplication retains pinned template defaults and can resolve rules after the template was removed',()=>{
  const {workspace,job}=setup();workspace.data.templates=[];workspace.context=()=>({layout:{margin:35},template:null,profile:null,terms:[],examples:[]});job.result.context={...job.result.context,templateId:'removed-fictional-template',template:{id:'removed-fictional-template',version:1,fields:[]},baseLayout:{margin:22,lineHeight:1.1}};
  const preview=createRuleApplicationPreview(workspace,job,1);assert.deepEqual(preview.payload.contextLibrarySnapshot.base.layout,{margin:22,lineHeight:1.1});assert.equal(preview.payload.contextLibrarySnapshot.base.template.version,1);assert.equal(job.result.context.layout.lineHeight,1);
+});
+
+
+test('explicit reapplication reads current facts only for the pinned person and tolerates a removed dossier',()=>{
+ const {workspace,job}=setup();workspace.data.dossiers=[{id:'fictional-case',owner:job.owner,version:4,entities:[{id:'alex',name:'Alex',version:1},{id:'bea',name:'Bea',version:1}],facts:[{id:'preferred-alex',key:'personName',label:'Name',entityId:'alex',value:'New Alex',version:2,confirmed:true},{id:'preferred-bea',key:'personName',label:'Name',entityId:'bea',value:'Bea Example',version:1,confirmed:true}]}];job.result.context={...job.result.context,dossierId:'fictional-case',dossierEntityId:'alex',dossierFacts:[{id:'preferred-alex',entityId:'alex',value:'Old Alex',confirmed:true}]};
+ const preview=createRuleApplicationPreview(workspace,job,1);assert.deepEqual(preview.payload.contextSnapshot.dossierFacts.map(f=>f.value),['New Alex']);assert.equal(job.result.context.dossierFacts[0].value,'Old Alex');
+ workspace.data.dossiers=[];const removed=createRuleApplicationPreview(workspace,job,1);assert.equal(removed.payload.contextSnapshot.dossierId,'');assert.deepEqual(removed.payload.contextSnapshot.dossierFacts,[]);assert.equal(job.result.context.dossierFacts[0].value,'Old Alex');
 });

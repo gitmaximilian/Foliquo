@@ -17,11 +17,11 @@ test('Studio drafts restore privately, survive metadata edits, and persist encry
  const post=data=>fetch(origin+'/api/studio-draft',{method:'POST',headers,body:JSON.stringify(data)});
  assert.deepEqual(await fetch(origin+'/api/studio-draft',{headers:{cookie}}).then(r=>r.json()),{draft:null});
  assert.equal((await post({translation:'Fictional private draft',targetLanguage:'Deutsch',files:[{name:'fictional.txt',type:'text/plain',data:Buffer.from('fictional source').toString('base64')}]})).status,200);
- assert.equal((await post({translation:'Updated draft',targetLanguage:'Deutsch'})).status,200);
- const restored=await fetch(origin+'/api/studio-draft',{headers:{cookie}}).then(r=>r.json());assert.equal(restored.draft.files.length,1);assert.equal(restored.draft.translation,'Updated draft');
+ assert.equal((await post({translation:'Updated draft',targetLanguage:'Deutsch',scanCorrections:[{fileIndex:0,rotation:0,rotations:{1:90}}]})).status,200);
+ const restored=await fetch(origin+'/api/studio-draft',{headers:{cookie}}).then(r=>r.json());assert.equal(restored.draft.files.length,1);assert.equal(restored.draft.translation,'Updated draft');assert.deepEqual(restored.draft.scanCorrections[0].rotations,{1:90});
  const other=(await fetch(origin)).headers.get('set-cookie').split(';')[0];assert.equal((await fetch(origin+'/api/studio-draft',{headers:{cookie:other}}).then(r=>r.json())).draft,null);
  assert.equal((await fetch(origin+'/api/studio-draft',{method:'POST',headers:{...headers,'x-foliquo-csrf':'wrong'},body:'{}'})).status,403);
- const saved=await new Workspace(dir).init();assert.ok(Object.values(saved.data.studioDrafts).some(d=>d.translation==='Updated draft'));
+ const saved=await new Workspace(dir).init();assert.ok(Object.values(saved.data.studioDrafts).some(d=>d.translation==='Updated draft'));assert.deepEqual(Object.values(saved.data.studioDrafts)[0].scanCorrections[0].rotations,{1:90});
  assert.equal((await readFile(join(dir,'workspace.enc'))).includes(Buffer.from('Updated draft')),false);
  assert.equal((await fetch(origin+'/api/providers',{headers:{cookie}})).status,200);
  await post({clear:true});assert.equal((await fetch(origin+'/api/studio-draft',{headers:{cookie}}).then(r=>r.json())).draft,null);

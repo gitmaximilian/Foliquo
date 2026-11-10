@@ -1,0 +1,24 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {randomUUID} from 'node:crypto';
+import {Workspace} from '../lib/workspace.mjs';
+import {createApp} from '../server.mjs';
+test('search API uses the existing session and CSRF boundary, runs local background maintenance, and never calls a provider',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-search-api-')),workspace=await new Workspace(directory,{lazyJobs:true}).init(),port=48500+Math.floor(Math.random()*500),origin=`http://127.0.0.1:${port}`;let calls=0;const provider={id:'openai',selected:'openai',status:()=>({connected:true,planEnabled:true}),models:async()=>[{id:'fictional-model'}],respond:async()=>{calls++;throw new Error('Search must not call a provider.');}};
+ const server=createApp({connection:{status:()=>({connected:true,planEnabled:true})},workspace,provider,port});await new Promise((resolve,reject)=>server.once('error',reject).listen(port,'127.0.0.1',resolve));t.after(async()=>{workspace.searchIndex.stop();await workspace.searchIndex.worker;await new Promise(resolve=>server.close(resolve));await workspace.tail;await rm(directory,{recursive:true,force:true});});
+ const page=await fetch(origin),cookie=page.headers.get('set-cookie').split(';')[0],session=await fetch(origin+'/api/session',{headers:{cookie}}).then(r=>r.json());const owner=decodeURIComponent(cookie.slice(cookie.indexOf('=')+1));
+ const headers={cookie,origin,'content-type':'application/json','x-foliquo-csrf':session.csrf},post=(path,data,overrides={})=>fetch(origin+path,{method:'POST',headers:{...headers,...overrides},body:JSON.stringify(data)});
+ const value={id:randomUUID(),owner,status:'succeeded',createdAt:Date.now(),finishedAt:Date.now(),names:['fictional-search.pdf'],result:{text:'Fictional privatesearchneedle',checks:[]},review:{version:1}};await workspace.jobStore.commitJobs([value]);await workspace.searchIndex.worker;
+ assert.equal((await fetch(origin+'/content-search.js')).status,200);assert.equal((await fetch(origin+'/content-search.css')).status,200);
+ const initial=await fetch(origin+'/api/search/status',{headers:{cookie}}).then(r=>r.json());assert.equal(initial.total,1);assert.equal(initial.enabled,false);
+ assert.equal((await post('/api/search/configure',{confirm:true,rebuild:false,paused:false},{'x-foliquo-csrf':'wrong'})).status,403);
+ assert.equal((await post('/api/search/configure',{confirm:true,rebuild:false,paused:false})).status,200);await workspace.searchIndex.worker;
+ const result=await post('/api/search/query',{query:'privatesearchneedle'}).then(r=>r.json());assert.equal(result.hits.length,1);assert.equal(result.hits[0].jobId,value.id);assert.equal(result.status.incomplete,false);
+ const foreignPage=await fetch(origin),foreignCookie=foreignPage.headers.get('set-cookie').split(';')[0],foreignSession=await fetch(origin+'/api/session',{headers:{cookie:foreignCookie}}).then(r=>r.json());const foreign=await fetch(origin+'/api/search/open',{method:'POST',headers:{...headers,cookie:foreignCookie,'x-foliquo-csrf':foreignSession.csrf},body:JSON.stringify({token:result.hits[0].token})});assert.equal(foreign.status,400);assert.equal(JSON.stringify(await foreign.json()).includes('privatesearchneedle'),false);
+ assert.equal((await post('/api/search/query',{query:'x'.repeat(161)})).status,400);assert.equal((await post('/api/search/query',{query:'privatesearchneedle',limit:100})).status,400);
+ value.result.text='Fictional updatedneedle';value.review.version=2;await workspace.jobStore.commitJobs([value]);await workspace.searchIndex.worker;const updated=await post('/api/search/query',{query:'updatedneedle'}).then(r=>r.json());assert.equal(updated.hits[0].version,2);assert.equal((await post('/api/search/open',{token:result.hits[0].token})).status,409);
+ await post('/api/search/configure',{confirm:true,rebuild:false,paused:true});await workspace.searchIndex.worker;await workspace.jobStore.deleteJob(value.id);await workspace.searchIndex.worker;assert.equal((await post('/api/search/query',{query:'updatedneedle'}).then(r=>r.json())).hits.length,0);assert.equal(calls,0);
+});

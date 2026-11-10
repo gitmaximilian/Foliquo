@@ -38,6 +38,43 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri build --bundles app
+      - name: Download the previous public Windows installer for upgrade validation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $previous = Join-Path $env:RUNNER_TEMP 'Foliquo-previous-setup.exe'
+          Invoke-WebRequest 'https://github.com/gitmaximilian/Foliquo/releases/download/desktop-v0.13.0/Foliquo_0.13.0_x64-setup.exe' -OutFile $previous
+          if ((Get-FileHash $previous -Algorithm SHA256).Hash.ToLower() -ne '8eacccae4c74a99425e296b7284c0261c59f62f4cdfb8d8d8997518333cf835c') { throw 'Previous installer checksum mismatch.' }
+          Invoke-WebRequest 'https://github.com/gitmaximilian/Foliquo/releases/download/desktop-v0.13.0/Foliquo_0.13.0_x64-setup.exe.sig' -OutFile "$previous.sig"
+          node scripts/check-updater-signatures.mjs $previous 0.13.0
+          if ($LASTEXITCODE -ne 0) { throw 'Previous installer updater signature mismatch.' }
+          "FOLIQUO_UPGRADE_FROM_INSTALLER=$previous" >> $env:GITHUB_ENV
+      - name: Build an unpublished intermediate Windows upgrade candidate
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $finalVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          try {
+            node scripts/set-release-version.mjs 0.13.99
+            if ($LASTEXITCODE -ne 0) { throw 'Intermediate version metadata failed.' }
+            npm run desktop:build
+            if ($LASTEXITCODE -ne 0) { throw 'Intermediate desktop build failed.' }
+            $candidate = Resolve-Path 'desktop/src-tauri/target/release/bundle/nsis/Foliquo_0.13.99_x64-setup.exe'
+            node scripts/check-updater-signatures.mjs $candidate 0.13.99
+            if ($LASTEXITCODE -ne 0) { throw 'Intermediate updater signature mismatch.' }
+            $retained = Join-Path $env:RUNNER_TEMP 'Foliquo-intermediate-0.13.99-setup.exe'
+            Copy-Item $candidate $retained
+            Copy-Item "$candidate.sig" "$retained.sig"
+            Remove-Item $candidate, "$candidate.sig"
+            "FOLIQUO_UPGRADE_INTERMEDIATE_INSTALLER=$retained" >> $env:GITHUB_ENV
+            "FOLIQUO_UPGRADE_INTERMEDIATE_VERSION=0.13.99" >> $env:GITHUB_ENV
+          } finally {
+            node scripts/set-release-version.mjs $finalVersion
+            if ($LASTEXITCODE -ne 0) { throw 'Could not restore final candidate version metadata.' }
+          }
       - name: Build signed Windows updater installer
         if: runner.os == 'Windows'
         env:
@@ -46,17 +83,6 @@ jobs:
         run: npm run desktop:build
       - name: Check bundled service and fictional export
         run: node scripts/smoke-desktop.mjs
-      - name: Download the previous public Windows installer for upgrade validation
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $previous = Join-Path $env:RUNNER_TEMP 'Foliquo-previous-setup.exe'
-          Invoke-WebRequest 'https://github.com/gitmaximilian/Foliquo/releases/download/desktop-v0.11.11/Foliquo_0.11.11_x64-setup.exe' -OutFile $previous
-          if ((Get-FileHash $previous -Algorithm SHA256).Hash.ToLower() -ne '1fe09a395ace8312f7e25e3cbf2d6ad191b3b2707d1a518f202a4fd4dca1996c') { throw 'Previous installer checksum mismatch.' }
-          Invoke-WebRequest 'https://github.com/gitmaximilian/Foliquo/releases/download/desktop-v0.11.11/Foliquo_0.11.11_x64-setup.exe.sig' -OutFile "$previous.sig"
-          node scripts/check-updater-signatures.mjs $previous 0.11.11
-          if ($LASTEXITCODE -ne 0) { throw 'Previous installer updater signature mismatch.' }
-          "FOLIQUO_UPGRADE_FROM_INSTALLER=$previous" >> $env:GITHUB_ENV
       - name: Verify the Windows window renders Foliquo
         if: runner.os == 'Windows'
         run: node scripts/smoke-desktop-window.mjs

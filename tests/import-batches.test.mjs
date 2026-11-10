@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PDFDocument} from 'pdf-lib';
-import {createImportBatch,batchFiles,batchSnapshot,availableBatchSlots,nextBatchGroup,batchForOwner} from '../lib/import-batches.mjs';
+import {createImportBatch,suggestImportGroups,batchFiles,batchSnapshot,availableBatchSlots,nextBatchGroup,batchForOwner} from '../lib/import-batches.mjs';
 
 const sourceFiles=()=>[0,1,2].map(index=>({name:`source-${index}.txt`,type:'text/plain',bytes:Buffer.from(`source-${index}`)}));
 const create=groups=>createImportBatch({owner:'owner-a',clientId:'client',requestId:'request-one',provider:'openai',model:'model',metadata:{targetLanguage:'Deutsch'},files:sourceFiles(),groups,pageCounts:[1,1,1]});
@@ -40,4 +40,14 @@ test('batch waves honor the queue limit, pause, and session ownership',()=>{
  assert.equal(availableBatchSlots(Array.from({length:8},()=>({status:'running'}))),0);
  assert.equal(nextBatchGroup(batch).name,'one');batch.stopped=true;assert.equal(nextBatchGroup(batch),null);
  assert.throws(()=>batchForOwner([batch],batch.id,'owner-b'),/nicht gefunden/);
+});
+
+
+test('local filename hints keep ambiguous files separate and never select a dossier or person',()=>{
+ const files=['case-a-back.pdf','case-a-front.pdf','independent.pdf','ambiguous.pdf','ambiguous.png'].map(name=>({name})),groups=suggestImportGroups(files,{pageCounts:[1,2,3,1,1]});assert.equal(groups.length,4);assert.deepEqual(groups[0].items.map(item=>item.fileIndex),[1,0]);assert.ok(groups[0].reasons.includes('filename-role-match'));assert.ok(groups[0].reasons.includes('keep-multipage-file'));assert.ok(groups.slice(-2).every(group=>group.reasons.includes('ambiguous-name-match')));assert.ok(groups.every(group=>group.uncertain));assert.ok(!JSON.stringify(groups).includes('dossier'));
+ const sequence=suggestImportGroups([{name:'register-page-2.pdf'},{name:'register-page-1.pdf'}]);assert.deepEqual(sequence[0].items.map(item=>item.fileIndex),[1,0]);assert.ok(sequence[0].reasons.includes('filename-page-sequence'));
+});
+
+test('group options remain bounded and are part of the idempotent request identity',()=>{
+ const options={owner:'owner-a',clientId:'client',requestId:'request-options',provider:'openai',model:'model',metadata:{targetLanguage:'Deutsch'},files:sourceFiles(),pageCounts:[1,1,1]},groups=[{fileIndexes:[0],options:{targetLanguage:'Englisch',useLearning:false,dossierId:'',dossierEntityId:''}},{fileIndexes:[1,2]}],batch=createImportBatch({...options,groups});assert.equal(batchSnapshot(batch).groups[0].targetLanguage,'Englisch');assert.equal(batchSnapshot(batch).groups[0].useLearning,false);assert.notEqual(batch.requestHash,createImportBatch({...options,groups:[{...groups[0],options:{...groups[0].options,targetLanguage:'Arabisch'}},groups[1]]}).requestHash);assert.throws(()=>createImportBatch({...options,groups:[{...groups[0],options:{targetLanguage:'unavailable'}},groups[1]]}),/Zielsprache/);assert.throws(()=>createImportBatch({...options,groups:[{...groups[0],options:{owner:'not-allowed'}},groups[1]]}),/Gruppenoptionen/);
 });

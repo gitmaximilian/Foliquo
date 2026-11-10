@@ -27,6 +27,7 @@ test('rule HTTP flow requires approval, preserves request identity and previews 
  const proposal=created.data.proposal,accepted=await call('/api/personal-rules/review',{id:proposal.id,version:proposal.version,accept:true});assert.equal(accepted.status,200);assert.equal(accepted.data.results[0].rule.effect.value,1.5);
  assert.equal((await call('/api/personal-rules/review',{id:proposal.id,version:proposal.version,accept:true})).data.results[0].replayed,true);
  const rules=(await call('/api/personal-rules?kind=layout&q=spacing')).data;assert.equal(rules.total,1);const rule=rules.items[0];
+ assert.deepEqual((await call('/api/personal-rules?id='+encodeURIComponent(rule.id))).data.items,[rule]);assert.equal((await call('/api/personal-rules?id=fictional-missing')).data.total,0);assert.equal((await call('/api/personal-rules?id='+ 'x'.repeat(101))).status,400);
  assert.equal((await new Workspace(workspace.directory).init()).data.personalRules[0].id,rule.id);
  const preview=await call('/api/personal-rules/preview',{metadata:{targetLanguage:'Deutsch',sourceLanguage:'Englisch'}});assert.equal(preview.status,200);assert.equal(preview.data.layoutPatch.lineHeight,1.5);
  const excluded=await call('/api/personal-rules/preview',{metadata:{targetLanguage:'Deutsch',excludedRuleIds:[rule.id]}});assert.equal(excluded.status,200);assert.equal(excluded.data.layoutPatch.lineHeight,undefined);assert.equal(excluded.data.decisions[0].state,'excluded');assert.equal(workspace.data.personalRules[0].status,'active');
@@ -80,4 +81,23 @@ test('source removal requires a reviewed choice and a failed save preserves the 
  const impact=await call('/api/learning/source-impact?id='+id);assert.equal(impact.data.rules.length,1);assert.equal(impact.data.rules[0].soleDependent,true);assert.equal((await call('/api/learning/update',{id,remove:true})).status,400);assert.equal(workspace.data.learning.length,1);
  const request={id,remove:true,confirm:true,ruleChoice:'independent',ruleVersions:impact.data.rules.map(({id,version})=>({id,version}))},write=workspace.writeMetadata.bind(workspace);workspace.writeMetadata=async()=>{throw Object.assign(new Error('Fictional full disk'),{code:'ENOSPC'});};assert.equal((await call('/api/learning/update',request)).status,400);assert.equal(workspace.data.learning.length,1);assert.equal(workspace.data.personalRules[0].independent,false);workspace.writeMetadata=write;
  assert.equal((await call('/api/learning/update',request)).status,200);assert.equal(workspace.data.learning.length,0);assert.equal(workspace.data.personalRules[0].independent,true);assert.deepEqual(workspace.data.personalRules[0].profileIds,[]);const reopened=await new Workspace(workspace.directory).init();assert.equal(reopened.data.learning.length,0);assert.equal(reopened.data.personalRules[0].origins[0].id,id);assert.equal(reopened.data.sampleProposalHistory.length,0);
+});
+
+test('source activation is separate, version-bound, atomic and cannot enable disabled rules',async t=>{
+ const {workspace,call,requests}=await setup(t),id=randomUUID();
+ workspace.data.learning.push({id,name:'Fictional source',canonicalRules:true,version:1,status:'pending_review',active:false,documentType:'Fictional certificate',targetLanguage:'German',rules:[],fieldLabels:[],sources:[],analysis:{complete:true,pageCount:1,profileVersion:1,sourceLanguage:'English',layout:{lineHeight:1.5},observations:[],terminology:[]}});
+ await workspace.save();const proposal=workspace.data.ruleProposals[0];
+ assert.equal((await call('/api/personal-rules/review',{id:proposal.id,version:proposal.version,accept:true})).status,200);
+ const rule=workspace.data.personalRules[0];assert.equal(workspace.data.learning[0].active,false);
+ const input={ruleId:rule.id,ruleVersion:rule.version,sourceId:id,sourceVersion:workspace.data.learning[0].version,confirm:true};
+ assert.equal((await call('/api/personal-rules/activate-source',{...input,confirm:false})).status,400);
+ assert.equal((await call('/api/personal-rules/activate-source',{...input,sourceVersion:0})).status,409);
+ const saved=JSON.stringify(workspace.data),write=workspace.writeMetadata.bind(workspace);
+ workspace.writeMetadata=async()=>{throw Object.assign(new Error('Fictional full disk'),{code:'ENOSPC'});};
+ assert.equal((await call('/api/personal-rules/activate-source',input)).status,400);assert.equal(JSON.stringify(workspace.data),saved);workspace.writeMetadata=write;
+ assert.equal((await call('/api/personal-rules/activate-source',input)).status,200);assert.equal(workspace.data.learning[0].active,true);assert.equal(workspace.data.personalRules[0].version,rule.version);
+ const disabled=await call('/api/personal-rules/proposals',{requestId:randomUUID(),operation:'disable',targetId:rule.id,targetVersion:rule.version});
+ await call('/api/personal-rules/review',{id:disabled.data.proposal.id,version:disabled.data.proposal.version,accept:true});
+ assert.equal((await call('/api/personal-rules/activate-source',{...input,ruleVersion:workspace.data.personalRules[0].version,sourceVersion:workspace.data.learning[0].version})).status,400);
+ assert.equal(workspace.data.personalRules[0].status,'inactive');assert.equal(requests(),0);
 });

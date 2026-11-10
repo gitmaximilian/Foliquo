@@ -17,6 +17,7 @@ function approve(data,input=definition()){
 }
 test('typed rules normalize scope and spacing without permitting fixed product invariants or extra executable fields',()=>{
  const rule=normalizeRuleDefinition(definition());assert.equal(rule.effect.value,1.5);assert.equal(rule.scope.targetLanguage,'de');
+ assert.equal(normalizeRuleDefinition(definition({titleMode:'effect'})).titleMode,'effect');assert.throws(()=>normalizeRuleDefinition(definition({titleMode:'unknown'})),{code:'ERR_RULE_VALIDATION'});
  assert.equal(ruleFingerprint(rule),ruleFingerprint(normalizeRuleDefinition(definition({scope:{targetLanguage:'German'},effect:{kind:'layout',key:'lineHeight',value:1.5}}))));
  for(const effect of [{kind:'layout',key:'font',value:'Arial'},{kind:'layout',key:'includeOriginals',value:false},{kind:'layout',key:'lineHeight',value:0},{kind:'layout',key:'lineHeight',value:'1,5pt'},{kind:'layout',key:'__proto__',value:1},{kind:'style',text:'Fictional style',command:'execute'}])assert.throws(()=>normalizeRuleDefinition(definition({effect})),{code:'ERR_RULE_VALIDATION'});
 });
@@ -38,6 +39,13 @@ test('stale replacement and rejected drafts cannot change the rule library',()=>
  const before=structuredClone(data);assert.throws(()=>reviewRuleProposal(data,replace.id,{version:1,accept:true}),{code:'ERR_RULE_STALE'});assert.deepEqual(data,before);
  reviewRuleProposal(data,replace.id,{version:1,accept:false});assert.throws(()=>reviewRuleProposal(data,replace.id,{version:1,accept:true}),{code:'ERR_RULE_STALE'});assert.equal(data.personalRules[0].effect.value,1.5);
 });
+test('generated title provenance never overrides an explicit replacement title or a custom duplicate',()=>{
+ const data=library(),first=approve(data,definition({titleMode:'effect'})).rule;
+ const proposal=proposeRule(data,{operation:'replace',targetId:first.id,targetVersion:first.version,definition:definition({title:'My own fictional label'})});const changed=reviewRuleProposal(data,proposal.id,{version:1,accept:true}).rule;
+ assert.equal(changed.title,'My own fictional label');assert.equal(changed.titleMode,'custom');
+ const repeated=approve(data,definition({titleMode:'effect',origins:[{kind:'sample',id:'fictional-new-evidence',version:1}]})).rule;
+ assert.equal(repeated.id,first.id);assert.equal(repeated.title,changed.title);assert.equal(repeated.titleMode,'custom');
+});
 test('oversized or malformed libraries are rejected before mutation',()=>{
  const data=library(),before=structuredClone(data);
  assert.throws(()=>proposeRule(data,{definition:definition({scope:{script:'arbitrary'}})}),{code:'ERR_RULE_VALIDATION'});assert.deepEqual(data,before);
@@ -53,7 +61,7 @@ test('schema-4 migration, restart and encrypted backup retain approved rules and
  const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv),bytes=Buffer.concat([Buffer.from('TOCR1'),iv,cipher.update(JSON.stringify(old)),cipher.final(),cipher.getAuthTag()]);await writeFile(join(directory,'workspace.enc'),bytes);
  const migrated=await new Workspace(directory).init();assert.equal(migrated.data.schema,WORKSPACE_SCHEMA);assert.deepEqual(migrated.data.learning,[profile]);assert.equal(migrated.data.personalRules.length,1);
  const backupName=(await readdir(directory)).find(name=>name.startsWith(`workspace.enc.pre-schema-${WORKSPACE_SCHEMA}-`));assert.ok(backupName);assert.deepEqual(await readFile(join(directory,backupName)),bytes);
- const result=approve(migrated.data);await migrated.save();const approvedRules=structuredClone(migrated.data.personalRules);
+ const result=approve(migrated.data,definition({titleMode:'effect'}));await migrated.save();const approvedRules=structuredClone(migrated.data.personalRules);
  const reopened=await new Workspace(directory).init();assert.deepEqual(reopened.data.personalRules,approvedRules);assert.deepEqual(await readFile(join(directory,'workspace.key')),key);
  const encrypted=await readFile(join(directory,'workspace.enc'));assert.equal(encrypted.includes(Buffer.from(result.rule.title)),false);
  const target=await new Workspace(join(root,'restored')).init();target.restore(reopened.backup('fictional-backup-password'),'fictional-backup-password');await target.save();
@@ -82,4 +90,20 @@ test('rule transactions publish only after durable save, serialize approvals and
  await assert.rejects(()=>workspace.save({ruleOperation:data=>approve(data,definition({effect:{kind:'layout',key:'margin',value:22}}))}),{code:'EACCES'});
  assert.deepEqual(workspace.data.personalRules,before,'failed approval never reaches live state');
  workspace.writeMetadata=write;await workspace.save();assert.deepEqual((await new Workspace(directory).init()).data.personalRules,before);
+});
+
+test('durable source activation survives already queued ordinary saves and failed writes',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'foliquo-fictional-source-transaction-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const workspace=await new Workspace(directory).init();
+ workspace.data.learning.push({id:'fictional-source',name:'Fictional source',canonicalRules:true,version:1,status:'active',active:false,documentType:'Certificate',targetLanguage:'German',rules:[],fieldLabels:[],sources:[],analysis:{complete:true,pageCount:1,profileVersion:1,sourceLanguage:'English',observations:[],terminology:[],layout:{}}});await workspace.save();
+ const write=workspace.writeMetadata.bind(workspace);let entered,release;
+ const waiting=new Promise(resolve=>{entered=resolve;}),gate=new Promise(resolve=>{release=resolve;});
+ workspace.writeMetadata=async snapshot=>{entered();await gate;return write(snapshot);};
+ const activation=workspace.save({sourceOperation:(_rules,sources)=>{sources[0].active=true;sources[0].version++;}});await waiting;
+ assert.equal(workspace.data.learning[0].active,false,'activation is invisible before durable commit');
+ workspace.data.settings.displayName='Fictional concurrent preference';const ordinary=workspace.save();release();await activation;await ordinary;
+ const reopened=await new Workspace(directory).init();assert.equal(reopened.data.learning[0].active,true);assert.equal(reopened.data.learning[0].version,2);assert.equal(reopened.data.settings.displayName,'Fictional concurrent preference');
+ workspace.writeMetadata=async()=>{throw Object.assign(new Error('Fictional denied write'),{code:'EACCES'});};
+ await assert.rejects(()=>workspace.save({sourceOperation:(_rules,sources)=>{sources[0].active=false;sources[0].version++;}}),{code:'EACCES'});
+ assert.equal(workspace.data.learning[0].active,true);assert.equal(workspace.data.learning[0].version,2);
 });

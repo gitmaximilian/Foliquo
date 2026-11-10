@@ -28,6 +28,12 @@
 
 Foli, manual editing and sample analysis share one reviewed rule library. Inspect scope and conflicts before translating; apply new rules to a finished translation only through a separate revision proposal. Read [the personal-rules guide](docs/PERSONAL-RULES.md) for approval, consumption, backup and update behavior.
 
+## Review, organize and find documents
+
+Compare source coverage with the original, review critical facts and inspect the rules frozen for each result version. Supported columns and long tables use the shared Word/PDF export path. Dossiers keep explicitly related documents and separate people together; local scan checks and confirmed batch groups help prepare uploads.
+
+Search saved translation and recognized source text in the library, with optional historical versions and documented original locations. The index is encrypted, local and rebuildable; it never reprocesses image archives automatically. Read the [content-search guide](docs/CONTENT-SEARCH.md), [dossier guide](docs/DOSSIERS.md), [scan guide](docs/SCAN-REVIEW.md) and [batch-grouping guide](docs/BATCH-GROUPING.md) for behavior and limits.
+
 ## See the workflow
 
 [![Actual Foliquo guided demo with a fictional document](docs/images/demo-workflow.jpg)](https://maximilianauer.at/projects/foliquo/demo/?lang=en)
@@ -62,7 +68,7 @@ Foliquo opens a local browser-based workspace. It listens only on `127.0.0.1`; k
 
 **Desktop apps:** Free Windows, macOS (Apple Silicon and Intel), and Linux x64 packages are published on the [latest published GitHub desktop release](https://github.com/gitmaximilian/Foliquo/releases/latest), with a [platform install guide](docs/DESKTOP-APPS.md). Windows and macOS apps check for updates and install a verified update from inside Foliquo. Versions v0.11.8 and newer can update from inside the app; older desktop versions must first be updated manually to v0.11.8. The Windows installer and macOS apps remain unsigned by the operating systems and can show first-install warnings; Linux stays a local Flatpak bundle with manual updates. The release also includes an unsigned MSIX Store-intake candidate. It is not a direct-install package: its identity must match the app’s Partner Center identity, and Microsoft must sign a Store build before end-user installation.
 
-**Stable browser/CLI distribution:** [The latest published version](https://github.com/gitmaximilian/Foliquo/releases/latest) has verified platform downloads and checksums. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. WinGet publication is handled separately; this release does not submit a WinGet update.
+**Browser/CLI distribution:** [Version 0.14.1](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.14.1) is the release target; platform downloads and checksums become available after the package gates pass. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. WinGet publication is handled separately; this release does not submit a WinGet update.
 
 | Platform | Installation and use |
 | --- | --- |

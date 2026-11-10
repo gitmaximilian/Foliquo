@@ -1,6 +1,6 @@
 {
   "name": "foliquo",
-  "version": "0.13.0",
+  "version": "0.14.1",
   "private": false,
   "license": "SEE LICENSE IN LICENSE",
   "author": {
@@ -19,6 +19,7 @@
     "test:backup:scale": "node scripts/backup-scale.mjs",
     "test:backup:legacy-profile": "node --expose-gc scripts/legacy-backup-profile.mjs",
     "test:storage:full-volume": "node scripts/full-volume-profile.mjs",
+    "test:search:profile": "node --expose-gc scripts/search-profile.mjs",
     "test:storage:memory": "node --expose-gc scripts/storage-memory.mjs",
     "test:storage:large-pdf": "node --expose-gc scripts/profile-large-pdf.mjs",
     "test:storage:result-json": "node --expose-gc scripts/profile-result-json.mjs",
