@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {basename,join} from 'node:path';
 import {readFile,readdir,rm,mkdir,writeFile,stat} from 'node:fs/promises';
 import {CURRENT_VERSION} from '../lib/version.mjs';
-import {seedInstalledLegacy,localClient,verifyLegacy,seedPersonalState,verifyPersonalState,seedConversationMessages} from './upgrade-fixtures.mjs';
+import {seedInstalledLegacy,localClient,verifyLegacy,seedPersonalState,verifyPersonalState,seedConversationMessages,seedInstalledWorkflow,verifyWorkflowState,seedSearchState} from './upgrade-fixtures.mjs';
 import {setTimeout as delay} from 'node:timers/promises';
 
 if (process.platform !== 'win32') throw new Error('This native window smoke check runs on Windows only.');
@@ -48,7 +48,7 @@ const debugPort = await new Promise((resolve, reject) => {
 const dataDir = join(tmpdir(), 'foliquo-window-smoke-' + randomUUID());
 async function findInstalledService(directory){try{if((await stat(join(directory,'server.mjs'))).isFile()&&(await stat(join(directory,'lib/workspace.mjs'))).isFile()&&(await stat(join(directory,'runtime/node.exe'))).isFile())return directory;}catch{}for(const entry of await readdir(directory,{withFileTypes:true}))if(entry.isDirectory()){const found=await findInstalledService(join(directory,entry.name));if(found)return found;}return null;}
 const installedService=await findInstalledService(installDir);if(!installedService)throw new Error('Installed service resources not found.');
-const legacyFixture=seedInstalledLegacy(installedService,dataDir);
+const legacyFixture=seedInstalledLegacy(installedService,dataDir),workflowFixture=seedInstalledWorkflow(installedService,dataDir);
 
 const child = spawn(executable, [], {
   cwd: installDir,
@@ -160,6 +160,7 @@ try {
   const seeded=await cdp('Runtime.evaluate',{expression:"(async()=>{const s=await fetch('/api/session').then(r=>r.json());const r=await fetch('/api/preferences',{method:'POST',headers:{'content-type':'application/json','x-foliquo-csrf':s.csrf},body:JSON.stringify({locale:'en',displayName:'Fictional update check',introComplete:true})});if(!r.ok)throw new Error('Could not save fictional upgrade preferences');return r.json();})()",awaitPromise:true,returnByValue:true});
   if(seeded.result?.exceptionDetails)throw new Error('Could not seed the isolated upgrade workspace.');
   const keyBefore=await readFile(join(dataDir,'workspace.key'));
+  const originalWorkflowClient=await localClient(new URL(state.url).origin,workflowFixture.cookie);if(originalWorkflowClient.session.version!=='0.13.0')throw new Error('Workflow upgrade must start from the real public 0.13.0 installer.');await verifyWorkflowState(originalWorkflowClient,workflowFixture);
   try{socket?.close();}catch{}
   const intermediate=process.env.FOLIQUO_UPGRADE_INTERMEDIATE_INSTALLER,intermediateVersion=process.env.FOLIQUO_UPGRADE_INTERMEDIATE_VERSION;
   if(!intermediate||!intermediateVersion||intermediateVersion===CURRENT_VERSION)throw new Error('The upgrade gate requires a distinct feature-bearing intermediate installer.');
@@ -171,7 +172,7 @@ try {
     if(activeWindow.exitCode===null)await Promise.race([new Promise(resolve=>activeWindow.once('exit',resolve)),delay(10000)]);
     const oldHealth=await fetch('http://127.0.0.1:'+oldRecord.port+'/api/health',{signal:AbortSignal.timeout(3000)}).then(response=>response.json());if(oldHealth.instance!==oldRecord.instance)throw new Error('The old service did not remain available for the upgrade fixture.');
     const from=oldHealth.version.split('.').map(Number),to=step.version.split('.').map(Number),firstDifference=to.findIndex((part,index)=>part!==from[index]);if(firstDifference<0||to[firstDifference]<=from[firstDifference])throw new Error('The fixture must perform two increasing version steps.');
-    if(index===0&&oldHealth.version!=='0.12.0')throw new Error('Historical upgrade must start from the real public 0.12.0 installer.');
+    if(index===0&&oldHealth.version!=='0.13.0')throw new Error('Historical upgrade must start from the real public 0.13.0 installer.');
     if(index===1){await stopOwnedService();const service=await findInstalledService(installDir);if(!service)throw new Error('Intermediate installed runtime not found.');personalState=seedConversationMessages(service,dataDir,intermediateClient,personalState);}
     const upgraded=spawnSync(step.installer,['/UPDATE','/S','/D='+installDir],{cwd:process.cwd(),env:{...process.env,FOLIQUO_DATA_DIR:dataDir,FOLIQUO_LOG_DIR:join(dataDir,'logs')},stdio:'inherit',timeout:360000,windowsHide:true});
     if(upgraded.error)throw upgraded.error;if(upgraded.status!==0){const log=await readFile(join(dataDir,'logs','desktop-service-upgrade.log'),'utf8').catch(()=>'(no service-upgrade log)');throw new Error('Upgrade installer failed: '+upgraded.status+' '+log.slice(-4000));}
@@ -185,7 +186,8 @@ try {
     const profile=await verifyLegacy(client,legacyFixture);let retained;
     if(index===0){profileSnapshot=profile;personalState=await seedPersonalState(client);intermediateClient=client;}
     else{if(JSON.stringify(profile)!==JSON.stringify(profileSnapshot))throw new Error('The feature-candidate upgrade changed the legacy profile.');retained=await verifyPersonalState(client,personalState);}
-    report.push({from:oldHealth.version,to:step.version,keyPreserved:true,orphanServiceReplaced:index===0,preferencesPreserved:true,legacyProfilePreserved:true,sourceBytesPreserved:true,budgetPreserved:true,usagePreserved:true,...(retained||{})});
+    const workflowClient=await localClient('http://127.0.0.1:'+upgradedRecord.port,workflowFixture.cookie),workflow=await verifyWorkflowState(workflowClient,workflowFixture,{newFeatures:true});if(index===0){await seedSearchState(workflowClient,workflowFixture);workflow.searchStateSeeded=true;}
+    report.push({workflow,from:oldHealth.version,to:step.version,keyPreserved:true,orphanServiceReplaced:index===0,preferencesPreserved:true,legacyProfilePreserved:true,sourceBytesPreserved:true,budgetPreserved:true,usagePreserved:true,...(retained||{})});
     console.log('Verified real installer upgrade: '+JSON.stringify(report.at(-1)));
   }
   const reportDirectory=join(process.cwd(),'release-desktop/final');await mkdir(reportDirectory,{recursive:true});await writeFile(join(reportDirectory,'UPGRADE-REPORT-Windows-x64.json'),JSON.stringify({fictional:true,providerRequests:0,steps:report},null,2)+'\n');
