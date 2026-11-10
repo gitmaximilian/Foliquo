@@ -226,3 +226,8 @@ Final local 0.14.1 mandatory commands pass: 478/478 tests, three fictional offli
 ## Platform and real installed update gates passed
 
 Release commit `8a0def6` passes the source run 42870037207 on all four platforms and real Homebrew prepublication tests on both Mac architectures. Downloaded source assets pass all six checksums and agree with the archive/platform/formula metadata. Main integration run 42871087724 passes on Windows/macOS/Linux, including existing archive/backup/recovery memory gates and genuine isolated ENOSPC preservation. Desktop run 42870036330 passes all four native jobs. The Windows native gate performs the real signed-installer 0.13.0 → 0.13.99 → 0.14.1 sequence and verifies original bytes, key, IDs, rules, chats, dossier/facts/job, review/final decisions, frozen rules, legacy profile, usage/budget and the intermediate paused search index with zero provider calls. Exact job IDs and scope are in WORKFLOW-ACCEPTANCE.md. Final desktop download audit, public releases/feed, main integration and Homebrew publication remain pending. Nothing new is public yet.
+
+
+## Final publication
+
+Foliquo Community 0.14.1 is published for desktop and browser/CLI. The public updater feed, all downloaded desktop checksums and signatures, real installed Windows upgrade, and Homebrew public assets on both Mac architectures passed. Homebrew tap PR 5 merged. See the final entry in WORKFLOW-ACCEPTANCE.md; historical checkpoint statements above describe earlier stages.
