@@ -68,7 +68,7 @@ Foliquo opens a local browser-based workspace. It listens only on `127.0.0.1`; k
 
 **Desktop apps:** Free Windows, macOS (Apple Silicon and Intel), and Linux x64 packages are published on the [latest published GitHub desktop release](https://github.com/gitmaximilian/Foliquo/releases/latest), with a [platform install guide](docs/DESKTOP-APPS.md). Windows and macOS apps check for updates and install a verified update from inside Foliquo. Versions v0.11.8 and newer can update from inside the app; older desktop versions must first be updated manually to v0.11.8. The Windows installer and macOS apps remain unsigned by the operating systems and can show first-install warnings; Linux stays a local Flatpak bundle with manual updates. The release also includes an unsigned MSIX Store-intake candidate. It is not a direct-install package: its identity must match the app’s Partner Center identity, and Microsoft must sign a Store build before end-user installation.
 
-**Stable browser/CLI distribution:** [Version 0.14.0](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.14.0) has verified platform downloads and checksums. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. WinGet publication is handled separately; this release does not submit a WinGet update.
+**Browser/CLI distribution:** [Version 0.14.1](https://github.com/gitmaximilian/Foliquo/releases/tag/v0.14.1) is the release target; platform downloads and checksums become available after the package gates pass. The [official Homebrew tap](https://github.com/gitmaximilian/homebrew-tap) is available. WinGet publication is handled separately; this release does not submit a WinGet update.
 
 | Platform | Installation and use |
 | --- | --- |

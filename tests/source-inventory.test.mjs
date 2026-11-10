@@ -174,6 +174,7 @@ test('revision restore recovers the matching source map and document nodes',asyn
 
 test('0.13.0 source decisions acquire a read-only binding only from their saved version or an unchanged frozen snapshot',()=>{
  const document=documentFromLegacyText('Fictional retained name'),item={id:'fictional-legacy-decision',documentId:'fictional-doc',pageId:'fictional-page',kind:'paragraph',label:'Name',fileIndex:0,page:1,box:null,sourceText:'Fictional source',targetNodeIds:[document.blocks[0].id],coverageStatus:'mapped',review:{version:2,decision:'map'}},inventory={schema:1,items:[item]},review={version:2};
+ assert.equal(reviewableSourceInventory(inventory,document,{review}).items[0].review.stale,true,'a version label without the saved reverse mapping is insufficient');document.blocks[0].sourceBlockIds=[item.id];
  const display=reviewableSourceInventory(inventory,document,{review});assert.equal(display.items[0].coverageStatus,'mapped');assert.equal(display.items[0].review.stale,undefined);assert.match(display.items[0].review.binding,/^[a-f0-9]{64}$/);assert.equal(item.review.binding,undefined,'display must not rewrite the old saved record');
  review.version=3;review.versions=[{version:2,document:structuredClone(document),sourceInventory:structuredClone(inventory)}];assert.equal(reviewableSourceInventory(inventory,document,{review}).items[0].coverageStatus,'mapped');document.blocks[0].content='Changed fictional name';assert.equal(reviewableSourceInventory(inventory,document,{review}).items[0].review.stale,true);assert.equal(item.review.decision,'map');
 });

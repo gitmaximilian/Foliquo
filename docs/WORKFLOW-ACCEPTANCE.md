@@ -1,6 +1,6 @@
 # Community workflow release acceptance
 
-Candidate: **0.14.0**. Scope: all 17 accepted items from the 5 November 2026 plan. This audit separates feature evidence from the still-required installed/package/publication gates. It is not a release completion declaration.
+Candidate: **0.14.1**. Scope: all 17 accepted items from the 5 November 2026 plan. This audit separates feature evidence from the still-required installed/package/publication gates. It is not a release completion declaration.
 
 ## Feature scope
 
@@ -24,7 +24,7 @@ Candidate: **0.14.0**. Scope: all 17 accepted items from the 5 November 2026 pla
 | G8 | Conservative grouping proposals require explicit confirmed start and stable retry identities | Batch unit/API/browser cases, actual split Word/PDF originals and restart checks |
 | G9 | Encrypted bounded content search opens current/historical saved text and proven original locations | Search core/API/recovery/provenance/browser checks, actual encrypted restore and 1,001-record profile |
 
-All feature rows have focused acceptance evidence. The local integrated test run for 0.14.0 passes **477/477**. A subsequent legacy-source compatibility correction passes its 21 focused source/upgrade checks; the final platform pipelines will repeat the full suite on that candidate. The first integrated run exposed four problems: common shape-token drift, an optional browser extension reference in the extracted preview renderer, and two Word assertions that assumed no additional paragraph properties. Shared tokens and the guarded extension call were fixed; Word tests now check the exact relevant paragraph/gap spacing rather than property serialization adjacency. The targeted follow-up and complete rerun pass.
+All feature rows have focused acceptance evidence. The corrected 0.14.1 local integrated suite passes **478/478**, including the legacy-source review regression and installed-fixture contract. The source/review/upgrade subset passes 28/28. Platform pipelines must repeat the full suite on this candidate. The first integrated run exposed four problems: common shape-token drift, an optional browser extension reference in the extracted preview renderer, and two Word assertions that assumed no additional paragraph properties. Shared tokens and the guarded extension call were fixed; Word tests now check the exact relevant paragraph/gap spacing rather than property serialization adjacency. The targeted follow-up and complete rerun pass.
 
 Actual current export inspection covers LTR/RTL columns, long-table continuation and an oversized row. Text is retained, repeat headers/continuations remain legible, and the original annex is still verified. Font substitution is reported rather than hidden. The original-byte/Word-structure checks cover all seven small layout fixtures; no new linguistic study is claimed.
 
@@ -40,16 +40,16 @@ Excluded: U8 extra Foli accounting display; G1 independent professional linguist
 
 | Gate | Current authoritative status |
 | --- | --- |
-| Version and release-note consistency | 0.14.0 metadata helper/check passes; no existing tag reused |
-| Local `npm test` | Passed: 477 tests, zero failures |
+| Version and release-note consistency | 0.14.1 metadata helper/check passes; no existing tag reused |
+| Local `npm test` | Passed on 0.14.1: 478 tests, zero failures |
 | Local benchmark | Passed; offline fictional cases, zero model requests/regressions |
-| Local acceptance/export command | Passed on 0.14.0; all four installation/test/benchmark/structured-export steps pass |
-| Local demo build | Passed on 0.14.0 in EN/DE/AR with fictional downloads |
+| Local acceptance/export command | Passed on 0.14.1; all four installation/test/benchmark/structured-export steps pass |
+| Local demo build | Passed on 0.14.1 in EN/DE/AR with fictional downloads |
 | Locked production dependency audit | Passed: no high-severity production finding |
 | Search archive duration/peak RSS | Passed; 1,001 fictional records including 20 MiB text, bounded pages/steps and predeclared memory budgets |
 | Search browser acceptance | Chromium/WebKit passed; EN/DE/AR, keyboard, dark/mobile, original/version checks |
 | Installed-upgrade fixture contract | Local encrypted/API/restart contract passes with rules, chat messages, dossier/fact/job, confirmed source/check/final decisions and paused search |
-| Real installed public 0.13.0 upgrade | Pending native execution. Harness now pins the public installer SHA-256 and tests 0.13.0 → unpublished 0.13.99 → 0.14.0 |
+| Real installed public 0.13.0 upgrade | Pending native execution. Harness now pins the public installer SHA-256 and tests 0.13.0 → unpublished 0.13.99 → 0.14.1 |
 | Native Mac/Windows/Linux packages and bundled runtime/data paths | Pending candidate builds and reports |
 | Source packages and actual package-manager install checks | Pending candidate builds and Homebrew checks |
 | Updater signatures, manifest versions/URLs and complete checksums | Pending candidate artifacts; public keys unchanged |
@@ -61,3 +61,7 @@ The installed baseline is downloaded from the existing public `desktop-v0.13.0` 
 Ignored raw evidence remains in `outputs/workflow-*`. Platform run IDs, package manifests, installed-upgrade JSON reports and final publication checks must be added here before marking the goal complete.
 
 The 0.13.0 source-review format has no binding digest. A read-only compatibility path now establishes one only from the same saved result version or an unchanged frozen snapshot. Missing/changed evidence still reopens review. The upgrade fixture deliberately retains this legacy format even when exercised with current modules, preventing a current-only fixture from hiding an installed migration failure.
+
+## Candidate correction before publication
+
+The immutable 0.14.0 tags reached the platform gates but were not published. Full platform tests caught a legacy-source fixture that must remain unreviewed: result version 1 cannot contain a human source decision because the old operation increments the version. Candidate 0.14.1 accepts an unbound legacy decision only from version 2 or later, with an allowed action and a matching current/frozen version; mapped decisions additionally require the actual saved reverse node links. The review read does not mutate saved records. The corrected source/review/installed-fixture set passes 28/28 locally. The browser sweep passed 51/52; the remaining proposal-edit case clicked its replaced draft before refresh. After waiting for the changed draft ID/text, that case passes in both Chromium and WebKit (2/2); its assertions and the product version guard are retained. The obsolete source run was cancelled after its other three jobs failed; no native package/public release was produced. Final local integrated checks on 0.14.1 pass: 478 tests, benchmark, demo build and all four acceptance steps. Platform/installed/package/publication gates remain pending.
