@@ -141,7 +141,7 @@ main{flex:1 0 auto;width:100%;max-width:var(--content-max);margin:0 auto;padding
 .workspace-mastheads h1{font-size:30px;line-height:38px;letter-spacing:-.025em;margin:0;font-weight:650}
 .workspace-mastheads p{max-width:72ch;margin:0;color:var(--color-text-secondary);font-size:14px;line-height:21px}
 .studio-intro-copy{position:relative;display:flex;flex-direction:column;align-items:center;gap:var(--space-2);width:100%;padding-top:28px}
-.welcome-greeting{position:absolute;top:0;inset-inline:0;display:block;max-width:100%;height:24px;margin-inline:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary);font-size:12px;line-height:24px;text-align:center;opacity:0;pointer-events:none;transform:translateY(2px);transition:opacity var(--motion-control) var(--ease-standard),transform var(--motion-control) var(--ease-standard)}
+.welcome-greeting{position:absolute;top:0;inset-inline:0;display:block;max-width:100%;height:24px;margin-inline:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary);font-size:12px;line-height:24px;text-align:end;opacity:0;pointer-events:none;transform:translateY(2px);transition:opacity var(--motion-control) var(--ease-standard),transform var(--motion-control) var(--ease-standard)}
 .welcome-greeting.greeting-in{opacity:1;transform:none}
 .welcome-greeting[hidden]{display:none}
 .workspace-mastheads>.review-heading{flex-direction:row;justify-content:space-between;text-align:start}
@@ -1451,7 +1451,7 @@ body{background:var(--color-surface)!important;color:#111!important}
 .guide-platform-grid article small{color:var(--muted)}
 @media(max-width:700px){.guide-platform-grid{grid-template-columns:minmax(0,1fr)}}
 /* Native file inputs keep their behavior while using the app's button language. */
-.clarification-upload{display:grid;gap:9px;margin-top:14px;color:var(--text);font-size:var(--text-control-size);font-weight:600}
+.clarification-upload{display:grid;gap:9px;margin-top:14px;color:var(--text);font-size:var(--text-control-size);font-weight:600}.clarification-upload-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-weight:400}.clarification-upload-button{cursor:pointer}.clarification-upload input:focus-visible+.clarification-upload-button{outline:2px solid var(--accent);outline-offset:2px}.clarification-upload-row .muted{overflow-wrap:anywhere}.clarification-upload-hint{font-size:var(--text-secondary-size);margin:6px 0 14px}
 #clarification-extra{display:block;width:100%;min-width:0;padding:10px;border:1px solid var(--line);border-radius:11px;background:var(--color-surface);color:var(--muted);font:inherit;font-weight:400;line-height:1.4}
 #clarification-extra::file-selector-button{min-height:36px;margin-inline-end:12px;padding:7px 13px;border:1px solid var(--line);border-radius:var(--radius-control);background:#171717;color:var(--color-on-primary);font:inherit;font-size:var(--text-control-size);font-weight:600;cursor:pointer;transition:background-color var(--motion-control) var(--ease-standard),transform var(--motion-control) var(--ease-standard)}
 #clarification-extra::file-selector-button:hover{background:#333;transform:translateY(-1px)}
@@ -1691,8 +1691,9 @@ html[lang=ar] .workspace-mastheads h1{letter-spacing:0}
 @media(max-width:599px){
  .header-inner{grid-template-columns:auto minmax(0,1fr);gap:8px;padding:8px 16px}
  .header-inner>.brand{grid-column:1;grid-row:1;justify-self:start}
- .header-inner>nav{grid-row:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
- .header-inner>nav .nav-item{width:100%;justify-content:flex-start}
+ .header-inner>nav{grid-row:2;display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;scroll-padding-inline:16px}
+ .header-inner>nav::-webkit-scrollbar{display:none}
+ .header-inner>nav .nav-item{flex:0 0 auto;width:auto;min-height:44px;justify-content:flex-start;white-space:nowrap}
  .header-right{grid-column:2;grid-row:1;justify-content:flex-end;flex-wrap:nowrap;gap:4px}
  .header-inner>.brand{padding:0}
  .jobs-header-button{position:relative;min-width:44px;padding:10px!important;justify-content:center!important}
@@ -1723,7 +1724,7 @@ html[lang=ar] .workspace-mastheads h1{letter-spacing:0}
 }
 @media(min-width:1600px){.translation-composer .dropzone{min-height:400px}}
 @media(max-width:359px){.header-inner{grid-template-columns:minmax(0,1fr)}.header-right{grid-column:1;grid-row:3;justify-content:flex-start}}
-.translation-composer .action-footer:has(.composer-note[data-empty=true]):not(:has(#error:not(:empty))){padding:0;border-top:0;min-height:0}
+.translation-composer .action-footer:has(.composer-note[data-empty=true]):not(:has(#error:not(:empty))){padding:0;border:0;min-height:0;background:transparent}
 .translation-composer .composer-note[data-empty=true]{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .translation-composer .document-type-context[hidden]{display:none}
 .language-field-label svg{display:block;flex:0 0 16px;width:16px;height:16px;stroke:currentColor;stroke-width:1.75}

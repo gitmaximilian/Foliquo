@@ -213,7 +213,8 @@ function renderSavedClarificationFiles(draft){$('#clarification-saved-files').te
 function scheduleClarificationDraft(){captureClarificationDraft();clearTimeout(clarificationDraftTimer);clarificationDraftTimer=setTimeout(()=>void saveClarificationDraft().catch(()=>{}),500);}
 async function dismissClarificationDialog(){try{await saveClarificationDraft();if(clarificationJobId)window.dismissedClarifications.add(clarificationJobId);closeClarifications();setJobsPanel(true);}catch{}}
 $('#clarification-fields').addEventListener('input',scheduleClarificationDraft);
-$('#clarification-extra').addEventListener('change',()=>{const draft=captureClarificationDraft();if(draft){draft.filesToUpload=[...$('#clarification-extra').files];void saveClarificationDraft().catch(()=>{});}});
+function renderClarificationExtraNames(){const names=$('#clarification-extra-names');if(names)names.textContent=[...($('#clarification-extra')?.files||[])].map(file=>file.name).join(', ');}
+ $('#clarification-extra').addEventListener('change',()=>{renderClarificationExtraNames();const draft=captureClarificationDraft();if(draft){draft.filesToUpload=[...$('#clarification-extra').files];void saveClarificationDraft().catch(()=>{});}});
 $('#clarification-dialog').addEventListener('cancel',event=>{event.preventDefault();void dismissClarificationDialog();});
 $('#clarification-dialog').addEventListener('close',()=>{const id=clarificationFocusJobId;clarificationFocusJobId=null;if(!id)return;const answer=document.querySelector(`[data-job-id="${CSS.escape(id)}"][data-queue-action="answer"]`);(answer&&!answer.closest('[inert]')?answer:$('#jobs-open')).focus({preventScroll:true});});
 
@@ -238,7 +239,7 @@ function showClarifications(job,scroll){
  const storedDraft=clarificationDrafts.get(job.id);
  const signature=JSON.stringify([job.id,job.questions.map(({box,...question})=>question)]);if(signature!==clarificationSignature){
   const sameJob=clarificationJobId===job.id,drafts=new Map(sameJob?[...document.querySelectorAll('#clarification-fields textarea')].map(el=>[el.dataset.questionId,el.value]):(storedDraft.answers||[]).map(a=>[a.id,a.answer]));
-  clarificationJobId=job.id;clarificationSignature=signature;if(!sameJob)$('#clarification-extra').value='';if(!sameJob)questionOriginalReady=renderQuestionOriginal(job);$('#clarification-files').dataset.noTranslate='';$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
+  clarificationJobId=job.id;clarificationSignature=signature;if(!sameJob){$('#clarification-extra').value='';renderClarificationExtraNames();}if(!sameJob)questionOriginalReady=renderQuestionOriginal(job);$('#clarification-files').dataset.noTranslate='';$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
   const fields=job.questions.map((q,i)=>{
    const field=document.createElement('div');field.className='clarification-field';field.dataset.questionId=q.id;field.addEventListener('focusin',()=>{document.querySelectorAll('.clarification-field').forEach(el=>el.classList.toggle('is-current',el===field));});
    const label=document.createElement('label');label.htmlFor=`answer-${q.id}`;label.textContent=`${i+1}. ${window.TOCRI18n?.localizeQuestion(q)||q.question}`;
