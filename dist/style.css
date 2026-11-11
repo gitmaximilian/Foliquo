@@ -2030,3 +2030,16 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .desk-card .desk-meta{color:var(--color-text-secondary);font-size:var(--text-secondary-size)}
 .desk-card .status-chip{justify-self:end}
 .desk-card .secondary{grid-column:1/-1}
+/* Review: direct value comparison, progress and focusable check cards. */
+.review-progress{height:8px;margin:8px 0 4px;overflow:hidden;border-radius:999px;background:var(--color-surface-active)}
+.review-progress>span{display:block;height:100%;border-radius:inherit;background:var(--color-success);transition:width var(--motion-progress) var(--ease-standard)}
+.review-progress-copy{margin:0 0 8px;font-size:var(--text-secondary-size)}
+.check-compare{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 14px;grid-column:1/-1;margin:2px 0 4px}
+.check-compare>span:not(.check-compare-arrow){display:grid;gap:2px;min-width:0}
+.check-compare small{color:var(--color-text-secondary);font-size:var(--text-secondary-size)}
+.check-compare bdi{padding:4px 10px;border:1px solid var(--color-border);border-radius:var(--radius-small);background:var(--color-surface-muted);font-family:"Noto Serif",Georgia,"Times New Roman",serif;font-size:15px;overflow-wrap:anywhere}
+.check-compare-arrow{padding-bottom:6px;color:var(--color-text-muted)}
+[dir=rtl] .check-compare-arrow{transform:scaleX(-1)}
+.review-guide-check:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.review-progress>span{transition:none}}
+
