@@ -54,7 +54,26 @@ function updateQueueLiveAnnouncement(force=false){
 }
 
 function actualProgress(job){return typeof job.progress==='number'&&Number.isFinite(job.progress)?Math.max(0,Math.min(100,Math.round(job.progress))):null;}
+// Desk: recent documents with their state and the next useful action, directly below the upload area.
+function renderDesk(){
+ const desk=$('#desk'),list=$('#desk-list');if(!desk||!list)return;
+ const jobs=(queueState.jobs||[]).filter(job=>job.status!=='expired'&&job.id!==featuredJobId).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,6);
+ const signature=JSON.stringify([window.TOCRI18n?.getLocale?.(),queueState.paused,jobs.map(job=>[job.id,job.status,job.stage,job.names])]);if(desk.dataset.renderSignature===signature)return;desk.dataset.renderSignature=signature;
+ desk.hidden=!jobs.length;
+ const tone={awaiting_answers:'is-open',failed:'is-critical',succeeded:'is-done',cancelled:'is-open'},next={awaiting_answers:['Rückfragen beantworten','answer'],succeeded:['Übersetzung prüfen','review'],failed:['Erneut versuchen','retry']};
+ list.replaceChildren(...jobs.map(job=>{
+  const item=document.createElement('li'),state=queueStatus(job,queueState.paused),name=document.createElement('strong'),meta=document.createElement('span'),chip=document.createElement('span');
+  item.className='desk-card';item.dataset.jobId=job.id;
+  name.textContent=job.names.join(' · ');name.dataset.noTranslate='';
+  meta.className='desk-meta';meta.textContent=job.targetLanguage||'';
+  chip.className=`status-chip ${tone[job.status]||'is-busy'}`;chip.textContent=window.TOCRI18n?.t(state.label)||state.label;
+  item.append(name,meta,chip);
+  if(next[job.status]){const action=queueButton(next[job.status][0],next[job.status][1],job);action.className='secondary';item.append(action);}
+  return item;
+ }));
+}
 function renderFeaturedJob(){
+ renderDesk();
  const card=$('#featured-job'),studio=$('#studio-view');if(!card)return;
  const job=queueState.jobs.find(item=>item.id===featuredJobId&&item.status!=='expired');
  if(!job){card.hidden=true;studio.classList.remove('is-featured');return;}
@@ -272,3 +291,4 @@ $('#clarification-form').onsubmit=async event=>{
  if(answers.some(a=>!a.answer)){$('#clarification-error').textContent='Bitte jede Rückfrage beantworten.';return;}clarificationSubmitting=true;$('#clarification-submit').disabled=true;$('#clarification-error').textContent='';
  try{await saveClarificationDraft();await localRequest(`/api/jobs/${id}/answer`,{answers,files:[]});await Promise.all(answers.map(answer=>animateResolvedQuestion(answer.id)));clarificationDrafts.delete(id);closeClarifications();window.dismissedClarifications.delete(id);toast('Antworten übernommen. Der Auftrag wird fortgesetzt.');await pollQueue();}catch(error){$('#clarification-error').textContent=error.message;}finally{clarificationSubmitting=false;$('#clarification-submit').disabled=false;}
 };
+$('#desk-all')?.addEventListener('click',()=>setJobsPanel(true));

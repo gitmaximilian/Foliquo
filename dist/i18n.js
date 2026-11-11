@@ -263,4 +263,6 @@ Object.assign(dictionaries.en,{'Antworten werden benötigt.':'Your answers are n
 Object.assign(dictionaries.ar,{'Antworten werden benötigt.':'نحتاج إلى إجاباتك.','Deine Antwort …':'إجابتك …','Antwort senden':'إرسال الإجابة'});
 // Consistent German navigation terms (source keys stay unchanged).
 Object.assign(dictionaries.de,{'Guide':'Leitfaden','Hinweise':'Leitfaden','Anlernen':'Stil lernen','Anlernen aktiv':'Stil lernen aktiv','Anlernen deaktiviert':'Stil lernen deaktiviert','Anlernen für diese Gruppe verwenden':'Stil lernen für diese Gruppe verwenden'});
+Object.assign(dictionaries.en,{'Auf dem Schreibtisch':'On your desk','Alle Aufträge ansehen':'View all jobs'});
+Object.assign(dictionaries.ar,{'Auf dem Schreibtisch':'على مكتبك','Alle Aufträge ansehen':'عرض كل المهام'});
 })();

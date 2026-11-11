@@ -24,3 +24,12 @@ test('an empty studio action bar shows no empty frame',async()=>{
  const css=await read('dist/style.css');
  assert.match(css,/\.action-footer:has\(\.composer-note\[data-empty=true\]\):not\(:has\(#error:not\(:empty\)\)\)\{padding:0;border:0;min-height:0;background:transparent\}/);
 });
+
+test('the studio desk lists recent documents with state chips and next actions',async()=>{
+ const [html,queue,css]=await Promise.all([read('dist/index.html'),read('dist/queue.js'),read('dist/style.css')]);
+ assert.match(html,/<section id="desk" class="desk" aria-labelledby="desk-title" hidden>/);
+ assert.match(queue,/function renderDesk\(\)/);
+ assert.match(queue,/awaiting_answers:\['Rückfragen beantworten','answer'\],succeeded:\['Übersetzung prüfen','review'\],failed:\['Erneut versuchen','retry'\]/);
+ assert.match(css,/\.desk\{grid-column:1;grid-row:4;/);
+ assert.match(css,/\.status-chip\.is-done\{/);
+});

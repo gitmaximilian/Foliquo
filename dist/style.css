@@ -2019,3 +2019,14 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .status-chip.is-critical{color:var(--color-danger);background:var(--color-danger-bg);border-color:var(--color-danger-border)}
 .status-chip.is-done{color:var(--color-success);background:var(--color-success-bg);border-color:var(--color-success-border)}
 .status-chip.is-busy{color:var(--color-info);background:var(--color-info-bg);border-color:var(--color-accent-border)}
+/* Desk: recent documents below the upload area. */
+.desk{grid-column:1;grid-row:4;margin-top:24px}
+@media(max-width:1279px){.desk{grid-row:5}}
+.desk-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.desk-head h2{margin:0;font-size:18px}
+.desk-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin:0;padding:0;list-style:none}
+.desk-card{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;padding:16px;border:1px solid var(--color-border);border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-paper)}
+.desk-card strong{grid-column:1/-1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.desk-card .desk-meta{color:var(--color-text-secondary);font-size:var(--text-secondary-size)}
+.desk-card .status-chip{justify-self:end}
+.desk-card .secondary{grid-column:1/-1}
