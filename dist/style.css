@@ -2065,3 +2065,6 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 #ai-settings-home{display:flex;flex-direction:column}
 #ai-settings-home>.send-note{order:9}
 #ai-settings-home>.settings-more{order:10}
+/* Style area: example/rule tabs with a direct route to Foli. */
+.style-area-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.style-area-bar .rule-tabs{margin:0}
