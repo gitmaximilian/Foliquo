@@ -2058,4 +2058,10 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .document-steps li.is-done::before{content:'✓';background:var(--color-success);color:var(--color-on-primary)}
 .document-steps li.is-current{color:var(--color-primary);border-color:var(--color-accent-border);background:var(--color-selected)}
 .document-steps li.is-current::before{background:var(--color-primary);color:var(--color-on-primary)}
-
+.settings-more{display:grid;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--color-border)}
+.settings-more h2{margin:0;font-size:16px}
+.settings-more-list{display:flex;flex-wrap:wrap;gap:8px}
+.settings-more .muted{margin:0;font-size:var(--text-secondary-size)}
+#ai-settings-home{display:flex;flex-direction:column}
+#ai-settings-home>.send-note{order:9}
+#ai-settings-home>.settings-more{order:10}

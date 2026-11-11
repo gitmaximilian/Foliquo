@@ -33,3 +33,12 @@ test('the studio desk lists recent documents with state chips and next actions',
  assert.match(css,/\.desk\{grid-column:1;grid-row:4;/);
  assert.match(css,/\.status-chip\.is-done\{/);
 });
+
+test('settings open from one header entry and link storage and update settings',async()=>{
+ const [html,dialogs,css]=await Promise.all([read('dist/index.html'),read('dist/workspace-dialogs.js'),read('dist/style.css')]);
+ assert.match(html,/aria-controls="ai-settings-dialog" aria-label="Einstellungen"/);
+ assert.match(html,/data-open-setting="guide-storage-open"/);
+ assert.match(html,/data-open-setting="guide-update-open"/);
+ assert.match(dialogs,/closest\?\.\('\[data-open-setting\]'\)/);
+ assert.match(css,/#ai-settings-home>\.settings-more\{order:10\}/);
+});

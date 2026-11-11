@@ -269,4 +269,6 @@ Object.assign(dictionaries.en,{'Dein Archiv ist noch leer':'Your archive is stil
 Object.assign(dictionaries.ar,{'Dein Archiv ist noch leer':'أرشيفك فارغ حتى الآن','Fertige Übersetzungen erscheinen hier automatisch, sortiert nach Dokumenttyp. Alles bleibt verschlüsselt auf diesem Computer.':'تظهر الترجمات المكتملة هنا تلقائياً مرتبة حسب نوع المستند. يبقى كل شيء مشفراً على هذا الحاسوب.','Demo mit fiktivem Dokument ansehen':'عرض العرض التوضيحي بمستند خيالي'});
 Object.assign(dictionaries.en,{'Stil':'Style'});Object.assign(dictionaries.ar,{'Stil':'الأسلوب'});
 Object.assign(dictionaries.de,{'Stilbeispiele verwalten':'Muster verwalten'});
+Object.assign(dictionaries.en,{'Einstellungen':'Settings','Weitere Einstellungen':'More settings','Speicher, Sicherung und Aufbewahrung':'Storage, backup and retention','Updates':'Updates','Sprache und Dunkelmodus findest du unten in der Seitenleiste.':'Language and dark mode are at the bottom of the sidebar.'});
+Object.assign(dictionaries.ar,{'Einstellungen':'الإعدادات','Weitere Einstellungen':'إعدادات أخرى','Speicher, Sicherung und Aufbewahrung':'التخزين والنسخ الاحتياطي والاحتفاظ','Updates':'التحديثات','Sprache und Dunkelmodus findest du unten in der Seitenleiste.':'تجد اللغة والوضع الداكن أسفل الشريط الجانبي.'});
 })();
