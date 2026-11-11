@@ -274,4 +274,8 @@ Object.assign(dictionaries.ar,{'Einstellungen':'الإعدادات','Weitere Ein
 // Library and example searches have separate source texts.
 Object.assign(dictionaries.en,{'Dokumente suchen':'Search documents','Muster suchen':'Search examples'});
 Object.assign(dictionaries.ar,{'Dokumente suchen':'البحث في المستندات','Muster suchen':'ابحث في الأمثلة'});
+// The side panel manages processing; the studio desk is the document overview.
+Object.assign(dictionaries.de,{'Aufträge':'Warteschlange','Alle Aufträge ansehen':'Warteschlange öffnen'});
+Object.assign(dictionaries.en,{'Aufträge':'Queue','Alle Aufträge ansehen':'Open queue'});
+Object.assign(dictionaries.ar,{'Aufträge':'قائمة الانتظار','Alle Aufträge ansehen':'فتح قائمة الانتظار'});
 })();
