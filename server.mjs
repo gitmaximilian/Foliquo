@@ -457,6 +457,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
       }
       queue.cleanup();const active=session(req,res);
       if(!active){json(res,{error:'Bitte die lokale Startseite neu öffnen.'},401);return;}
+      if(req.method!=='GET'&&req.method!=='HEAD'&&(req.headers.origin!==origin||(req.headers['x-foliquo-csrf']||req.headers['x-translateocr-csrf'])!==active.csrf)){json(res,{error:'Ungültiger Ursprung oder Sitzungsschutz.'},403);return;}
       if(archiveRecovery){const recovered=await archiveRecovery;if(!recovered){json(res,{error:'Das lokale Archiv konnte nicht wiederhergestellt werden. Bitte schließe die offenen Vorgänge und prüfe die lokale Sicherung.'},503);return;}}
       const jobPath=url.pathname.match(/^\/api\/jobs\/([a-f0-9-]+)(?:\/|$)/),canReadJob=req.method==='GET'||req.method==='POST'&&req.headers.origin===origin&&(req.headers['x-foliquo-csrf']||req.headers['x-translateocr-csrf'])===active.csrf&&String(req.headers['content-type']).startsWith('application/json');
       const lightweightReviewRead=req.method==='GET'&&/^\/api\/jobs\/[a-f0-9-]+\/review$/.test(url.pathname)&&(url.searchParams.get('preview')!=='1'||url.searchParams.get('stream')==='1');
