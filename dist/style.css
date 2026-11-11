@@ -2045,3 +2045,8 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .library-empty.is-first-run{display:grid;justify-items:center;gap:10px;max-width:520px;margin:24px auto;padding:32px 24px;text-align:center}
 .library-empty.is-first-run h3{margin:0;font-size:20px}
 .library-empty.is-first-run p{margin:0;color:var(--color-text-secondary)}
+/* Sidebar group label for the style area (rules, samples, terms and Foli). */
+.nav-group-label{display:block;margin:14px 12px 2px;color:var(--color-text-muted);font-size:12px;font-weight:650;letter-spacing:.06em;text-transform:uppercase}
+@media(max-width:1279px){.nav-group-label{display:none}}
+/* Keep the select chevron clear of the label in the glossary filters. */
+#glossary-language-filter,#glossary-type-filter{padding-inline-end:36px}
