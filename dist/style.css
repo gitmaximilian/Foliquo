@@ -2068,3 +2068,7 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 /* Style area: example/rule tabs with a direct route to Foli. */
 .style-area-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
 .style-area-bar .rule-tabs{margin:0}
+/* Quick start checklist. */
+.guide-quick-progress{margin:0 0 8px;color:var(--color-text-secondary);font-size:var(--text-secondary-size);font-weight:600}
+.guide-quick-steps>li.is-done strong{color:var(--color-success)}
+.guide-quick-steps>li.is-done strong::after{content:' ✓'}

@@ -55,7 +55,18 @@ function updateQueueLiveAnnouncement(force=false){
 
 function actualProgress(job){return typeof job.progress==='number'&&Number.isFinite(job.progress)?Math.max(0,Math.min(100,Math.round(job.progress))):null;}
 // Desk: recent documents with their state and the next useful action, directly below the upload area.
+// Guide quick start as a live checklist: connection, first document, clarified result, downloadable result.
+function renderQuickstart(){
+ const steps=[...document.querySelectorAll('.guide-quick-steps>li')];if(steps.length!==4)return;
+ const jobs=queueState.jobs||[],connected=typeof providerReady!=='undefined'&&Boolean(providerReady),finished=jobs.some(job=>job.status==='succeeded');
+ const done=[connected||jobs.length>0,jobs.length>0,finished&&!jobs.some(job=>job.status==='awaiting_answers'),finished];
+ steps.forEach((step,index)=>{step.classList.toggle('is-done',done[index]);step.setAttribute('aria-label',`${step.querySelector('strong')?.textContent||''}${done[index]?' ✓':''}`);});
+ let progress=document.querySelector('#guide-quick-progress');if(!progress){progress=document.createElement('p');progress.id='guide-quick-progress';progress.className='guide-quick-progress';progress.dataset.noTranslate='';document.querySelector('.guide-quick-steps')?.before(progress);}
+ const count=done.filter(Boolean).length,locale=window.TOCRI18n?.getLocale?.()||'de';
+ progress.textContent=locale==='en'?`${count} of 4 done`:locale==='ar'?`تم إنجاز ${count} من 4`:`${count} von 4 erledigt`;
+}
 function renderDesk(){
+ renderQuickstart();
  const desk=$('#desk'),list=$('#desk-list');if(!desk||!list)return;
  const jobs=(queueState.jobs||[]).filter(job=>job.status!=='expired'&&job.id!==featuredJobId).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,6);
  const signature=JSON.stringify([window.TOCRI18n?.getLocale?.(),queueState.paused,jobs.map(job=>[job.id,job.status,job.stage,job.names])]);if(desk.dataset.renderSignature===signature)return;desk.dataset.renderSignature=signature;

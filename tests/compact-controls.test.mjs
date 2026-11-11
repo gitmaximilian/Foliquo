@@ -42,3 +42,10 @@ test('settings open from one header entry and link storage and update settings',
  assert.match(dialogs,/closest\?\.\('\[data-open-setting\]'\)/);
  assert.match(css,/#ai-settings-home>\.settings-more\{order:10\}/);
 });
+
+test('the guide quick start is a live checklist and the style tabs link to Foli',async()=>{
+ const [queue,rules]=await Promise.all([read('dist/queue.js'),read('dist/personal-rules.js')]);
+ assert.match(queue,/function renderQuickstart\(\)/);
+ assert.match(queue,/const done=\[connected\|\|jobs\.length>0,jobs\.length>0,finished&&!jobs\.some\(job=>job\.status==='awaiting_answers'\),finished\]/);
+ assert.match(rules,/foliLink\.id='style-ask-foli'/);
+});
