@@ -271,4 +271,7 @@ Object.assign(dictionaries.en,{'Stil':'Style'});Object.assign(dictionaries.ar,{'
 Object.assign(dictionaries.de,{'Stilbeispiele verwalten':'Muster verwalten'});
 Object.assign(dictionaries.en,{'Einstellungen':'Settings','Weitere Einstellungen':'More settings','Speicher, Sicherung und Aufbewahrung':'Storage, backup and retention','Updates':'Updates','Sprache und Dunkelmodus findest du unten in der Seitenleiste.':'Language and dark mode are at the bottom of the sidebar.'});
 Object.assign(dictionaries.ar,{'Einstellungen':'الإعدادات','Weitere Einstellungen':'إعدادات أخرى','Speicher, Sicherung und Aufbewahrung':'التخزين والنسخ الاحتياطي والاحتفاظ','Updates':'التحديثات','Sprache und Dunkelmodus findest du unten in der Seitenleiste.':'تجد اللغة والوضع الداكن أسفل الشريط الجانبي.'});
+// Library and example searches have separate source texts.
+Object.assign(dictionaries.en,{'Dokumente suchen':'Search documents','Muster suchen':'Search examples'});
+Object.assign(dictionaries.ar,{'Dokumente suchen':'البحث في المستندات','Muster suchen':'ابحث في الأمثلة'});
 })();

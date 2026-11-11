@@ -2072,3 +2072,15 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .guide-quick-progress{margin:0 0 8px;color:var(--color-text-secondary);font-size:var(--text-secondary-size);font-weight:600}
 .guide-quick-steps>li.is-done strong{color:var(--color-success)}
 .guide-quick-steps>li.is-done strong::after{content:' ✓'}
+/* Library as an archive: each document row reads as a paper card on wide screens. */
+@media(min-width:900px){
+ .document-table{border-collapse:separate;border-spacing:0 8px}
+ .document-table tbody tr{background:var(--color-surface);box-shadow:var(--shadow-paper)}
+ .document-table tbody td{padding-block:14px;border-block:1px solid var(--color-border)}
+ .document-table tbody td:first-child{border-inline-start:1px solid var(--color-border);border-start-start-radius:var(--radius-card);border-end-start-radius:var(--radius-card)}
+ .document-table tbody td:last-child{border-inline-end:1px solid var(--color-border);border-start-end-radius:var(--radius-card);border-end-end-radius:var(--radius-card)}
+ .document-table .document-open{font-weight:650}
+ .document-table .document-date{color:var(--color-text-secondary);font-variant-numeric:tabular-nums}
+}
+
+.status-chip.is-muted{color:var(--color-text-secondary);background:var(--color-surface-muted);border-color:var(--color-border)}
