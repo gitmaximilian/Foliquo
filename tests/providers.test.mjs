@@ -42,6 +42,13 @@ test('Claude respects returned model output limits',async()=>{
  manager.setKey('anthropic','sk-ant-fixture');await manager.select('anthropic');await manager.respond({model:'claude-fixture',input:[{role:'user',content:[{type:'input_text',text:'fictional'}]}]});assert.equal(submitted.max_tokens,8192);
 });
 
+test('Claude uses a larger default output limit only for current model generations',async()=>{
+ for(const [model,expected] of [['claude-opus-5-5',16384],['claude-sonnet-4-5',16384],['claude-3-haiku-20240307',4096]]){
+  let submitted;const {manager}=setup(async(url,options={})=>String(url).includes('/models?')?Response.json({data:[{id:model}],has_more:false}):(submitted=JSON.parse(options.body),anthropicStream('complete')));
+  manager.setKey('anthropic','sk-ant-fixture');await manager.select('anthropic');await manager.respond({model,input:[{role:'user',content:[{type:'input_text',text:'fictional'}]}]});assert.equal(submitted.max_tokens,expected,model);
+ }
+});
+
 test('OpenAI Responses usage events expose provider token details without changing the text result',async()=>{
  const {manager}=setup(async(url)=>String(url).endsWith('/models')?Response.json({data:[{id:'gpt-6.1-sol'}]}):new Response(`data: ${JSON.stringify({type:'response.output_text.delta',delta:'ready'})}\n\ndata: ${JSON.stringify({type:'response.completed',response:{id:'resp_fictional',usage:{input_tokens:120,output_tokens:35,total_tokens:155,input_tokens_details:{cached_tokens:20},output_tokens_details:{reasoning_tokens:7}}}})}\n\n`));
  manager.setKey('openai','sk-openai-test-key');await manager.select('openai');const reports=[];const text=await manager.respond({model:'gpt-6.1-sol',input:[{role:'user',content:[{type:'input_text',text:'fictional'}]}]},AbortSignal.timeout(1000),()=>{},(usage,meta)=>reports.push({usage,meta}));assert.equal(text,'ready');assert.deepEqual(reports.at(-1),{usage:{inputTokens:120,outputTokens:35,cachedInputTokens:20,reasoningTokens:7},meta:{complete:true,responseId:'resp_fictional'}});

@@ -2,6 +2,7 @@ import {cp,mkdir,readFile,rm,stat,writeFile} from 'node:fs/promises';
 import {dirname,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {buildPackage} from './package-release.mjs';
+import {slimOffice,verifySlimOffice} from './office-slim.mjs';
 
 const root=fileURLToPath(new URL('..',import.meta.url));
 const generated=join(root,'desktop/generated');
@@ -31,8 +32,14 @@ if(process.platform==='darwin'){
 }else if(process.platform==='win32'){
  const source=join(process.env.ProgramFiles||'C:\\Program Files','LibreOffice');
  await stat(join(source,'program/soffice.exe'));
- await cp(source,join(office,'LibreOffice'),{recursive:true,dereference:true});
+ const copyWindowsOffice=()=>cp(source,join(office,'LibreOffice'),{recursive:true,dereference:true});
+ await copyWindowsOffice();
+ await slimBundledOffice(join(office,'LibreOffice'),join(source,'program/soffice.com'),join(office,'LibreOffice/program/soffice.com'),copyWindowsOffice);
 }else{
+ await copyLinuxOffice();
+ await slimBundledOffice(join(office,'libreoffice'),'/usr/lib/libreoffice/program/soffice',join(office,'libreoffice/program/soffice'),copyLinuxOffice);
+}
+async function copyLinuxOffice(){
  const source='/usr/lib/libreoffice';
  await stat(join(source,'program/soffice'));
  await cp(source,join(office,'libreoffice'),{recursive:true,dereference:true});
@@ -53,6 +60,14 @@ if(process.platform==='darwin'){
  sofficeRc=sofficeRc.replace('FHS_CONFIG_FILE=file:///etc/libreoffice/sofficerc','FHS_CONFIG_FILE=${ORIGIN}/../sofficerc');
  await writeFile(sofficeRcPath,sofficeRc);
  await cp('/usr/share/doc/libreoffice-common/copyright',join(office,'LIBREOFFICE-COPYRIGHT'));
+}
+// Remove modules Foliquo never uses, then prove that every export and upload conversion is unchanged.
+// If anything differs, restore the complete copy so the layout engine is never altered.
+async function slimBundledOffice(root,sourceSoffice,bundledSoffice,restore){
+ if(process.env.FOLIQUO_KEEP_FULL_OFFICE==='1'){console.log('LibreOffice slimming skipped by FOLIQUO_KEEP_FULL_OFFICE.');return;}
+ const {removed}=await slimOffice(root);
+ try{const checked=await verifySlimOffice(sourceSoffice,bundledSoffice);console.log(`LibreOffice slimmed by ${(removed/1048576).toFixed(1)} MB; identical PDF output for ${checked.length} conversions.`);}
+ catch(error){console.warn(`LibreOffice slimming reverted: ${error.message}`);await rm(root,{recursive:true,force:true});await restore();}
 }
 await writeFile(join(office,'SOURCE-AND-LICENSE.txt'),'LibreOffice Writer is distributed under its upstream licenses. See the included LICENSE/NOTICE files and https://www.libreoffice.org/about-us/licenses/ . Source downloads: https://www.libreoffice.org/download/ .\n');
 console.log(`Prepared Foliquo desktop resources for ${process.platform}/${process.arch}.`);

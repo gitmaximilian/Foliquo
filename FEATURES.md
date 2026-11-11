@@ -12,7 +12,7 @@ Foliquo is a local browser application for preparing translation drafts from ima
 
 Each completed job is grouped in the library by detected document type. The optional Learn Style tab stores examples locally and derives reusable formatting and phrasing conventions. It is not model training and personal facts are not reused.
 
-Stamps and seals are laid out as bordered blocks with their line breaks preserved. Translate their readable words without square brackets; use brackets for non-text emblems, logos, and signatures. An illegible signature mark is written as `[Unterschrift: unleserlich]`.
+Stamps and seals are laid out as bordered blocks with their line breaks preserved. Translate their readable words without square brackets; use brackets for non-text emblems, logos, and signatures. Notes for non-text elements follow the target language. For example, an illegible signature mark is written as `[Unterschrift: unleserlich]` in German, `[Signature: illegible]` in English and `[توقيع: غير مقروء]` in Arabic. Model-authored clarification questions use the current interface language.
 
 ## Providers and data
 

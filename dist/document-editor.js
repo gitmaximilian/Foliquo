@@ -1,6 +1,9 @@
 (() => {
   const $ = selector => document.querySelector(selector);
   const t = key => window.TOCRI18n?.t?.(key) || key;
+  // Keep in sync with lib/target-notations.mjs: the note follows the translation's target language.
+  const HANDWRITING_UNREADABLE={Deutsch:'[Handschriftlich: unleserlich]',Englisch:'[Handwritten: illegible]',Arabisch:'[بخط اليد: غير مقروء]',Französisch:'[Mention manuscrite: illisible]',Spanisch:'[Manuscrito: ilegible]',Italienisch:'[Annotazione manoscritta: illeggibile]',Türkisch:'[El yazısı: okunaksız]'};
+  const unreadableHandwriting = language => HANDWRITING_UNREADABLE[language] || HANDWRITING_UNREADABLE.Deutsch;
   let model = null, mode = 'text', host, toolbar, undo = [], redo = [];
   const clone = value => JSON.parse(JSON.stringify(value));
   const uid = () => crypto.randomUUID();
@@ -94,7 +97,7 @@
         const label=document.createElement('label');label.textContent=t('Bereichsart');const role=document.createElement('select');role.setAttribute('aria-label',t('Bereichsart'));for(const [id,key]of [['body','Normaler Text'],['margin','Randnotiz'],['signature','Unterschrift'],['handwriting','Handschrift']])role.add(new Option(t(key),id));role.value=block.properties?.role||'body';role.onchange=()=>{saveHistory();block.properties={...block.properties,role:role.value};if(role.value==='handwriting')block.properties.handwritingState='uncertain';else delete block.properties.handwritingState;delete block.properties.handwritingReviewedAt;render();};label.append(role);card.append(label);
         if(block.properties?.role==='handwriting'){
           const status=document.createElement('p');status.dataset.handwritingStatus='';status.className=unresolvedHandwriting(block)?'error':'muted';status.textContent=t(unresolvedHandwriting(block)?'Unklare Handschrift: vor der Übernahme am Original klären.':block.properties.handwritingState==='unreadable'?'Ausdrücklich als unleserlich markiert.':'Am Original bestätigte Handschrift.');card.append(status,button('Original zur Handschrift ansehen',()=>inspectHandwriting(block),'text-button'));
-          const confirm=button('Handschrift am Original bestätigt',()=>{if(!block.content.trim())return;saveHistory();block.properties={...block.properties,handwritingState:'confirmed',handwritingReviewedAt:Date.now()};$('#workflow-local-error').textContent='';render();});confirm.dataset.handwritingConfirm='';confirm.disabled=!block.content.trim();card.append(confirm,button('Handschrift als unleserlich markieren',()=>{saveHistory();block.content='[Handschriftlich: unleserlich]';block.properties={...block.properties,handwritingState:'unreadable',handwritingReviewedAt:Date.now()};$('#workflow-local-error').textContent='';render();}));
+          const confirm=button('Handschrift am Original bestätigt',()=>{if(!block.content.trim())return;saveHistory();block.properties={...block.properties,handwritingState:'confirmed',handwritingReviewedAt:Date.now()};$('#workflow-local-error').textContent='';render();});confirm.dataset.handwritingConfirm='';confirm.disabled=!block.content.trim();card.append(confirm,button('Handschrift als unleserlich markieren',()=>{saveHistory();block.content=unreadableHandwriting(model?.language);block.properties={...block.properties,handwritingState:'unreadable',handwritingReviewedAt:Date.now()};$('#workflow-local-error').textContent='';render();}));
         }
       }
       const edit = (value, label, rows, apply) => { const input = document.createElement('textarea'); input.rows = rows; input.maxLength = 20000; input.value = value; input.setAttribute('aria-label', label); input.oninput = () => { saveHistory(); apply(input.value); }; card.append(input); };

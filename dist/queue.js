@@ -213,7 +213,8 @@ function renderSavedClarificationFiles(draft){$('#clarification-saved-files').te
 function scheduleClarificationDraft(){captureClarificationDraft();clearTimeout(clarificationDraftTimer);clarificationDraftTimer=setTimeout(()=>void saveClarificationDraft().catch(()=>{}),500);}
 async function dismissClarificationDialog(){try{await saveClarificationDraft();if(clarificationJobId)window.dismissedClarifications.add(clarificationJobId);closeClarifications();setJobsPanel(true);}catch{}}
 $('#clarification-fields').addEventListener('input',scheduleClarificationDraft);
-$('#clarification-extra').addEventListener('change',()=>{const draft=captureClarificationDraft();if(draft){draft.filesToUpload=[...$('#clarification-extra').files];void saveClarificationDraft().catch(()=>{});}});
+function renderClarificationExtraNames(){const names=$('#clarification-extra-names');if(names)names.textContent=[...($('#clarification-extra')?.files||[])].map(file=>file.name).join(', ');}
+ $('#clarification-extra').addEventListener('change',()=>{renderClarificationExtraNames();const draft=captureClarificationDraft();if(draft){draft.filesToUpload=[...$('#clarification-extra').files];void saveClarificationDraft().catch(()=>{});}});
 $('#clarification-dialog').addEventListener('cancel',event=>{event.preventDefault();void dismissClarificationDialog();});
 $('#clarification-dialog').addEventListener('close',()=>{const id=clarificationFocusJobId;clarificationFocusJobId=null;if(!id)return;const answer=document.querySelector(`[data-job-id="${CSS.escape(id)}"][data-queue-action="answer"]`);(answer&&!answer.closest('[inert]')?answer:$('#jobs-open')).focus({preventScroll:true});});
 
@@ -238,7 +239,7 @@ function showClarifications(job,scroll){
  const storedDraft=clarificationDrafts.get(job.id);
  const signature=JSON.stringify([job.id,job.questions.map(({box,...question})=>question)]);if(signature!==clarificationSignature){
   const sameJob=clarificationJobId===job.id,drafts=new Map(sameJob?[...document.querySelectorAll('#clarification-fields textarea')].map(el=>[el.dataset.questionId,el.value]):(storedDraft.answers||[]).map(a=>[a.id,a.answer]));
-  clarificationJobId=job.id;clarificationSignature=signature;if(!sameJob)$('#clarification-extra').value='';if(!sameJob)questionOriginalReady=renderQuestionOriginal(job);$('#clarification-files').dataset.noTranslate='';$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
+  clarificationJobId=job.id;clarificationSignature=signature;if(!sameJob){$('#clarification-extra').value='';renderClarificationExtraNames();}if(!sameJob)questionOriginalReady=renderQuestionOriginal(job);$('#clarification-files').dataset.noTranslate='';$('#clarification-files').textContent=job.names.join(' · ');$('#clarification-error').textContent='';
   const fields=job.questions.map((q,i)=>{
    const field=document.createElement('div');field.className='clarification-field';field.dataset.questionId=q.id;field.addEventListener('focusin',()=>{document.querySelectorAll('.clarification-field').forEach(el=>el.classList.toggle('is-current',el===field));});
    const label=document.createElement('label');label.htmlFor=`answer-${q.id}`;label.textContent=`${i+1}. ${window.TOCRI18n?.localizeQuestion(q)||q.question}`;
@@ -259,7 +260,7 @@ function showClarifications(job,scroll){
     actions.append(unreadable);
    }
    const hint=document.createElement('small');hint.className='question-action-hint';hint.textContent=window.TOCRI18n?.t('Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.')||'Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.';
-   const send=document.createElement('button');send.type='button';send.className='primary question-answer-submit';send.textContent=window.TOCRI18n?.t('Antwort senden')||'Antwort senden';send.disabled=!answer.value.trim();answer.addEventListener('input',()=>{send.disabled=!answer.value.trim();});send.onclick=()=>void acceptClarification(job,q,answer.value.trim());
+   const send=document.createElement('button');send.type='button';send.className='secondary question-answer-submit';send.hidden=(job.questions?.length||0)<2;send.textContent=window.TOCRI18n?.t('Antwort senden')||'Antwort senden';send.disabled=!answer.value.trim();answer.addEventListener('input',()=>{send.disabled=!answer.value.trim();});send.onclick=()=>void acceptClarification(job,q,answer.value.trim());
    field.append(label,context,suggestion,actions,hint,answer,send);return field;
   });$('#clarification-fields').replaceChildren(...fields);
  }window.TOCRReviewGuide?.renderQuestionStage(job);$('#clarification-card').hidden=false;renderSavedClarificationFiles(storedDraft);const answerLauncher=document.querySelector(`[data-job-id="${CSS.escape(job.id)}"][data-queue-action="answer"]`),focusReturn=answerLauncher&&!answerLauncher.closest('[inert]')?answerLauncher:$('#jobs-open');window.showClarificationDialog(focusReturn);if(scroll){$('#clarification-fields textarea')?.focus({preventScroll:true});}
