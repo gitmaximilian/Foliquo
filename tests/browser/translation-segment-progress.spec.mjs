@@ -9,6 +9,7 @@ import {Workspace} from '../../lib/workspace.mjs';
 import {createApp} from '../../server.mjs';
 
 test('featured job shows saved section progress while a later section is still running',async({page})=>{
+ test.setTimeout(60000); // The real export path uses LibreOffice and can exceed 30 s on loaded machines.
  const directory=await mkdtemp(join(tmpdir(),'foliquo-browser-segment-progress-')),workspace=await new Workspace(directory).init();
  const probe=createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));
  let releaseSecond,signalSecond;const secondGate=new Promise(resolve=>releaseSecond=resolve),secondStarted=new Promise(resolve=>signalSecond=resolve);let secondIsRunning=false,revisionSecondAttempts=0;const revisionCalls=[];
