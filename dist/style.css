@@ -2042,4 +2042,6 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 [dir=rtl] .check-compare-arrow{transform:scaleX(-1)}
 .review-guide-check:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.review-progress>span{transition:none}}
-
+.library-empty.is-first-run{display:grid;justify-items:center;gap:10px;max-width:520px;margin:24px auto;padding:32px 24px;text-align:center}
+.library-empty.is-first-run h3{margin:0;font-size:20px}
+.library-empty.is-first-run p{margin:0;color:var(--color-text-secondary)}

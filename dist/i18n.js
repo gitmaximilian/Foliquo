@@ -265,4 +265,6 @@ Object.assign(dictionaries.ar,{'Antworten werden benötigt.':'نحتاج إلى 
 Object.assign(dictionaries.de,{'Guide':'Leitfaden','Hinweise':'Leitfaden','Anlernen':'Stil lernen','Anlernen aktiv':'Stil lernen aktiv','Anlernen deaktiviert':'Stil lernen deaktiviert','Anlernen für diese Gruppe verwenden':'Stil lernen für diese Gruppe verwenden'});
 Object.assign(dictionaries.en,{'Auf dem Schreibtisch':'On your desk','Alle Aufträge ansehen':'View all jobs'});
 Object.assign(dictionaries.ar,{'Auf dem Schreibtisch':'على مكتبك','Alle Aufträge ansehen':'عرض كل المهام'});
+Object.assign(dictionaries.en,{'Dein Archiv ist noch leer':'Your archive is still empty','Fertige Übersetzungen erscheinen hier automatisch, sortiert nach Dokumenttyp. Alles bleibt verschlüsselt auf diesem Computer.':'Finished translations appear here automatically, sorted by document type. Everything stays encrypted on this computer.','Demo mit fiktivem Dokument ansehen':'View the demo with a fictional document'});
+Object.assign(dictionaries.ar,{'Dein Archiv ist noch leer':'أرشيفك فارغ حتى الآن','Fertige Übersetzungen erscheinen hier automatisch, sortiert nach Dokumenttyp. Alles bleibt verschlüsselt auf diesem Computer.':'تظهر الترجمات المكتملة هنا تلقائياً مرتبة حسب نوع المستند. يبقى كل شيء مشفراً على هذا الحاسوب.','Demo mit fiktivem Dokument ansehen':'عرض العرض التوضيحي بمستند خيالي'});
 })();
