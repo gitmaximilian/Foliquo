@@ -63,6 +63,8 @@ import {repeatedCriticalValueChecks} from './lib/document-consistency.mjs';
 import {locationsOnOriginal} from './lib/source-geometry.mjs';
 
 const root = fileURLToPath(new URL('.',import.meta.url));
+// Model-authored clarification questions follow the current interface language.
+const questionLanguageFor=locale=>({en:'Englisch',de:'Deutsch',ar:'Arabisch'})[locale]||'Deutsch';
 const normalizeConflictTerm=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 function glossaryConflictQuestions(payload,context){
  const pending=[],clarifications=payload.metadata.clarifications||[],retainedGlossary=[],retainedLearning=[];
@@ -231,8 +233,8 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     payload.metadata.clarifications=(payload.metadata.clarifications||[]).filter(item=>!String(item.context||'').startsWith('Lernregelentscheidung · ')&&!String(item.context||'').startsWith('Glossarentscheidung · ')&&!String(item.context||'').startsWith('Foli rule choice · ')&&!String(item.context||'').startsWith('Foli scope · '));
     if(payload.contextLibrarySnapshot?.schema===2){delete payload.contextLibrarySnapshot;await onCheckpoint();}
     const renderMeta={...payload.metadata,...(context.layout&&!payload.revision?{layout:context.layout}:{})};
-    const providerMetadata=Object.fromEntries(['targetLanguage','sourceLanguage','sourceLanguagePreference','documentType','additionalInfo','nameSpellings','clarifications','fileRoles'].filter(key=>renderMeta[key]!==undefined).map(key=>[key,renderMeta[key]]));
-    const request=translationRequest(payload.model,documents,providerMetadata);if(payload.metadata.nameSpellings)request.input[0].content.push({type:'input_text',text:'Vom Benutzer bestätigte Namensschreibweise(n), nur für die passende Person verwenden: '+payload.metadata.nameSpellings});
+    const providerMetadata=Object.fromEntries(['targetLanguage','sourceLanguage','sourceLanguagePreference','documentType','additionalInfo','nameSpellings','clarifications','fileRoles'].filter(key=>renderMeta[key]!==undefined).map(key=>[key,renderMeta[key]]))
+    const request=translationRequest(payload.model,documents,providerMetadata,{questionLanguage:questionLanguageFor(workspace?.preferences?.().locale)});if(payload.metadata.nameSpellings)request.input[0].content.push({type:'input_text',text:'Vom Benutzer bestätigte Namensschreibweise(n), nur für die passende Person verwenden: '+payload.metadata.nameSpellings});
     if(definitions.length){request.instructions+='\nDie bestätigte Formularvorlage definiert feste Felder. Ordne alle vorhandenen Angaben den Feldbezeichnungen zu, verwende die Zielbezeichnungen und frage bei fehlenden Pflichtfeldern nach. Erhalte alle übrigen Inhalte vollständig; erfinde keine Werte.';request.input[0].content.push({type:'input_text',text:'Bestätigte Formularzuordnung: '+JSON.stringify(definitions)});}
     if(inventory&&!payload.revision)request.input[0].content.push({type:'input_text',text:'Separat erfasste Originalfelder – überprüfe sie am Bild und gib für jedes Feld in fields den tatsächlich übersetzten Wert aus: '+JSON.stringify(inventory)});
     if(context.layout&&!payload.revision)renderMeta.layout=context.layout;
@@ -277,7 +279,7 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     const {text,detected}=parsed;onStage('pdf');
     let fields=mergeInventory(sourceFields(parsed.rawFields,documents),inventory,definitions);
     fields=mapForm(fields,definitions);const missing=missingFormQuestions(fields,definitions);if(missing.length)return {requiresInput:true,detected,questions:missing};
-    const regions=specialRegions(parsed.rawRegions||[],documents),references=referenceTrace(text,context.examples||[],context.referenceFingerprints||[],workspace?.key||null);
+    const regions=specialRegions(parsed.rawRegions||[],documents,payload.metadata.targetLanguage),references=referenceTrace(text,context.examples||[],context.referenceFingerprints||[],workspace?.key||null);
     const base={text,detected,fields,regions,references,inventory,...(parsed.translationSegments?{translationSegments:parsed.translationSegments}:{}),originalPreviews:originals,context:renderMeta,previews:documents.map(f=>({name:f.originalName||f.name,type:f.type,data:f.bytes.toString('base64')})),filename:'foliquo-translation.pdf'};
     if(segmentedRevision)signal.throwIfAborted();const rebuilt=await rebuild(text,base,false,onStage);if(segmentedRevision)signal.throwIfAborted();return rebuilt;
   }
