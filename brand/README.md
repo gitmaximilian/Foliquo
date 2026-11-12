@@ -1,6 +1,6 @@
 # Foliquo brand assets
 
-Foliquo uses the approved geometric F monogram and lowercase wordmark. The two editions share the same silhouette and differ only in the treatment of the mark:
+Foliquo uses the capsule F monogram (stem and roof as one rounded shape, a blue capsule as the middle bar) and the lowercase wordmark. The two editions share the same silhouette and differ only in the treatment of the mark:
 
 - **Standard** uses the filled mark.
 - **Community** uses the outlined mark with transparent interiors.
