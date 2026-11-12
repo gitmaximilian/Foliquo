@@ -27,3 +27,7 @@
 #foli-status,#foli-error{max-height:72px;overflow:auto}#foli-view.compact>.card-heading,#foli-view.compact>.foli-intro,#foli-view.compact>.foli-examples,#foli-view.compact>.foli-privacy{display:none}#foli-view.compact #foli-status,#foli-view.compact #foli-error{max-height:48px}
 
 .foli-tools>summary{min-width:44px;justify-content:center;font-size:1.25rem;font-weight:700}
+.foli-empty{display:grid;justify-items:center;gap:8px;max-width:480px;margin:48px auto;text-align:center}
+.foli-empty-mark{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--color-selected);color:var(--color-accent);font-size:22px}
+.foli-empty-title{margin:0;font-size:18px;font-weight:650;color:var(--color-text)}
+.foli-empty .muted{margin:0}

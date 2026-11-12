@@ -24,3 +24,28 @@ test('an empty studio action bar shows no empty frame',async()=>{
  const css=await read('dist/style.css');
  assert.match(css,/\.action-footer:has\(\.composer-note\[data-empty=true\]\):not\(:has\(#error:not\(:empty\)\)\)\{padding:0;border:0;min-height:0;background:transparent\}/);
 });
+
+test('the studio desk lists recent documents with state chips and next actions',async()=>{
+ const [html,queue,css]=await Promise.all([read('dist/index.html'),read('dist/queue.js'),read('dist/style.css')]);
+ assert.match(html,/<section id="desk" class="desk" aria-labelledby="desk-title" hidden>/);
+ assert.match(queue,/function renderDesk\(\)/);
+ assert.match(queue,/awaiting_answers:\['Rückfragen beantworten','answer'\],succeeded:\['Übersetzung prüfen','review'\],failed:\['Erneut versuchen','retry'\]/);
+ assert.match(css,/\.desk\{grid-column:1;grid-row:4;/);
+ assert.match(css,/\.status-chip\.is-done\{/);
+});
+
+test('settings open from one header entry and link storage and update settings',async()=>{
+ const [html,dialogs,css]=await Promise.all([read('dist/index.html'),read('dist/workspace-dialogs.js'),read('dist/style.css')]);
+ assert.match(html,/aria-controls="ai-settings-dialog" aria-label="Einstellungen"/);
+ assert.match(html,/data-open-setting="guide-storage-open"/);
+ assert.match(html,/data-open-setting="guide-update-open"/);
+ assert.match(dialogs,/closest\?\.\('\[data-open-setting\]'\)/);
+ assert.match(css,/#ai-settings-home>\.settings-more\{order:10\}/);
+});
+
+test('the guide quick start is a live checklist and the style tabs link to Foli',async()=>{
+ const [queue,rules]=await Promise.all([read('dist/queue.js'),read('dist/personal-rules.js')]);
+ assert.match(queue,/function renderQuickstart\(\)/);
+ assert.match(queue,/const done=\[connected\|\|jobs\.length>0,jobs\.length>0,finished&&!jobs\.some\(job=>job\.status==='awaiting_answers'\),finished\]/);
+ assert.match(rules,/foliLink\.id='style-ask-foli'/);
+});

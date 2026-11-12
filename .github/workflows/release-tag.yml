@@ -1,0 +1,70 @@
+name: Tag a release
+# Creates v<version> and desktop-v<version> on the current main commit and starts the
+# existing tag workflows, which build, verify and stage both releases as drafts.
+# Tags pushed with the workflow token do not trigger push workflows, so the tag
+# workflows are dispatched explicitly against the new tags.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without prefix, e.g. 0.16.0
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: release-tag
+  cancel-in-progress: false
+jobs:
+  tag:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+      - name: Verify version, release notes and green CI on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Use a plain version such as 0.16.0.' >&2; exit 1; }
+          node scripts/check-release.mjs "v$VERSION"
+          node scripts/set-release-version.mjs --check
+          sha="$(git rev-parse HEAD)"
+          for tag in "v$VERSION" "desktop-v$VERSION"; do
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then echo "Tag $tag already exists; refusing to move it." >&2; exit 1; fi
+            if gh release view "$tag" >/dev/null 2>&1; then echo "Release $tag already exists." >&2; exit 1; fi
+          done
+          conclusion="$(gh run list --workflow ci.yml --commit "$sha" --event push --limit 1 --json status,conclusion --jq '.[0] | (.status + "/" + (.conclusion // ""))')"
+          if [ "$conclusion" != "completed/success" ]; then echo "CI on main ($sha) is '$conclusion', not completed/success." >&2; exit 1; fi
+          echo "SHA=$sha" >> "$GITHUB_ENV"
+      - name: Create and push both tags
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Foliquo release bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "v$VERSION" -m "Foliquo Community $VERSION" "$SHA"
+          git tag -a "desktop-v$VERSION" -m "Foliquo Community desktop $VERSION" "$SHA"
+          git push origin "refs/tags/v$VERSION" "refs/tags/desktop-v$VERSION"
+      - name: Start the source and desktop release workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run release.yml --ref "v$VERSION"
+          gh workflow run desktop-release.yml --ref "desktop-v$VERSION"
+          echo "Tagged $SHA as v$VERSION and desktop-v$VERSION; both release workflows were started. Publish with **Publish a release** after both drafts exist." >> "$GITHUB_STEP_SUMMARY"

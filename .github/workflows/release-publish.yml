@@ -1,0 +1,55 @@
+name: Publish a release
+# Publishes the two drafts staged by the tag workflows, in the documented order:
+# the source release first (not Latest), then the desktop release as Latest, which
+# keeps the GitHub Latest endpoint on the desktop updater manifest. It refuses to
+# publish unless both drafts exist and both tag workflows succeeded.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without prefix, e.g. 0.16.0
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: release-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Verify both drafts and their release workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Use a plain version such as 0.16.0.' >&2; exit 1; }
+          check() {
+            local tag="$1" workflow="$2" draft result
+            draft="$(gh release view "$tag" --json isDraft --jq .isDraft)" || { echo "No release $tag exists." >&2; exit 1; }
+            [ "$draft" = true ] || { echo "Release $tag is already published." >&2; exit 1; }
+            result="$(gh run list --workflow "$workflow" --branch "$tag" --limit 1 --json status,conclusion --jq '.[0] | (.status + "/" + (.conclusion // ""))')"
+            [ "$result" = "completed/success" ] || { echo "$workflow for $tag is '$result', not completed/success." >&2; exit 1; }
+          }
+          check "v$VERSION" release.yml
+          check "desktop-v$VERSION" desktop-release.yml
+      - name: Publish source, then desktop as Latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release edit "v$VERSION" --draft=false --latest=false
+          gh release edit "desktop-v$VERSION" --draft=false --latest
+          # Publication by the workflow token does not trigger release events; start the follow-up explicitly.
+          gh workflow run update-packages.yml --ref main -f tag="v$VERSION"
+          echo "Published v$VERSION and desktop-v$VERSION (Latest). Package manager updates were started." >> "$GITHUB_STEP_SUMMARY"

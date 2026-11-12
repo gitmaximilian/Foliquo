@@ -44,7 +44,7 @@ test('action menu dimensions, radius, spacing, colors, and shadow use shared des
 });
 
 test('status and onboarding accents use centralized semantic color tokens',()=>{
- assert.match(css,/--color-accent:#245E9B/);
+ assert.match(css,/--color-accent:#2556C9/);
  for(const token of ['--color-success-hover-bg:','--color-warning-hover-bg:','--color-danger-hover-bg:'])assert.ok(css.includes(token),`${token} is defined`);
  assert.match(css,/\.queue-message\{[^}]*border:1px solid var\(--color-warning-border\)[^}]*background:var\(--color-warning-bg\)[^}]*color:var\(--color-warning\)/);
  assert.match(css,/\.audit-warning,\.dossier-conflict\{[^}]*border:1px solid var\(--color-warning-border\)[^}]*border-left:4px solid var\(--color-warning\)[^}]*background:var\(--color-warning-bg\)[^}]*color:var\(--color-warning\)/);
@@ -60,7 +60,7 @@ test('status and onboarding accents use centralized semantic color tokens',()=>{
 
 test('common control and card surfaces use the shared canvas and foreground tokens',()=>{
  assert.match(css,/input:not\(\[type=checkbox\]\):not\(\[type=file\]\),select,textarea\{[^}]*background:var\(--color-surface\)/);
- assert.match(css,/\.primary\{[^}]*background:var\(--ink\);color:var\(--color-on-primary\)/);
+ assert.match(css,/\.primary\{[^}]*background:var\(--color-primary\);color:var\(--color-on-primary\)/);
  assert.match(css,/\.secondary\{[^}]*background:var\(--color-surface\)/);
  assert.match(css,/:where\(\.workspace-dialog\)\{[^}]*background:var\(--color-surface\)/);
 });
@@ -79,7 +79,7 @@ test('one global reduced-motion policy covers transitions, animation, and smooth
 });
 
 test('common control, inset-panel, and small radii use shared shape tokens',()=>{
- for(const token of ['--radius-small:6px','--radius-control:8px','--radius-panel:12px','--radius-card:12px','--radius-dialog:16px'])assert.ok(css.includes(token),`${token} is defined`);
+ for(const token of ['--radius-small:6px','--radius-control:8px','--radius-panel:14px','--radius-card:14px','--radius-dialog:16px'])assert.ok(css.includes(token),`${token} is defined`);
  assert.doesNotMatch(css,/border-radius:(?:8|10|12)px(?=[;}])/,'repeated small and panel radii do not fork into local literals');
  assert.match(css,/\.secondary\{[^}]*border-radius:var\(--radius-control\)/);
  assert.match(css,/\.output-chip\{[^}]*border-radius:var\(--radius-panel\)/);

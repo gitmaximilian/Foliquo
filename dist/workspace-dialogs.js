@@ -82,3 +82,5 @@
  window.showClarificationDialog=launcher=>{const dialog=document.querySelector('#clarification-dialog');dialogs.open(dialog,launcher||document.activeElement);};
  window.hideClarificationDialog=()=>dialogs.close(document.querySelector('#clarification-dialog'));
 })();
+// Settings hub: open storage or update settings from the settings dialog.
+document.addEventListener('click',event=>{const trigger=event.target.closest?.('[data-open-setting]');if(!trigger)return;const target=document.getElementById(trigger.dataset.openSetting);if(!target)return;document.getElementById('ai-settings-dialog')?.close();target.click();});
