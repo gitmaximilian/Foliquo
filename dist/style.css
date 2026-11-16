@@ -2084,3 +2084,43 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 }
 
 .status-chip.is-muted{color:var(--color-text-secondary);background:var(--color-surface-muted);border-color:var(--color-border)}
+
+.studio-options > summary,
+#review-other-formats > summary,
+#review-rule-options > summary,
+.clarification-extra-options > summary {
+  cursor: pointer;
+  padding-block: 10px;
+  color: var(--color-text-secondary);
+}
+
+.studio-options[open] > summary {
+  margin-block-end: 12px;
+}
+
+#review-other-formats > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#clarification-back-to-answer {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .clarification-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    direction: inherit;
+  }
+
+  .clarification-actions .question-use { grid-column: 1 / -1; }
+  .clarification-actions .question-source { grid-column: 1; }
+  .clarification-actions .question-unreadable { grid-column: 2; }
+
+  #clarification-back-to-answer {
+    display: inline-flex;
+    margin-block-end: 8px;
+    scroll-margin-block-start: 12px;
+  }
+}

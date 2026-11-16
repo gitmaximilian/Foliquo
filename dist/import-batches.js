@@ -6,13 +6,20 @@
   ar:{placeholder:'1-3:1; 4-6:2',label:'توزيع صفحات PDF على المهام',note:'في ملفات PDF أدخل نطاق الصفحات ورقم المهمة بصيغة النطاق:رقم المهمة، وافصل بينها بفواصل منقوطة (مثال 1-3:1; 4-6:2). خصص كل صفحة مرة واحدة. تشير الأرقام إلى ملف PDF الأصلي؛ ثم تطبق التدويرات والقص وترتيب الصفحات المحفوظة داخل كل مهمة. اترك الحقل فارغاً لإضافة ملف PDF كاملاً إلى المهمة المحددة.',invalid:'تحقق من نطاقات صفحات PDF. استخدم صيغة مثل 1-3:1; 4-6:2 من دون تداخل.'}
  };
  const locale=()=>copy[window.currentInterfaceLanguage]||copy.en;
+ function syncFileGroup(row,input){
+  const group=row.querySelector('.file-batch-group');
+  if(!group)return;
+  const hasRanges=Boolean(input.value.trim());
+  group.disabled=hasRanges;
+  group.hidden=!$('#batch-mode')?.checked||hasRanges;
+ }
  function attach(){
   const batch=$('#batch-mode')?.checked===true;
   document.querySelectorAll('.file-item').forEach((row,index)=>{
    const file=files[index],name=row.querySelector(':scope > span:not(.file-icon)');if(!file||!name||!/\.pdf$/i.test(file.name))return;
-   let input=name.querySelector('.file-batch-pages');if(!input){input=document.createElement('input');input.type='text';input.className='file-batch-pages';input.autocomplete='off';input.spellcheck=false;input.value=ranges.get(file)||'';input.oninput=()=>{ranges.set(file,input.value);const group=row.querySelector('.file-batch-group');if(group){group.disabled=Boolean(input.value.trim());group.hidden=Boolean(input.value.trim());}renderState();if(typeof updateQueueButton==='function')updateQueueButton();};name.append(input);}
+   let input=name.querySelector('.file-batch-pages');if(!input){input=document.createElement('input');input.type='text';input.className='file-batch-pages';input.autocomplete='off';input.spellcheck=false;input.value=ranges.get(file)||'';input.oninput=()=>{ranges.set(file,input.value);syncFileGroup(row,input);renderState();if(typeof updateQueueButton==='function')updateQueueButton();};name.append(input);}
    input.placeholder=locale().placeholder;input.setAttribute('aria-label',`${file.name} · ${locale().label}`);input.hidden=!batch;
-   const group=row.querySelector('.file-batch-group');if(group){group.disabled=Boolean(input.value.trim());group.hidden=Boolean(input.value.trim());}
+   syncFileGroup(row,input);
   });
   const note=$('#batch-range-note');if(note){note.textContent=locale().note;note.hidden=!batch;}
   renderState();

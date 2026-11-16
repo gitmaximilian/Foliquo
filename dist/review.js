@@ -1,3 +1,4 @@
+let reviewDownloadInProgress=false;
 let reviewHadProposal=false,reviewUnavailable=false,reviewJobId=null,reviewData=null,reviewUrl=null,reviewTimer=null,reviewLoading=false,reviewSubmitting=false,reviewMessageSignature='',reviewPreviewVersion=null,reviewResumeAttempted=false;
 function reviewCopy(key,values={}){const template=typeof window!=='undefined'?(window.TOCRI18n?.t(key)||key):key;return Object.entries(values).reduce((text,[name,value])=>text.replaceAll(`{${name}}`,String(value)),template);}
 const localizedReviewMessages=new Set([
@@ -18,23 +19,31 @@ window.addEventListener('translateocr-locale',()=>{if(!reviewData)return;renderR
 function rememberReview(id){try{if(id)sessionStorage.setItem('translateocr-review-job',id);else sessionStorage.removeItem('translateocr-review-job');}catch{}}
 function resumeReviewWorkspace(jobs){if(reviewResumeAttempted||reviewJobId)return;reviewResumeAttempted=true;let id;try{id=sessionStorage.getItem('translateocr-review-job');}catch{}if(id&&jobs.some(j=>j.id===id&&j.hasResult)){if(!$('#studio-view').hidden)void openReviewWorkspace(id);}else if(id)rememberReview(null);}
 async function openReviewWorkspace(id,{historyMode='push'}={}){
- clearTimeout(reviewTimer);reviewHadProposal=false;reviewUnavailable=false;reviewJobId=id;reviewData=null;reviewPreviewVersion=null;reviewMessageSignature='';rememberReview(id);view('review',{historyMode});$('#review-error').textContent='';$('#review-names').textContent='Deine Übersetzung wird geladen …';$('#review-messages').replaceChildren();$('#review-prompt').value='';resizeReviewPrompt();
+ clearTimeout(reviewTimer);reviewHadProposal=false;reviewUnavailable=false;reviewJobId=id;reviewData=null;reviewPreviewVersion=null;reviewMessageSignature='';$('#review-other-formats').open=false;$('#review-rule-options').open=false;rememberReview(id);view('review',{historyMode});$('#review-error').textContent='';$('#review-names').textContent='Deine Übersetzung wird geladen …';$('#review-messages').replaceChildren();$('#review-prompt').value='';resizeReviewPrompt();
  $('#review-pdf').removeAttribute('src');$('#review-text').textContent='';if(reviewUrl){URL.revokeObjectURL(reviewUrl);reviewUrl=null;}renderReviewControls();await loadReview(true);
 }
 function renderReviewControls(){
  const progress=reviewData?.revisionProgress,interrupted=progress?.state==='interrupted',busy=reviewUnavailable||!reviewData||reviewData.busy||reviewSubmitting||reviewData.proposal||interrupted;$('#review-busy').hidden=!reviewData?.busy&&!reviewSubmitting;$('#review-send').disabled=busy;$('#review-prompt').disabled=busy;
  $('#review-revision-controls').hidden=!progress;$('#review-revision-progress').textContent=progress?reviewCopy('{complete} von {total} Abschnitten gespeichert.',{complete:progress.complete,total:progress.total}):'';$('#review-revision-warning').textContent=interrupted?reviewCopy(progress.unknown?'Ein unterbrochener Aufruf kann bei Fortsetzung erneut Kontingent oder API-Kosten verbrauchen. Mit „Fortsetzen“ bestätigst du die Wiederholung.':'Gespeicherte Abschnitte bleiben erhalten.'):progress?.state==='needs_input'?reviewCopy('Bitte beantworte die Rückfrage für diesen Abschnitt.'):'';
  $('#review-revision-resume').hidden=!interrupted;$('#review-revision-discard').hidden=!['interrupted','needs_input'].includes(progress?.state);$('#review-revision-cancel').hidden=!reviewData?.busy||!progress;$('#review-revision-resume').disabled=reviewUnavailable||reviewSubmitting;$('#review-revision-discard').disabled=reviewUnavailable||reviewSubmitting||Boolean(reviewData?.busy);$('#review-revision-cancel').disabled=reviewUnavailable||!reviewData?.busy;
- const blocked=reviewUnavailable||!reviewData?.result||window.TOCRSourceInventory?.isSaving||window.TOCRReviewGuide?.isSaving;for(const id of ['review-final-pdf','review-final-word','review-final-both'])$("#"+id).disabled=blocked;
+ const blocked=reviewDownloadInProgress||reviewUnavailable||!reviewData?.result||window.TOCRSourceInventory?.isSaving||window.TOCRReviewGuide?.isSaving;for(const id of ['review-final-pdf','review-final-word','review-final-both'])$("#"+id).disabled=blocked;
  $('#review-version').textContent=reviewData?reviewCopy('Version {version}',{version:reviewData.version}):reviewCopy('Wird geladen');
- $('#review-final-status').textContent=reviewUnavailable?reviewCopy('Dieser Auftrag ist abgelaufen. Bitte zurückgehen und die Dateien erneut hochladen.'):!reviewData?.result?reviewCopy('Die Übersetzung wird geladen …'):reviewCopy('Version {version}',{version:reviewData.version});
+ const current=reviewData?.reviewSummary;
+ let status='Prüfe diese Fassung am Original und bestätige die Prüfung beim Download.';
+ if(reviewData?.hasQuestions)status='Für die Änderung ist eine Antwort nötig. Du kannst die gespeicherte Fassung weiter prüfen und herunterladen.';
+ else if(reviewData?.proposal)status='Ein Änderungsvorschlag wartet auf deine Entscheidung. Der Download enthält die gespeicherte Fassung.';
+ else if(reviewData?.busy||reviewSubmitting)status='Foliquo bearbeitet deine Änderung. Der Download enthält die gespeicherte Fassung.';
+ else if(interrupted)status='Die Änderung wurde unterbrochen. Du kannst sie fortsetzen oder die gespeicherte Fassung herunterladen.';
+ else if(current?.userReviewed)status='Diese Fassung wurde geprüft und ist bereit zum Export.';
+ $('#review-final-status').textContent=reviewCopy(reviewUnavailable?'Dieser Auftrag ist abgelaufen. Bitte zurückgehen und die Dateien erneut hochladen.':!reviewData?.result?'Die Übersetzung wird geladen …':status);
+ $('#review-final-both').textContent=reviewCopy(current?.userReviewed?'PDF und Word herunterladen':'Prüfen und herunterladen (PDF + Word)');
  window.TOCRRuleApplication?.update(reviewData);renderLearningOffer(reviewData);
 }
 function renderLearningOffer(snapshot){
  const card=$('#learning-offer'),button=$('#review-learning-finish'),offer=snapshot?.learningOffer,state=offer?.state;
  const known=['offered','preflight','analyzing','pending_review','interrupted','active','dismissed','removed'].includes(state);
  card.hidden=!['offered','preflight','analyzing','pending_review','interrupted','active'].includes(state);
- button.hidden=Boolean(snapshot?.learningPromptDisabled)||known||!snapshot?.result||snapshot?.hasQuestions||snapshot?.busy||snapshot?.proposal;
+ button.hidden=Boolean(snapshot?.learningPromptDisabled)||known||!snapshot?.result||!snapshot?.reviewSummary?.userReviewed||snapshot?.hasQuestions||snapshot?.busy||snapshot?.proposal;
  button.disabled=reviewUnavailable||reviewSubmitting;
  $('#learning-offer-actions').hidden=!['offered','preflight'].includes(state);
  $('#learning-preflight').hidden=state!=='preflight';
@@ -106,9 +115,22 @@ $('#review-prompt').onkeydown=event=>{if(event.key==='Enter'&&(event.ctrlKey||ev
 function reviewPreviewMode(mode){$('#review-pdf').hidden=mode!=='pdf';$('#review-text').hidden=mode!=='text';$('#review-show-pdf').classList.toggle('active',mode==='pdf');$('#review-show-text').classList.toggle('active',mode==='text');}
 $('#review-show-pdf').onclick=()=>reviewPreviewMode('pdf');$('#review-show-text').onclick=()=>reviewPreviewMode('text');
 async function downloadFinal(format){
- if(reviewUnavailable||!reviewData?.result)return;const id=reviewJobId,version=reviewData.version;
- if(window.TOCRReviewGuide&&!await window.TOCRReviewGuide.confirmFinal(reviewData))return;if(id!==reviewJobId||version!==reviewData.version){$('#review-error').textContent=reviewCopy('Bitte die aktuelle Vorschau laden, bevor du final herunterlädst.');return;}
- try{const response=await localRequest(`/api/jobs/${id}/review/finalize`,{version,format,certification:$('#certification-confirm').checked});downloadBlob(await response.blob(),`foliquo-v${version}.${format==='bundle'?'zip':format==='pdf'?'pdf':'docx'}`);toast(reviewCopy('Finale Version {version} wird heruntergeladen.',{version}));await loadReview();}catch(error){$('#review-error').textContent=error.message;}
+ if(reviewDownloadInProgress||reviewUnavailable||!reviewData?.result)return;
+ const id=reviewJobId,version=reviewData.version;
+ reviewDownloadInProgress=true;
+ try{
+  if(!reviewData.reviewSummary?.userReviewed&&window.TOCRReviewGuide&&!await window.TOCRReviewGuide.confirmFinal(reviewData))return;
+  if(id!==reviewJobId||version!==reviewData?.version){
+   $('#review-error').textContent=reviewCopy('Bitte die aktuelle Vorschau laden, bevor du final herunterlädst.');
+   return;
+  }
+  renderReviewControls();
+  const response=await localRequest(`/api/jobs/${id}/review/finalize`,{version,format,certification:$('#certification-confirm').checked});
+  downloadBlob(await response.blob(),`foliquo-v${version}.${format==='bundle'?'zip':format==='pdf'?'pdf':'docx'}`);
+  toast(reviewCopy('Finale Version {version} wird heruntergeladen.',{version}));
+  if(id===reviewJobId)await loadReview();
+ }catch(error){if(id===reviewJobId)$('#review-error').textContent=error.message;}
+ finally{reviewDownloadInProgress=false;renderReviewControls();}
 }
 $('#review-final-pdf').onclick=()=>downloadFinal('pdf');$('#review-final-word').onclick=()=>downloadFinal('word');$('#review-final-both').onclick=()=>downloadFinal('bundle');
 
