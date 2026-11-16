@@ -39,11 +39,13 @@ function updateQueueButton(){
  const button=$('#translate');if(!button)return;const batchMode=$('#batch-mode')?.checked===true,groups=batchMode?window.selectedImportGroups?.(files)||[]:[];
  button.disabled=Boolean(window.fileIntakePending)||queueSubmitting||!files.length||batchMode&&groups.length<2||!providerReady||!$('#model').value||window.isLanguagePairValid?.()===false;
  button.textContent=queueSubmitting?'Wird hinzugefügt …':batchMode?queueText('Stapel vorbereiten · {count}',{count:groups.length}):queueState.jobs.some(j=>['queued','running','cancelling'].includes(j.status))?'Zur Warteschlange +':'Übersetzen';
+ const connect=$('#studio-connect');
+ if(connect){const needsSetup=files.length>0&&!window.fileIntakePending&&localRuntime&&(!providerReady||!$('#model').value);connect.hidden=!needsSetup;button.hidden=Boolean(needsSetup);}
  const note=$('#composer-note');if(note)note.dataset.empty=String(!files.length&&!window.fileIntakePending);const provider=window.translateProviderContextState?.providerName||'';if(note)note.textContent=window.fileIntakePending?(window.TOCRI18n?.t('Dateien werden geprüft …')||'Dateien werden geprüft …'):!files.length?'Dateien hinzufügen, um zu starten.':batchMode?(window.TOCRI18n?.t('Ordne die Dateien den Aufträgen zu. Gleiche Auftragsnummern werden gemeinsam vorbereitet; die ersten acht starten in einer Welle.')||'Ordne die Dateien den Aufträgen zu. Gleiche Auftragsnummern werden gemeinsam vorbereitet; die ersten acht starten in einer Welle.') :window.isLanguagePairValid?.()===false?(window.TOCRI18n?.t('Ausgangs- und Zielsprache müssen unterschiedlich sein.')||'Ausgangs- und Zielsprache müssen unterschiedlich sein.'):!providerReady||!$('#model').value?(window.TOCRI18n?.t('KI einrichten, um zu übersetzen.')||'KI einrichten, um zu übersetzen.'):(window.TOCRI18n?.t('Die ausgewählten Dateien werden an {provider} gesendet. Das PDF enthält die Originalseiten; Word die bearbeitbare Übersetzung.')||'Die ausgewählten Dateien werden an {provider} gesendet. Das PDF enthält die Originalseiten; Word die bearbeitbare Übersetzung.').replace('{provider}',provider);
 }
 function updateQueueLiveAnnouncement(force=false){
   const jobs=queueState.jobs,active=jobs.find(j=>['running','cancelling'].includes(j.status)),pending=jobs.filter(j=>['queued','running','cancelling'].includes(j.status));
- for(const job of jobs.filter(j=>j.status==='awaiting_answers'&&j.questions?.length)){const key=job.id+':'+job.questions.map(q=>q.id).join(',');if(!questionNoticeKeys.has(key)){questionNoticeKeys.add(key);if(clarificationJobId!==job.id)toast('Antworten werden benötigt.',{label:'Rückfragen beantworten',onClick:()=>showClarifications(job,true)});}}
+ for(const job of jobs.filter(j=>j.status==='awaiting_answers'&&j.questions?.length)){const key=job.id+':'+job.questions.map(q=>q.id).join(',');if(!questionNoticeKeys.has(key)){questionNoticeKeys.add(key);if(clarificationJobId!==job.id&&(job.id!==featuredJobId||$('#studio-view').hidden))toast('Antworten werden benötigt.',{label:'Rückfragen beantworten',onClick:()=>showClarifications(job,true)});}}
  const announcement=`${active?.id||''}:${active?.stage||''}:${pending.length}:${jobs.filter(j=>j.status==='succeeded').length}:${jobs.filter(j=>j.status==='awaiting_answers').length}`;
  if(!force&&announcement===queueLastAnnouncement)return;
  queueLastAnnouncement=announcement;
@@ -83,6 +85,7 @@ function renderDesk(){
   return item;
  }));
 }
+$('#studio-connect')?.addEventListener('click',event=>window.openAISettings?.(event.currentTarget));
 function renderFeaturedJob(){
  renderDesk();
  const card=$('#featured-job'),studio=$('#studio-view');if(!card)return;
@@ -92,17 +95,19 @@ function renderFeaturedJob(){
  const state=queueStatus(job,queueState.paused),locale=window.TOCRI18n?.getLocale?.()||'de',status=$('#featured-job-status'),title=$('#featured-job-title'),names=$('#featured-job-files'),detail=$('#featured-job-detail'),actions=$('#featured-job-actions');
  const signature=JSON.stringify([locale,job.id,job.status,job.stage,job.targetLanguage,job.provider,job.error,job.progress,job.segmentProgress,queueState.paused,job.names]);if(card.dataset.renderSignature===signature)return;card.dataset.renderSignature=signature;
  const focusedAction=actions.contains(document.activeElement)?document.activeElement.dataset.queueAction:null;
- status.textContent=window.TOCRI18n?.t(state.label)||state.label;
- const titles={running:'Deine Übersetzung läuft',queued:'Übersetzung wartet',awaiting_answers:'Deine Antwort wird gebraucht',succeeded:'Deine Übersetzung ist bereit',failed:'Übersetzung fehlgeschlagen',cancelling:'Abbruch läuft',cancelled:'Auftrag abgebrochen'};
- title.textContent=window.TOCRI18n?.t(titles[job.status]||'Übersetzung wird vorbereitet')||titles[job.status]||'Übersetzung wird vorbereitet';
+ status.textContent=queueText(job.status==='succeeded'?'Auftrag':'Status: {state}',{state:queueText(state.label)});
+ const titles={running:'Deine Übersetzung läuft',queued:'Übersetzung wartet',awaiting_answers:'Deine Antwort wird gebraucht',succeeded:'Die Übersetzung ist bereit zur Prüfung',failed:'Übersetzung fehlgeschlagen',cancelling:'Abbruch läuft',cancelled:'Auftrag abgebrochen'};
+ title.textContent=queueText(job.status==='queued'&&queueState.paused?'Übersetzung pausiert':titles[job.status]||'Übersetzung wird vorbereitet');
  names.textContent=job.names.join(' · ');names.dataset.noTranslate='';
  const progressTrack=$('#featured-job-progress'),progressFill=progressTrack.querySelector('span'),progress=actualProgress(job);progressTrack.hidden=!['queued','running','cancelling'].includes(job.status);if(progressTrack.hidden){progressTrack.classList.remove('is-indeterminate');progressTrack.removeAttribute('aria-valuenow');progressTrack.removeAttribute('aria-valuetext');progressFill.style.width='';}else if(progress===null){progressTrack.classList.add('is-indeterminate');progressTrack.removeAttribute('aria-valuenow');progressTrack.removeAttribute('aria-valuetext');progressFill.style.width='';}else{progressTrack.classList.remove('is-indeterminate');progressTrack.setAttribute('aria-valuemin','0');progressTrack.setAttribute('aria-valuemax','100');progressTrack.setAttribute('aria-valuenow',String(progress));progressTrack.setAttribute('aria-valuetext',`${progress}%`);progressFill.style.width=`${progress}%`;}
  const stage=phaseLabels[job.stage]||state.label,segmentText=job.segmentProgress?.total>1?locale==='en'?` · ${job.segmentProgress.complete} of ${job.segmentProgress.total} sections saved`:locale==='ar'?` · تم حفظ ${job.segmentProgress.complete} من ${job.segmentProgress.total} أقسام`:` · Abschnitt ${job.segmentProgress.complete} von ${job.segmentProgress.total} gespeichert`:'';detail.textContent=job.status==='succeeded'?`${job.targetLanguage} · ${providerLabels[job.provider]||job.provider||'ChatGPT'}`:job.status==='failed'?(job.error||'Bitte öffne die Aufträge für Details und einen erneuten Versuch.'):`${window.TOCRI18n?.t(stage)||stage} · ${job.targetLanguage}${segmentText}`;
  actions.replaceChildren();
  if(job.status==='awaiting_answers')actions.append(queueButton('Rückfragen beantworten','answer',job));
- if(job.status==='succeeded'){actions.append(queueButton('Übersetzung prüfen','review',job),queueButton('PDF herunterladen','download',job),queueButton('Word herunterladen','word',job));}
+ if(job.status==='succeeded')actions.append(queueButton('Übersetzung prüfen','review',job));
+ const next=actions.querySelector('[data-queue-action]');if(next){next.classList.remove('text-button');next.classList.add('primary');}
  if(job.status==='failed')actions.append(queueButton('Erneut versuchen','retry',job));
- if(['queued','running','cancelling'].includes(job.status)){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Aufträge ansehen';button.onclick=()=>setJobsPanel(true);actions.append(button);}
+ if(job.status==='queued'&&queueState.paused){const resume=document.createElement('button');resume.type='button';resume.className='primary';resume.textContent=queueText('Fortsetzen');resume.onclick=()=>void setQueuePaused(false,resume);actions.append(resume);}
+ else if(['queued','running','cancelling'].includes(job.status)){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Aufträge ansehen';button.onclick=()=>setJobsPanel(true);actions.append(button);}
  const fresh=document.createElement('button');fresh.type='button';fresh.className='text-button featured-job-new';fresh.textContent='Weitere Dokumente übersetzen';fresh.onclick=()=>{try{sessionStorage.removeItem('translateocr-featured-job');}catch{}featuredJobId='';renderFeaturedJob();document.querySelector('#pick')?.focus({preventScroll:true});};actions.append(fresh);if(focusedAction){const restored=[...actions.querySelectorAll('[data-queue-action]')].find(button=>button.dataset.queueAction===focusedAction);restored?.focus({preventScroll:true});}
 }
 async function importBatchAction(batchId,action){
@@ -168,7 +173,7 @@ async function queueAction(action,job,launcher=document.activeElement){
   if(action==='retry'&&job.interrupted){const warning='Dieser Auftrag wurde unterbrochen. Ein Anbieteraufruf kann bereits Verbrauch ausgelöst haben. Gesicherte Antworten werden wiederverwendet; ein unklarer Request kann beim Wiederholen erneut Kosten oder Kontingent verbrauchen. Jetzt bewusst fortsetzen?';if(!confirm(window.TOCRI18n?.t(warning)||warning))return;}
   if(action==='retry'&&job.retryAfterAt>Date.now())throw new Error(`Der Anbieter bittet bis ${new Date(job.retryAfterAt).toLocaleTimeString()} zu warten.`);
   if(action==='retry'&&job.budgetConsentRequired){const warning='Foliquo kann den Betrag dieses API-Aufrufs nicht zuverlässig schätzen. Die lokale Monatsgrenze kann dadurch überschritten werden. Diesen einen Aufruf trotzdem erlauben?';if(!confirm(window.TOCRI18n?.t(warning)||warning))return;await localRequest('/api/usage/consent-once',{provider:job.provider,model:job.model,confirm:true});}
-  if(action==='review'){await openReviewWorkspace(job.id);return;}
+  if(action==='review'){await openReviewWorkspace(job.id);if(reviewJobId===job.id&&!$('#review-view').hidden)$('#review-final-title').focus();return;}
   if(action==='answer'){showClarifications(job,true);return;}
   if(action==='word'){await downloadJobFile(job,'word');return;}
   if(action==='bundle'){await downloadBundle(job);markDownloaded(job.id);return;}
@@ -188,7 +193,7 @@ async function downloadJobFile(job,format){const response=await localRequest(`/a
 async function downloadBundle(job){return downloadJobFile(job,'bundle');}
 function announceCompletion(job){
  if(job.clientId!==queueClientId||queueAnnounced.has(job.id)||!job.hasResult)return;
- markCompletionAnnounced(job.id);toast('Übersetzung bereit. PDF und Word kannst du direkt herunterladen.');
+ markCompletionAnnounced(job.id);if(job.id!==featuredJobId||$('#studio-view').hidden)toast('Die Übersetzung ist bereit zur Prüfung.');
 }
 async function pollQueue(){
  if(queuePolling)return;if(!localRuntime||!csrf){scheduleQueuePoll();return;}queuePolling=true;
@@ -220,10 +225,16 @@ $('#translate').onclick=async()=>{
   const upload=await documentsForRequest(selected),result=await localRequest('/api/jobs',{files:upload,metadata:meta,model,provider:$('#provider-choice').value,clientId:queueClientId,requestId:crypto.randomUUID()}).then(r=>r.json());queueSnapshots.set(result.id,selected);await window.clearStudioDraft?.();window.TOCRRules?.resetJobOptions?.();
   if($('#additional-info').value.trim()===meta.additionalInfo)$('#additional-info').value='';
   if(files.length===selected.length&&files.every((f,i)=>f===selected[i])){files=[];invalidateDraft({discardTranslation:true});resetPreview();renderFiles();$('#file').value='';}
-  featuredJobId=result.id;try{sessionStorage.setItem('translateocr-featured-job',featuredJobId);}catch{}await pollQueue();renderFeaturedJob();document.querySelector('#featured-job')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});toast('Auftrag hinzugefügt.');
+  featuredJobId=result.id;try{sessionStorage.setItem('translateocr-featured-job',featuredJobId);}catch{}await pollQueue();renderFeaturedJob();document.querySelector('#featured-job')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});toast(queueText('Auftrag hinzugefügt.'));
  }catch(error){$('#error').textContent=error.message;}finally{queueSubmitting=false;updateQueueButton();}
 };
-$('#queue-toggle').onclick=async()=>{try{await localRequest(`/api/queue/${queueState.paused?'resume':'pause'}`,{});await pollQueue();}catch(error){toast(error.message);}};
+async function setQueuePaused(paused,button){
+ button.disabled=true;
+ try{await localRequest(`/api/queue/${paused?'pause':'resume'}`,{});await pollQueue();}
+ catch(error){toast(error.message);}
+ finally{button.disabled=false;}
+}
+$('#queue-toggle').onclick=event=>void setQueuePaused(!queueState.paused,event.currentTarget);
 scheduleQueuePoll();
 
 window.dismissedClarifications=new Set();
@@ -241,7 +252,7 @@ async function saveClarificationDraft(){
 }
 function renderSavedClarificationFiles(draft){$('#clarification-saved-files').textContent=draft.savedFiles?.length?window.TOCRI18n.t('Zusätzliche Aufnahmen gespeichert:')+' '+draft.savedFiles.map(f=>f.name).join(' · '):'';}
 function scheduleClarificationDraft(){captureClarificationDraft();clearTimeout(clarificationDraftTimer);clarificationDraftTimer=setTimeout(()=>void saveClarificationDraft().catch(()=>{}),500);}
-async function dismissClarificationDialog(){try{await saveClarificationDraft();if(clarificationJobId)window.dismissedClarifications.add(clarificationJobId);closeClarifications();setJobsPanel(true);}catch{}}
+async function dismissClarificationDialog(){try{await saveClarificationDraft();const onFeatured=clarificationJobId===featuredJobId&&!$('#studio-view').hidden;if(clarificationJobId)window.dismissedClarifications.add(clarificationJobId);closeClarifications();if(!onFeatured)setJobsPanel(true);}catch{}}
 $('#clarification-fields').addEventListener('input',scheduleClarificationDraft);
 function renderClarificationExtraNames(){const names=$('#clarification-extra-names');if(names)names.textContent=[...($('#clarification-extra')?.files||[])].map(file=>file.name).join(', ');}
  $('#clarification-extra').addEventListener('change',()=>{renderClarificationExtraNames();const draft=captureClarificationDraft();if(draft){draft.filesToUpload=[...$('#clarification-extra').files];void saveClarificationDraft().catch(()=>{});}});
@@ -262,6 +273,11 @@ async function acceptClarification(job,q,answer){
  catch(error){$('#clarification-error').textContent=error.message;}
  finally{queueMutationVersion++;clarificationSubmitting=false;document.querySelectorAll('#clarification-fields button,#clarification-submit').forEach(b=>b.disabled=false);}
 }
+const clarificationBack=$('#clarification-back-to-answer');
+clarificationBack.onclick=()=>{
+ const answer=document.querySelector('.clarification-field.is-current textarea')||$('#clarification-fields textarea');
+ answer?.focus();answer?.scrollIntoView({block:'center'});
+};
 function showClarifications(job,scroll){
  clarificationFocusJobId=job.id;
  if(clarificationJobId&&clarificationJobId!==job.id){void saveClarificationDraft().catch(()=>{});}
@@ -283,7 +299,7 @@ function showClarifications(job,scroll){
     const use=document.createElement('button');use.type='button';use.className='text-button question-action question-use';use.textContent='Vorschlag übernehmen';use.onclick=()=>void acceptClarification(job,q,q.suggestion);
     suggestion.append(heading,candidate);actions.append(use);
    }
-   const locate=document.createElement('button');locate.type='button';locate.className='text-button question-action question-source';locate.setAttribute('aria-pressed','false');locate.textContent='Originalstelle ansehen';locate.onclick=async()=>{document.querySelectorAll('.clarification-field').forEach(el=>el.classList.toggle('is-current',el===field));locate.disabled=true;locate.textContent='Originalstelle wird gesucht …';try{await questionOriginalReady;if(!q.box){const location=await localRequest(`/api/jobs/${job.id}/locate`,{questionId:q.id}).then(r=>r.json());Object.assign(q,location);}if(clarificationJobId===job.id&&typeof focusQuestionOriginal==='function'){await focusQuestionOriginal(q);document.querySelectorAll('#clarification-fields .question-source').forEach(button=>button.setAttribute('aria-pressed',String(button===locate)));}}catch(error){$('#clarification-error').textContent=error.message;}finally{locate.disabled=false;locate.textContent='Originalstelle ansehen';}};if(q.kind!=='learning-layout'&&!String(q.kind||'').startsWith('personal-rule'))actions.append(locate);
+   const locate=document.createElement('button');locate.type='button';locate.className='text-button question-action question-source';locate.setAttribute('aria-pressed','false');locate.textContent='Originalstelle ansehen';locate.onclick=async()=>{document.querySelectorAll('.clarification-field').forEach(el=>el.classList.toggle('is-current',el===field));locate.disabled=true;locate.textContent='Originalstelle wird gesucht …';try{await questionOriginalReady;if(!q.box){const location=await localRequest(`/api/jobs/${job.id}/locate`,{questionId:q.id}).then(r=>r.json());Object.assign(q,location);}if(clarificationJobId===job.id&&typeof focusQuestionOriginal==='function'){await focusQuestionOriginal(q);if(clarificationJobId!==job.id||!locate.isConnected)return;if(clarificationBack.getClientRects().length){clarificationBack.focus();clarificationBack.scrollIntoView({block:'start'});}document.querySelectorAll('#clarification-fields .question-source').forEach(button=>button.setAttribute('aria-pressed',String(button===locate)));}}catch(error){$('#clarification-error').textContent=error.message;}finally{locate.disabled=false;locate.textContent='Originalstelle ansehen';}};if(q.kind!=='learning-layout'&&!String(q.kind||'').startsWith('personal-rule'))actions.append(locate);
    if(q.kind!=='learning-layout'&&!String(q.kind||'').startsWith('personal-rule')){
     const unreadable=document.createElement('button');unreadable.type='button';unreadable.className='text-button question-action question-unreadable';unreadable.textContent='Unleserlich';
     unreadable.onclick=()=>void acceptClarification(job,q,null);
@@ -300,6 +316,6 @@ window.addEventListener('translateocr-locale',()=>{if(!clarificationJobId)return
 $('#clarification-form').onsubmit=async event=>{
  event.preventDefault();if(clarificationSubmitting||!clarificationJobId)return;const id=clarificationJobId,answers=[...document.querySelectorAll('#clarification-fields textarea')].map(el=>({id:el.dataset.questionId,answer:el.value.trim(),unreadable:el.dataset.unreadable==='true'}));
  if(answers.some(a=>!a.answer)){$('#clarification-error').textContent='Bitte jede Rückfrage beantworten.';return;}clarificationSubmitting=true;$('#clarification-submit').disabled=true;$('#clarification-error').textContent='';
- try{await saveClarificationDraft();await localRequest(`/api/jobs/${id}/answer`,{answers,files:[]});await Promise.all(answers.map(answer=>animateResolvedQuestion(answer.id)));clarificationDrafts.delete(id);closeClarifications();window.dismissedClarifications.delete(id);toast('Antworten übernommen. Der Auftrag wird fortgesetzt.');await pollQueue();}catch(error){$('#clarification-error').textContent=error.message;}finally{clarificationSubmitting=false;$('#clarification-submit').disabled=false;}
+ try{await saveClarificationDraft();await localRequest(`/api/jobs/${id}/answer`,{answers,files:[]});await Promise.all(answers.map(answer=>animateResolvedQuestion(answer.id)));clarificationDrafts.delete(id);closeClarifications();window.dismissedClarifications.delete(id);toast(queueText('Antworten übernommen. Der Auftrag wird fortgesetzt.'));await pollQueue();}catch(error){$('#clarification-error').textContent=error.message;}finally{clarificationSubmitting=false;$('#clarification-submit').disabled=false;}
 };
 $('#desk-all')?.addEventListener('click',()=>setJobsPanel(true));
