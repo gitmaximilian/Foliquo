@@ -76,9 +76,9 @@ test('editor writes the same unreadable handwriting note as the server',async()=
 
 test('document titles use the target language',()=>{
  assert.equal(translationTitle({targetLanguage:'Englisch',sourceLanguage:'Arabisch'}),'Certified translation from Arabic into English');
- assert.equal(translationTitle({targetLanguage:'Deutsch',sourceLanguage:'Arabisch'}),'Beglaubigte Übersetzung aus der arabischen Sprache ins Deutsche');
+ assert.equal(translationTitle({targetLanguage:'Deutsch',sourceLanguage:'Arabisch'}),'Beglaubigte Übersetzung aus der arabischen Sprache in die deutsche Sprache');
  assert.equal(translationTitle({targetLanguage:'Französisch',sourceLanguage:'Arabisch'}),'Traduction certifiée de l’arabe vers le français');
- assert.equal(translationTitle({targetLanguage:'Arabisch',sourceLanguage:'Ukrainisch'}),'ترجمة مصدّقة من الأوكرانية إلى العربية');
+ assert.equal(translationTitle({targetLanguage:'Arabisch',sourceLanguage:'Ukrainisch'}),'ترجمة مصدّقة من اللغة الأوكرانية إلى اللغة العربية');
  for(const target of targets.filter(target=>target!=='Deutsch'))assert.doesNotMatch(translationTitle({targetLanguage:target,sourceLanguage:'Englisch'}),/Beglaubigte|Übersetzung/,target);
  assert.equal(translationHeaderLines({targetLanguage:'Englisch',sourceLanguage:'Arabisch'})[0].language,'en');
 });

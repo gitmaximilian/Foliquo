@@ -11,11 +11,11 @@ test('guided demo offers English, German, and Arabic with RTL semantics and loca
  const html=(await read('../dist/demo/index.html')).toString(),js=(await read('../dist/demo/demo.js')).toString();
  for(const locale of ['en','de','ar'])assert.match(html,new RegExp(`value="${locale}"`));
  assert.match(html,/id="locale"/);assert.match(js,/document\.documentElement\.dir=locale==='ar'\?'rtl':'ltr'/);
- for(const phrase of ['Try it for yourself.','Einmal ausprobieren.','جرّبه بنفسك.','Certified translation from Arabic into English','Beglaubigte Übersetzung aus dem Englischen ins Deutsche','ترجمة مصدّقة من الإنجليزية إلى العربية'])assert.ok(js.includes(phrase),`missing demo localization: ${phrase}`);
+ for(const phrase of ['Try it for yourself.','Einmal ausprobieren.','جرّبه بنفسك.','Certified translation from Arabic into English','Beglaubigte Übersetzung aus der englischen Sprache in die deutsche Sprache','ترجمة مصدّقة من اللغة الإنجليزية إلى اللغة العربية'])assert.ok(js.includes(phrase),`missing demo localization: ${phrase}`);
 });
 
 test('each localized demo export contains its target-language translation and both original pages',async()=>{
- const expected={de:['Beglaubigte Übersetzung aus dem Englischen ins Deutsche','keine besonderen Merkmale'],en:['Certified translation from Arabic into English','No distinguishing features'],ar:['ترجمة مصدّقة من اإلنجليزية إلى العربية','لا توجد سمات مميزة']};
+ const expected={de:['Beglaubigte Übersetzung aus der englischen Sprache in die deutsche Sprache','keine besonderen Merkmale'],en:['Certified translation from Arabic into English','No distinguishing features'],ar:['ترجمة مصدّقة من اإلنجليزية إلى العربية','لا توجد سمات مميزة']};
  for(const locale of ['de','en','ar']){
   const original=await PDFDocument.load(await read(`../dist/demo/assets/original-${locale}.pdf`));assert.equal(original.getPageCount(),2,`${locale} source should include front and back`);
   for(const version of ['initial','final']){
@@ -29,6 +29,6 @@ test('each localized demo export contains its target-language translation and bo
 
 test('certification headings use the selected target language and translated source-language name',()=>{
  assert.equal(translationTitle({language:'Arabisch',targetLanguage:'English'}),'Certified translation from Arabic into English');
- assert.equal(translationTitle({language:'Englisch',targetLanguage:'Deutsch'}),'Beglaubigte Übersetzung aus dem Englischen ins Deutsche');
- assert.equal(translationTitle({language:'Englisch',targetLanguage:'Arabisch'}),'ترجمة مصدّقة من الإنجليزية إلى العربية');
+ assert.equal(translationTitle({language:'Englisch',targetLanguage:'Deutsch'}),'Beglaubigte Übersetzung aus der englischen Sprache in die deutsche Sprache');
+ assert.equal(translationTitle({language:'Englisch',targetLanguage:'Arabisch'}),'ترجمة مصدّقة من اللغة الإنجليزية إلى اللغة العربية');
 });

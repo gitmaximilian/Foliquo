@@ -68,7 +68,7 @@ function renderReview(snapshot){
   $('#review-preview-note').textContent=reviewCopy(snapshot.result.context?.layout?.includeOriginals===false?'PDF ohne Originalanhang · Word mit derselben bearbeitbaren Übersetzung':'PDF mit Originalseiten · Word mit derselben bearbeitbaren Übersetzung');$('#review-names').textContent=snapshot.names.join(' · ');$('#review-text').textContent=snapshot.result.text;
  if(reviewPreviewVersion!==snapshot.version){reviewPreviewVersion=snapshot.version;if(snapshot.previewTransport==='download-stream')void loadReviewPDF(snapshot.jobId,snapshot.version);else void setReviewPDF(snapshot.result.pdf);}queueResultCache.delete(reviewJobId);
  }
- if(typeof renderInspector==='function')renderInspector(snapshot);if(typeof renderStudio==='function')renderStudio(snapshot);if(typeof renderWorkflow==='function')renderWorkflow(snapshot);globalThis.window?.TOCRReviewGuide?.render(snapshot);
+ if(typeof renderInspector==='function')renderInspector(snapshot);if(typeof renderStudio==='function')renderStudio(snapshot);if(typeof renderWorkflow==='function')renderWorkflow(snapshot);globalThis.window?.TOCRReviewGuide?.render(snapshot);globalThis.window?.TOCRCertification?.render(snapshot);
  renderReviewControls();
 }
 async function loadReview(preview=false){
@@ -125,9 +125,10 @@ async function downloadFinal(format){
    return;
   }
   renderReviewControls();
-  const response=await localRequest(`/api/jobs/${id}/review/finalize`,{version,format,certification:$('#certification-confirm').checked});
+  const response=await localRequest(`/api/jobs/${id}/review/finalize`,{version,format,certification:window.TOCRCertification?.choices()||{enabled:false}});
   downloadBlob(await response.blob(),`foliquo-v${version}.${format==='bundle'?'zip':format==='pdf'?'pdf':'docx'}`);
   toast(reviewCopy('Finale Version {version} wird heruntergeladen.',{version}));
+  window.TOCRCertification?.afterDownload();
   if(id===reviewJobId)await loadReview();
  }catch(error){if(id===reviewJobId)$('#review-error').textContent=error.message;}
  finally{reviewDownloadInProgress=false;renderReviewControls();}
