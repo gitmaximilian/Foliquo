@@ -104,6 +104,14 @@ fn office_path(resource: &Path) -> PathBuf {
     { resource.join("office/libreoffice/program/soffice") }
 }
 
+/// Last "Foliquo could not start" line of this run's service log, shown in the window instead of only naming the file.
+fn last_service_error(path: &Path) -> Option<String> {
+    let text = fs::read_to_string(path).ok()?;
+    let line = text.lines().rev().find(|line| !line.trim().is_empty())?;
+    let message = line.trim().strip_prefix("Foliquo could not start: ")?;
+    Some(message.chars().take(400).collect())
+}
+
 fn start_service(app: &tauri::App) -> Result<(u16, Option<OwnedService>), String> {
     let resource = app.path().resource_dir().map_err(|e| e.to_string())?;
     let service = resource.join("service");
@@ -150,7 +158,11 @@ fn start_service(app: &tauri::App) -> Result<(u16, Option<OwnedService>), String
     let expected_id = workspace_id(&workspace);
     for _ in 0..400 {
         if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
-            return Err(format!("The local service exited during startup ({status}). Check desktop-service.log in the Foliquo log directory."));
+            let reason = last_service_error(&logs.join("desktop-service.log"));
+            return Err(match reason {
+                Some(line) => format!("The local service exited during startup: {line}"),
+                None => format!("The local service exited during startup ({status}). Check desktop-service.log in the Foliquo log directory."),
+            });
         }
         if let Some(health) = probe(port) {
             if health["application"] == "foliquo" && health["protocol"] == 1 && health["workspaceId"] == expected_id {

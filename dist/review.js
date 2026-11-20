@@ -19,7 +19,10 @@ window.addEventListener('translateocr-locale',()=>{if(!reviewData)return;renderR
 function rememberReview(id){try{if(id)sessionStorage.setItem('translateocr-review-job',id);else sessionStorage.removeItem('translateocr-review-job');}catch{}}
 function resumeReviewWorkspace(jobs){if(reviewResumeAttempted||reviewJobId)return;reviewResumeAttempted=true;let id;try{id=sessionStorage.getItem('translateocr-review-job');}catch{}if(id&&jobs.some(j=>j.id===id&&j.hasResult)){if(!$('#studio-view').hidden)void openReviewWorkspace(id);}else if(id)rememberReview(null);}
 async function openReviewWorkspace(id,{historyMode='push'}={}){
- clearTimeout(reviewTimer);reviewHadProposal=false;reviewUnavailable=false;reviewJobId=id;reviewData=null;reviewPreviewVersion=null;reviewMessageSignature='';$('#review-other-formats').open=false;$('#review-rule-options').open=false;rememberReview(id);view('review',{historyMode});$('#review-error').textContent='';$('#review-names').textContent='Deine Übersetzung wird geladen …';$('#review-messages').replaceChildren();$('#review-prompt').value='';resizeReviewPrompt();
+ clearTimeout(reviewTimer);reviewHadProposal=false;reviewUnavailable=false;reviewJobId=id;
+ // A finished job opened for review stays on the desk; the studio returns to the upload for the next document.
+ if(typeof featuredJobId==='string'&&featuredJobId===id&&queueState?.jobs?.find(job=>job.id===id)?.status==='succeeded'){featuredJobId='';try{sessionStorage.removeItem('translateocr-featured-job');}catch{}}
+reviewData=null;reviewPreviewVersion=null;reviewMessageSignature='';$('#review-other-formats').open=false;$('#review-rule-options').open=false;rememberReview(id);view('review',{historyMode});$('#review-error').textContent='';$('#review-names').textContent='Deine Übersetzung wird geladen …';$('#review-messages').replaceChildren();$('#review-prompt').value='';resizeReviewPrompt();
  $('#review-pdf').removeAttribute('src');$('#review-text').textContent='';if(reviewUrl){URL.revokeObjectURL(reviewUrl);reviewUrl=null;}renderReviewControls();await loadReview(true);
 }
 function renderReviewControls(){
@@ -68,7 +71,7 @@ function renderReview(snapshot){
   $('#review-preview-note').textContent=reviewCopy(snapshot.result.context?.layout?.includeOriginals===false?'PDF ohne Originalanhang · Word mit derselben bearbeitbaren Übersetzung':'PDF mit Originalseiten · Word mit derselben bearbeitbaren Übersetzung');$('#review-names').textContent=snapshot.names.join(' · ');$('#review-text').textContent=snapshot.result.text;
  if(reviewPreviewVersion!==snapshot.version){reviewPreviewVersion=snapshot.version;if(snapshot.previewTransport==='download-stream')void loadReviewPDF(snapshot.jobId,snapshot.version);else void setReviewPDF(snapshot.result.pdf);}queueResultCache.delete(reviewJobId);
  }
- if(typeof renderInspector==='function')renderInspector(snapshot);if(typeof renderStudio==='function')renderStudio(snapshot);if(typeof renderWorkflow==='function')renderWorkflow(snapshot);globalThis.window?.TOCRReviewGuide?.render(snapshot);
+ if(typeof renderInspector==='function')renderInspector(snapshot);if(typeof renderStudio==='function')renderStudio(snapshot);if(typeof renderWorkflow==='function')renderWorkflow(snapshot);globalThis.window?.TOCRReviewGuide?.render(snapshot);globalThis.window?.TOCRCertification?.render(snapshot);
  renderReviewControls();
 }
 async function loadReview(preview=false){
@@ -125,9 +128,10 @@ async function downloadFinal(format){
    return;
   }
   renderReviewControls();
-  const response=await localRequest(`/api/jobs/${id}/review/finalize`,{version,format,certification:$('#certification-confirm').checked});
+  const response=await localRequest(`/api/jobs/${id}/review/finalize`,{version,format,certification:window.TOCRCertification?.choices()||{enabled:false}});
   downloadBlob(await response.blob(),`foliquo-v${version}.${format==='bundle'?'zip':format==='pdf'?'pdf':'docx'}`);
   toast(reviewCopy('Finale Version {version} wird heruntergeladen.',{version}));
+  window.TOCRCertification?.afterDownload();
   if(id===reviewJobId)await loadReview();
  }catch(error){if(id===reviewJobId)$('#review-error').textContent=error.message;}
  finally{reviewDownloadInProgress=false;renderReviewControls();}
