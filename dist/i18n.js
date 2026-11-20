@@ -288,4 +288,6 @@ Object.assign(dictionaries.en,{"Änderung vorschlagen →": "Suggest change →"
 Object.assign(dictionaries.ar,{"Änderung vorschlagen →": "اقتراح التعديل ←", "Du siehst jede Änderung vor dem Übernehmen. Übernommene Änderungen werden eine neue Version.": "ترى كل تعديل قبل تطبيقه. تصبح التعديلات المطبّقة نسخة جديدة.", "Änderungsvorschlag bereit": "اقتراح التعديل جاهز", "Änderungen prüfen": "مراجعة التعديلات"});
 Object.assign(dictionaries.en,{"Ein Änderungsvorschlag wartet auf der Prüfseite unter „Änderungen“.": "A suggested change is waiting on the review page under “Changes”.", "Neue Änderungswünsche erscheinen auf der Prüfseite vor der Übernahme.": "New change requests appear on the review page before they are applied."});
 Object.assign(dictionaries.ar,{"Ein Änderungsvorschlag wartet auf der Prüfseite unter „Änderungen“.": "يوجد اقتراح تعديل بانتظارك في صفحة المراجعة ضمن «التعديلات».", "Neue Änderungswünsche erscheinen auf der Prüfseite vor der Übernahme.": "تظهر طلبات التعديل الجديدة في صفحة المراجعة قبل تطبيقها."});
+Object.assign(dictionaries.en,{"PDF und Word mit den Originalseiten nach der Übersetzung": "PDF and Word with the original pages after the translation"});
+Object.assign(dictionaries.ar,{"PDF und Word mit den Originalseiten nach der Übersetzung": "PDF وWord مع صفحات الأصل بعد الترجمة"});
 })();
