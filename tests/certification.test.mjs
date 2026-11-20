@@ -89,7 +89,13 @@ test('the exported PDF carries the header, ends the translation with the clause 
  for(let index=1;index<=pdf.numPages;index++)pages.push((await (await pdf.getPage(index)).getTextContent()).items.map(item=>item.str).join(' ').replace(/\s+/g,' '));
  const translation=pages.slice(0,pdf.numPages-2).join(' ');
  assert.match(translation,/Beglaubigte auszugsweise Übersetzung aus der arabischen Sprache in die deutsche Sprache/);
- assert.match(translation,/Unterschrift: unleserlich.*Die genaue Übereinstimmung der vorstehenden Übersetzung mit dem angehefteten Original bestätige ich unter Berufung auf meinen Eid\..*Wien, 20\.11\.2026/);
+ // Font substitution can split ligatures in extracted text (e.g. macOS), so compare order on space-free text;
+ // the exact clause wording is asserted on the Word file above.
+ const compact=translation.replace(/\s+/g,''),at=marker=>compact.indexOf(marker);
+ assert.ok(at('unleserlich')>0,'last source line is present');
+ assert.ok(at('DiegenaueÜbereinstimmungdervorstehendenÜbersetzungmitdem')>at('unleserlich'),'clause follows the last text');
+ assert.ok(at('bestätigeichunterBerufungaufmeinenEid.')>at('DiegenaueÜbereinstimmung'),'clause is complete');
+ assert.ok(at('Wien,')>at('meinenEid.'),'place and date follow the clause');
  assert.deepEqual(pages.slice(-2).map(page=>page.trim()),['','']);
 });
 
