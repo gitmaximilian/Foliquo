@@ -14,6 +14,7 @@
   blank:['Line {line}: {length} empty lines. Remove them or mark the space with a line.','Zeile {line}: {length} Leerzeilen. Entfernen oder den Leerraum mit einem Strich kennzeichnen.','السطر {line}: {length} أسطر فارغة. احذفها أو علّم الفراغ بخط.'],
   signature:['{expected} signatures were found in the original, {found} are rendered in the text. Each needs the name or “illegible”.','Im Original wurden {expected} Unterschriften erkannt, im Text stehen {found}. Jede braucht den Namen oder „unleserlich“.','عُثر في الأصل على {expected} توقيعات، وفي النص {found}. يحتاج كل توقيع إلى الاسم أو «غير مقروء».'],
   copy:['A plain copy has information value only. For official use, attach the original or a certified copy.','Eine einfache Kopie hat nur Informationswert. Für den amtlichen Gebrauch das Original oder eine beglaubigte Kopie anheften.','النسخة العادية للاطلاع فقط. للاستخدام الرسمي أرفق الأصل أو نسخة مصدّقة.'],
+  germanOnly:['The clause is in German only: Foliquo has no verified version in this language.','Die Klausel steht nur auf Deutsch: Für diese Sprache hat Foliquo keine geprüfte Fassung.','الصيغة بالألمانية فقط: لا يتوفر لدى Foliquo نص موثّق بهذه اللغة.'],
   ready:['Ready for the final export.','Bereit für den finalen Export.','جاهز للتصدير النهائي.'],
   saved:['Certification profile saved.','Beglaubigungsprofil gespeichert.','تم حفظ ملف التصديق.'],
   paper:[
@@ -21,6 +22,7 @@
    ['Connect translation and original (or the certified copy) permanently: staple or thread, then a large, durable vignette.','Übersetzung und Original (oder beglaubigte Kopie) dauerhaft verbinden: Heftklammer oder Bindfaden, darüber eine große, dauerhaft klebende Vignette.','اربط الترجمة بالأصل (أو النسخة المصدّقة) ربطًا دائمًا: دبوس أو خيط، ثم ملصق كبير دائم.'],
    ['Set your round seal partly on the vignette and partly on the translation and the source, and sign without covering text.','Rundsiegel teils auf die Vignette, teils auf Übersetzung und Ausgangstext setzen und unterschreiben, ohne Text zu verdecken.','ضع الختم الدائري جزئيًا على الملصق وجزئيًا على الترجمة والأصل، ووقّع دون تغطية النص.'],
    ['Not durable: corner folded over a staple, a vignette alone, a pre-stamped vignette, metal corner clips.','Nicht dauerhaft: umgeschlagene Heftklammerecke, Vignette allein, vorab gestempelte Vignette, Metalleckklammer.','غير دائم: طيّ زاوية الدبوس، ملصق وحده، ملصق مختوم مسبقًا، مشبك زاوية معدني.'],
+   ['Insert photos yourself if they belong in the translation; the client adds nothing.','Fotos fügst nur du selbst ein, wenn sie in die Übersetzung gehören; die Partei ergänzt nichts.','أدرج الصور بنفسك إذا كانت جزءًا من الترجمة؛ لا يضيف العميل شيئًا.'],
    ['Confirm any later handwritten correction with date and signature.','Spätere handschriftliche Korrekturen mit Datum und Unterschrift bestätigen.','أكّد أي تصحيح يدوي لاحق بالتاريخ والتوقيع.'],
    ['Hand over only the connected set, never the translation or stamped vignettes alone, and tell the client that nothing may be added.','Nur das verbundene Exemplar aushändigen, nie die Übersetzung oder gestempelte Vignetten allein, und darauf hinweisen, dass nichts ergänzt werden darf.','سلّم المجموعة المربوطة فقط، لا الترجمة وحدها ولا ملصقات مختومة، وأبلغ العميل بأنه لا يجوز إضافة شيء.'],
   ],
@@ -52,8 +54,8 @@
   $('#certification-options').toggleAttribute('data-disabled',!current.enabled);
   const parts=[];
   const headerBox=element('div',undefined,{class:'certification-preview-header'});headerBox.append(element('span',t('header'),{class:'eyebrow'}));for(const line of header)headerBox.append(element('p',line.text,{lang:line.language,dir:line.language==='ar'?'rtl':'ltr'}));parts.push(headerBox);
-  if(current.enabled&&profile.place){const box=element('div',undefined,{class:'certification-preview-clause'});for(const paragraph of clause)box.append(element('p',paragraph.text,{lang:paragraph.language,dir:paragraph.language==='ar'?'rtl':'ltr'}));box.append(element('div','',{class:'certification-seal-space','aria-hidden':'true'}));parts.push(box);}
-  else if(current.enabled){const note=element('p',t('noPlace'),{class:'certification-missing'}),button=element('button',t('setPlace'),{type:'button',class:'secondary'});button.onclick=openProfile;note.append(' ',button);parts.push(note);}
+  if(current.enabled&&profile.place){const box=element('div',undefined,{class:'certification-preview-clause'});for(const paragraph of clause)box.append(element('p',paragraph.text,{lang:paragraph.language,dir:paragraph.language==='ar'?'rtl':'ltr'}));box.append(element('div','',{class:'certification-seal-space','aria-hidden':'true'}));parts.push(box);if(snapshot.germanOnly&&profile.bilingual!==false)parts.push(element('p',t('germanOnly'),{class:'muted certification-note'}));}
+  else if(!profile.place){const note=element('p',t('noPlace'),{class:'certification-missing'}),button=element('button',t('setPlace'),{type:'button',class:'secondary'});button.onclick=openProfile;note.append(' ',button);parts.push(note);}
   host.replaceChildren(...parts);
   renderChecks();
  }

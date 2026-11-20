@@ -92,3 +92,11 @@ test('the exported PDF carries the header, ends the translation with the clause 
  assert.match(translation,/Unterschrift: unleserlich.*Die genaue Übereinstimmung der vorstehenden Übersetzung mit dem angehefteten Original bestätige ich unter Berufung auf meinen Eid\..*Wien, 20\.11\.2026/);
  assert.deepEqual(pages.slice(-2).map(page=>page.trim()),['','']);
 });
+
+test('pairs without a verified foreign clause are reported as German-only (guide B 7)',async()=>{
+ const {clauseGermanOnly}=await import('../lib/certification.mjs');
+ assert.equal(clauseGermanOnly({language:'Ukrainisch',targetLanguage:'Deutsch'}),true);
+ assert.equal(clauseGermanOnly({language:'Englisch',targetLanguage:'Deutsch'}),false);
+ assert.equal(clauseGermanOnly({language:'Deutsch',targetLanguage:'Arabisch'}),false);
+ assert.equal(clauseGermanOnly({language:'Deutsch',targetLanguage:'Französisch'}),true);
+});

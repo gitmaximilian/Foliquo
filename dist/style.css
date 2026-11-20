@@ -2151,3 +2151,4 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .certification-settings-dialog form{display:grid;gap:14px}
 .certification-settings-dialog fieldset{border:0;padding:0;margin:0}
 .certification-settings-dialog legend{font-weight:600;margin-bottom:6px}
+.certification-route input[type=radio]{appearance:auto;display:inline-block;width:18px;height:18px;min-height:0;padding:0;margin:2px 0 0;border:0;background:none;flex:none;accent-color:var(--color-primary)}

@@ -14,6 +14,17 @@ Each completed job is grouped in the library by detected document type. The opti
 
 Stamps and seals are laid out as bordered blocks with their line breaks preserved. Translate their readable words without square brackets; use brackets for non-text emblems, logos, and signatures. Notes for non-text elements follow the target language. For example, an illegible signature mark is written as `[Unterschrift: unleserlich]` in German, `[Signature: illegible]` in English and `[توقيع: غير مقروء]` in Arabic. Model-authored clarification questions use the current interface language.
 
+## Certified translations (Austria)
+
+Foliquo follows the ÖVGD guideline for court-certified translations (12/2024); see [the mapping](docs/CERTIFICATION-GUIDE-MAPPING.md). A one-time certification profile stores the place, the translator's listed languages, a bilingual clause option and the usual source form and route. The review page then shows the header and the clause as they will be exported:
+
+- Header "Beglaubigte [auszugsweise] Übersetzung aus der … Sprache in die … Sprache" with a line in the other language of the pair.
+- Clause in the § 190 AußStrG wording for an attached or presented original, an attached copy or an attached certified copy, at the actual end of the text after a rule, with place and production date, a labelled English or Arabic version where it applies, and 5 cm reserved for seal and signature.
+- Warnings for a missing place, unlisted languages, relay pairs, blank runs, signatures missing from the text and plain copies.
+- A checklist after download for the paper route (connection, seal, corrections), the electronic route (sign the exported PDF with ID Austria outside Foliquo) and use abroad.
+
+Foliquo never sets a seal, a handwritten or an electronic signature and does not certify. The checklist is information, not legal advice.
+
 ## Providers and data
 
 ChatGPT sign-in uses the account authorization flow. OpenAI, Claude, and DeepSeek API keys are stored in the encrypted local workspace. Provider API use may be billed separately. Source documents are sent to the selected model provider only when a translation or model-assisted action is requested. The local server binds to loopback and is not a hosted multi-user service.
