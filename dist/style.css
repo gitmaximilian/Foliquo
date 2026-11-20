@@ -2152,3 +2152,19 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .certification-settings-dialog fieldset{border:0;padding:0;margin:0}
 .certification-settings-dialog legend{font-weight:600;margin-bottom:6px}
 .certification-route input[type=radio]{appearance:auto;display:inline-block;width:18px;height:18px;min-height:0;padding:0;margin:2px 0 0;border:0;background:none;flex:none;accent-color:var(--color-primary)}
+/* Inline change proposal: before/after per passage and one decision, next to the change request. */
+.review-proposal-inline{display:grid;gap:12px;margin:4px 0 16px;padding:16px;border:1px solid var(--color-border);border-radius:var(--radius-panel);background:var(--color-surface-muted)}
+.review-proposal-inline:focus{outline:2px solid var(--color-focus);outline-offset:2px}
+.review-proposal-inline h3{margin:0;font-size:16px}
+.review-proposal-inline>p{margin:0}
+.review-proposal-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.review-proposal-change{display:grid;gap:8px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-control);background:var(--color-surface)}
+.review-proposal-compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.review-proposal-compare>div{min-width:0;padding:8px 10px;border-radius:var(--radius-small)}
+.review-proposal-compare p{margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.review-proposal-before{background:var(--color-danger-bg)}
+.review-proposal-after{background:var(--color-success-bg)}
+.review-proposal-protected{padding:8px 12px;border-radius:var(--radius-control);background:var(--color-warning-bg);border:1px solid var(--color-warning-border)}
+.review-proposal-hint{color:var(--color-danger)}
+.review-proposal-actions{display:flex;flex-wrap:wrap;gap:10px}
+@media(max-width:599px){.review-proposal-compare{grid-template-columns:1fr}}

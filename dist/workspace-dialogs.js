@@ -54,7 +54,7 @@
  const dialogs=window.TOCRDialogs;
  const tools=document.querySelector('#review-tools-dialog');
  window.closeReviewTools=()=>dialogs.close(tools);
- for(const id of ['review-tools-open','review-proposal-open'])document.querySelector('#'+id).addEventListener('click',event=>{dialogs.open(tools,event.currentTarget);});
+ for(const id of ['review-tools-open'])document.querySelector('#'+id).addEventListener('click',event=>{dialogs.open(tools,event.currentTarget);});
  document.querySelector('#review-tools-close').addEventListener('click',window.closeReviewTools);
  dialogs.bind(tools);
  const directEdit=document.querySelector('#direct-edit-dialog');
