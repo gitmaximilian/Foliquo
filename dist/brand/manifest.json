@@ -25,14 +25,14 @@
         },
         "symbol": {
           "viewBox": "0 0 400 400",
-          "outerCenterline": "M 75 306 V 168 C 75 117 116 76 167 76 H 323",
-          "standardStroke": 90,
+          "silhouette": "M 107.5 40 H 292.5 A 50.5 50.5 0 0 1 292.5 141 H 170 A 12 12 0 0 0 158 153 V 309.5 A 50.5 50.5 0 0 1 57 309.5 V 90.5 A 50.5 50.5 0 0 1 107.5 40 Z",
+          "silhouetteNote": "Kapsel-F: stem and roof as one filled shape",
           "pill": {
-            "x": 143,
-            "y": 149,
-            "width": 185,
-            "height": 87,
-            "radius": 43.5
+            "x": 192,
+            "y": 183,
+            "width": 151,
+            "height": 92,
+            "radius": 46
           },
           "communityStyle": "transparent fill, 9-unit stroke around the same standard silhouette and pill"
         },
@@ -100,14 +100,14 @@
         },
         "symbol": {
           "viewBox": "0 0 400 400",
-          "outerCenterline": "M 75 306 V 168 C 75 117 116 76 167 76 H 323",
-          "standardStroke": 90,
+          "silhouette": "M 107.5 40 H 292.5 A 50.5 50.5 0 0 1 292.5 141 H 170 A 12 12 0 0 0 158 153 V 309.5 A 50.5 50.5 0 0 1 57 309.5 V 90.5 A 50.5 50.5 0 0 1 107.5 40 Z",
+          "silhouetteNote": "Kapsel-F: stem and roof as one filled shape",
           "pill": {
-            "x": 143,
-            "y": 149,
-            "width": 185,
-            "height": 87,
-            "radius": 43.5
+            "x": 192,
+            "y": 183,
+            "width": 151,
+            "height": 92,
+            "radius": 46
           },
           "communityStyle": "transparent fill, 9-unit stroke around the same standard silhouette and pill"
         },
