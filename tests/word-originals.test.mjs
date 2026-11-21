@@ -44,3 +44,13 @@ test('LibreOffice opens the Word file with the source pages as separate pages',{
  const pdf=await PDFDocument.load(await officeToPDF(createTranslationWord('FIKTIVE URKUNDE\nName | Alex Example',{language:'Arabisch',targetLanguage:'Deutsch',originalPages:pages}),'docx'));
  assert.equal(pdf.getPageCount(),3);
 });
+
+test('revisions reuse the rendered source pages instead of rendering the original again',async()=>{
+ const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica);
+ for(let number=1;number<=3;number++)pdf.addPage([400,600]).drawText(`FICTIONAL CACHE PAGE ${number}`,{x:36,y:540,font,size:12});
+ const documents=[{name:'fictional-cache.pdf',type:'application/pdf',bytes:Buffer.from(await pdf.save())}];
+ const first=await sourcePageImages(documents),again=await sourcePageImages([{...documents[0],bytes:Buffer.from(documents[0].bytes)}]);
+ assert.equal(first.length,3);assert.strictEqual(again,first,'same content returns the cached pages');
+ const other=await sourcePageImages([{...documents[0],bytes:Buffer.from(await (await PDFDocument.load(documents[0].bytes)).save({useObjectStreams:false}))}]);
+ assert.notStrictEqual(other,first,'different bytes are rendered separately');assert.equal(other.length,3);
+});

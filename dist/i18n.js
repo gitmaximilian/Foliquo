@@ -290,4 +290,6 @@ Object.assign(dictionaries.en,{"Ein Änderungsvorschlag wartet auf der Prüfseit
 Object.assign(dictionaries.ar,{"Ein Änderungsvorschlag wartet auf der Prüfseite unter „Änderungen“.": "يوجد اقتراح تعديل بانتظارك في صفحة المراجعة ضمن «التعديلات».", "Neue Änderungswünsche erscheinen auf der Prüfseite vor der Übernahme.": "تظهر طلبات التعديل الجديدة في صفحة المراجعة قبل تطبيقها."});
 Object.assign(dictionaries.en,{"PDF und Word mit den Originalseiten nach der Übersetzung": "PDF and Word with the original pages after the translation"});
 Object.assign(dictionaries.ar,{"PDF und Word mit den Originalseiten nach der Übersetzung": "PDF وWord مع صفحات الأصل بعد الترجمة"});
+Object.assign(dictionaries.en,{"Text kopieren": "Copy text"});
+Object.assign(dictionaries.ar,{"Text kopieren": "نسخ النص"});
 })();
