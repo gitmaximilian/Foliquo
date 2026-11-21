@@ -303,9 +303,10 @@ export function createApp({ connection, port = 4318, fetcher = fetch, workspace=
     const expectedTranslationPages=result.preflight?.translationPages;
     const complete=Number.isInteger(expectedTranslationPages)?pdf.getPageCount()>=expectedTranslationPages+originalPages:pdf.getPageCount()>originalPages;
     // Word files from before 0.17.1 carry no source pages; rebuild them once so both downloads include the original.
-    let wordHasOriginals=false;try{wordHasOriginals=Object.keys(unzipSync(new Uint8Array(Buffer.from(result.word||'','base64')),{filter:file=>file.name.startsWith('word/media/original-')})).length>0;}catch{}
-    if(complete&&wordHasOriginals)return result;
-    const repaired=await rebuild(result.text,{...result,context:{...result.context,certificationConfirmed:result.context?.certificationConfirmed===true}},true);
+    // Only a readable Word file without source pages is rebuilt; anything else is left as stored.
+    let wordNeedsOriginals=false;try{const names=Object.keys(unzipSync(new Uint8Array(Buffer.from(result.word||'','base64')),{filter:file=>file.name==='word/document.xml'||file.name.startsWith('word/media/original-')}));wordNeedsOriginals=names.includes('word/document.xml')&&!names.some(name=>name.startsWith('word/media/original-'));}catch{}
+    if(complete&&!wordNeedsOriginals)return result;
+    let repaired;try{repaired=await rebuild(result.text,{...result,context:{...result.context,certificationConfirmed:result.context?.certificationConfirmed===true}},true);}catch(error){if(complete)return result;throw error;}
     job.result=repaired;job.resultBytes=Buffer.byteLength(JSON.stringify(repaired));
     await persist();return repaired;
   }

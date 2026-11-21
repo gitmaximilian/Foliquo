@@ -91,7 +91,9 @@ function renderFeaturedJob(){
  const card=$('#featured-job'),studio=$('#studio-view');if(!card)return;
  const job=queueState.jobs.find(item=>item.id===featuredJobId&&item.status!=='expired');
  if(!job){card.hidden=true;studio.classList.remove('is-featured');return;}
- card.hidden=false;studio.classList.add('is-featured');
+ card.hidden=false;studio.classList.add('is-featured');card.dataset.status=job.status;
+ // The mark follows the state: check when ready, question when an answer is needed, clock while waiting or running.
+ const marks={succeeded:'M5 12.5 9.5 17 19 7',awaiting_answers:'M9.5 9a2.5 2.5 0 1 1 3.6 2.24c-.7.35-1.1.9-1.1 1.66V14M12 17.5v.01',failed:'M12 7.5v6M12 16.5v.01M10.3 4.3 3.2 17a2 2 0 0 0 1.7 3h14.2a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z',cancelled:'M7 7l10 10M17 7 7 17'},mark=card.querySelector('.featured-job-mark path');if(mark)mark.setAttribute('d',marks[job.status]||'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z');
  const state=queueStatus(job,queueState.paused),locale=window.TOCRI18n?.getLocale?.()||'de',status=$('#featured-job-status'),title=$('#featured-job-title'),names=$('#featured-job-files'),detail=$('#featured-job-detail'),actions=$('#featured-job-actions');
  const signature=JSON.stringify([locale,job.id,job.status,job.stage,job.targetLanguage,job.provider,job.error,job.progress,job.segmentProgress,queueState.paused,job.names]);if(card.dataset.renderSignature===signature)return;card.dataset.renderSignature=signature;
  const focusedAction=actions.contains(document.activeElement)?document.activeElement.dataset.queueAction:null;
