@@ -19,6 +19,7 @@ A cleanup of the whole interface: one consistent type scale and control size, an
 ## Fixes
 
 - Private dossiers: the "Person im Dossier" and "Art der Angabe" labels stay in the chosen interface language instead of sometimes appearing in English. "Art der Angabe" preselects "Eigene Angabe" instead of showing an empty field.
+- Revisions are faster: the source pages placed in the Word file are rendered once per document and reused for later versions, instead of being rendered again on every change.
 - Tests on Windows use free ports assigned by the operating system.
 
 ## Also in this release (prepared as 0.17.1)
