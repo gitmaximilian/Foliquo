@@ -31,3 +31,5 @@
 .foli-empty-mark{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--color-selected);color:var(--color-accent);font-size:22px}
 .foli-empty-title{margin:0;font-size:18px;font-weight:650;color:var(--color-text)}
 .foli-empty .muted{margin:0}
+/* Narrow windows: examples in one swipeable row so the conversation keeps its room; a compact empty state. */
+@media(max-width:600px){.foli-examples{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-block:2px}.foli-examples::-webkit-scrollbar{display:none}.foli-examples button{flex:0 0 auto;white-space:nowrap;border:1px solid var(--color-border);border-radius:999px;padding-inline:12px}.foli-empty{margin:16px auto}.foli-empty-mark{width:36px;height:36px;font-size:18px}}

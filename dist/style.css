@@ -1386,7 +1386,7 @@ select{-webkit-appearance:none;appearance:none;background-color:var(--color-on-p
 .document-table td{display:grid;grid-template-columns:minmax(76px,auto) minmax(0,1fr);align-items:start;gap:8px 12px;width:auto!important;min-width:0;padding:8px 0;border:0;vertical-align:top}
 .document-table td:first-child{width:auto;min-width:0}
 .document-cell-label{display:block;color:var(--muted);font-size:11px;line-height:1.4}
-.document-open{min-height:24px;padding:0;text-align:start;font-size:13px}
+.document-open{min-height:32px;padding:0;text-align:start;font-size:13px}
 .document-actions-list{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:6px}
 .document-actions-list>button{display:inline-flex;width:auto;min-width:52px;min-height:34px;padding-inline:10px}
 .document-actions-list>.action-menu{margin-inline-start:0}
@@ -2152,3 +2152,60 @@ html[dir=rtl] .featured-job-progress.is-indeterminate>span{animation-name:progre
 .certification-settings-dialog fieldset{border:0;padding:0;margin:0}
 .certification-settings-dialog legend{font-weight:600;margin-bottom:6px}
 .certification-route input[type=radio]{appearance:auto;display:inline-block;width:18px;height:18px;min-height:0;padding:0;margin:2px 0 0;border:0;background:none;flex:none;accent-color:var(--color-primary)}
+/* Inline change proposal: before/after per passage and one decision, next to the change request. */
+.review-proposal-inline{display:grid;gap:12px;margin:4px 0 16px;padding:16px;border:1px solid var(--color-border);border-radius:var(--radius-panel);background:var(--color-surface-muted)}
+.review-proposal-inline:focus{outline:2px solid var(--color-focus);outline-offset:2px}
+.review-proposal-inline h3{margin:0;font-size:16px}
+.review-proposal-inline>p{margin:0}
+.review-proposal-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.review-proposal-change{display:grid;gap:8px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-control);background:var(--color-surface)}
+.review-proposal-compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.review-proposal-compare>div{min-width:0;padding:8px 10px;border-radius:var(--radius-small)}
+.review-proposal-compare p{margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.review-proposal-before{background:var(--color-danger-bg)}
+.review-proposal-after{background:var(--color-success-bg)}
+.review-proposal-protected{padding:8px 12px;border-radius:var(--radius-control);background:var(--color-warning-bg);border:1px solid var(--color-warning-border)}
+.review-proposal-hint{color:var(--color-danger)}
+.review-proposal-actions{display:flex;flex-wrap:wrap;gap:10px}
+@media(max-width:599px){.review-proposal-compare{grid-template-columns:1fr}}
+
+/* ---- Layout consistency (0.17.1): one column, one grid, the same rhythm at every width. ---- */
+/* Progress steps stay one row; on narrow screens the row scrolls instead of wrapping into ragged lines. */
+.document-steps{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding-block:2px;margin-inline:-2px;padding-inline:2px}
+.document-steps::-webkit-scrollbar{display:none}
+.document-steps li{flex:0 0 auto;white-space:nowrap}
+/* The studio job card aligns with the page title and the desk instead of floating in the middle. */
+#studio-view .featured-job{width:100%;max-width:none;margin:8px 0 28px}
+.featured-job[data-status=awaiting_answers] .featured-job-mark{background:var(--color-warning-bg);color:var(--color-warning)}
+.featured-job[data-status=failed] .featured-job-mark{background:var(--color-danger-bg);color:var(--color-danger)}
+.featured-job[data-status=succeeded] .featured-job-mark{background:var(--color-success-bg);color:var(--color-success)}
+/* Review: notice spans the card, the download group sits on its own row at the start edge. */
+#review-view .review-final{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;padding:var(--space-6)}
+#review-view .review-final>div:first-child{min-width:0}
+#review-view .review-final .review-draft-status{margin-inline:0;width:100%;box-sizing:border-box}
+#review-view .review-final .export-actions{grid-column:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:10px 14px;width:100%;padding-top:14px;border-top:1px solid var(--color-border)}
+#review-view .review-final .export-actions>button.primary{min-height:44px}
+#review-view .certification-panel,#review-view .certification-checklist,#review-view .review-chat{padding:var(--space-6)}
+/* Certification options on one aligned grid: every group has its label above, controls share a baseline. */
+.certification-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px 24px;align-items:end}
+.certification-options>label:not(.check-label){margin:0}
+.certification-options>.check-label{min-height:var(--control-height);align-items:center;margin:0}
+.certification-route{display:grid;gap:6px;align-content:end}
+.certification-route>label{min-height:28px}
+/* Library: actions keep one column edge in every row. */
+.document-actions-list{justify-content:flex-end}
+html[dir=rtl] .document-actions-list{justify-content:flex-start}
+/* Questions dialog: answer shortcuts start at the text edge and keep equal height; viewer tools wrap as one tidy group. */
+#clarification-fields .clarification-actions{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:stretch;gap:8px;direction:inherit}
+#clarification-fields .clarification-actions .question-action{flex:0 0 auto;width:auto;min-height:40px;white-space:nowrap;padding-inline:14px}
+@media(max-width:599px){#clarification-fields .clarification-actions .question-action{flex:1 1 calc(50% - 4px);white-space:normal}}
+.source-toolbar,.source-viewer-controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+/* Phone: header actions of the review page share the row evenly. */
+@media(max-width:599px){
+ .review-heading-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+ .review-heading-actions>button{width:100%;justify-content:center}
+ #review-view .review-final .export-actions>*{width:100%}
+ #review-view .review-final .export-actions>button{justify-content:center}
+}
+/* Touch targets on narrow windows: the whole label is the target, at least 32px high. */
+@media (max-width:599px){.check-label,label:has(>input[type=radio]),label:has(>input[type=checkbox]){min-height:32px}}
