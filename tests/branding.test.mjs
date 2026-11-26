@@ -34,3 +34,16 @@ test('both approved brand editions are shipped and the workspace selects Communi
   assert.match(cover, /foliquo/);
   assert.doesNotMatch(cover, /Foliquo/);
 });
+
+test('the Glasblätter mark is generated for both editions and the logo component keeps gradient ids unique', async () => {
+  const [community, standard, logo, script] = await Promise.all([
+    read('dist/brand/community/svg/icon-color.svg'), read('dist/brand/standard/svg/icon-color.svg'),
+    read('dist/brand/foliquo-logo.js'), read('scripts/build-brand.mjs'),
+  ]);
+  assert.match(community, /Zwei überlappende Blätter/);
+  assert.match(community, /url\(#fq-back\)/);
+  assert.doesNotMatch(standard, /linearGradient/);
+  assert.doesNotMatch(logo, /M 75 306/);
+  assert.match(logo, /replaceAll\('url\(#fq-'/);
+  assert.match(script, /Glasblätter/);
+});

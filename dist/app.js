@@ -9,7 +9,7 @@ function view(name,{historyMode='push'}={}){
  document.querySelectorAll('[data-page-heading]').forEach(el=>el.hidden=el.dataset.pageHeading!==name);
  for(const n of workspaceViews){$(`#${n}-view`).hidden=n!==name;const nav=document.querySelector(`header nav [data-view="${n}"]`);if(nav){nav.classList.toggle('active',n===name);if(n===name)nav.setAttribute('aria-current','page');else nav.removeAttribute('aria-current');}}
  document.querySelector('.workspace-layout').dataset.view=name;
- $('#breadcrumb').textContent={studio:'Übersetzen',documents:'Bibliothek',guide:'Hinweise',review:'Bearbeiten',workspace:'Anlernen',foli:'Foli'}[name];
+ $('#breadcrumb').textContent={studio:'Übersetzen',documents:'Bibliothek',guide:'Hinweise',review:'Bearbeiten',workspace:'Mein Stil',foli:'Foli'}[name];
  const reviewExtras=$('#review-extras');if(reviewExtras)reviewExtras.hidden=name!=='review';
  if(name==='documents')renderDocuments();if(name==='workspace'&&typeof loadLibrary==='function')void loadLibrary();
  if(historyMode!=='none'){const url=new URL(location.href);url.searchParams.set('view',name);if(name==='review')url.searchParams.set('job',reviewJobId);else url.searchParams.delete('job');if(historyMode==='replace'||url.href!==location.href)history[historyMode==='replace'?'replaceState':'pushState']({view:name},'',url);}
