@@ -79,7 +79,7 @@ for(const scenario of ['simple','questions','resume and correct']){
    }
    await capture('review');
    metrics.reviewActions=await visible('#review-final .export-actions button');
-   if(!baseline){expect(metrics.resultActions).toBe(1);expect(metrics.reviewActions).toBe(2);}
+   if(!baseline){expect(metrics.resultActions).toBe(1);expect(metrics.reviewActions).toBe(1);}
    const download=page.waitForEvent('download');await click('#review-final-both');
    const summary=page.locator('#review-final-summary');await expect(summary).toBeVisible();
    clicks++;await summary.getByRole('checkbox').check();

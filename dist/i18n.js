@@ -317,4 +317,10 @@ Object.assign(dictionaries.ar,{"Inhalt durchsuchen": "البحث في النص �
 Object.assign(dictionaries.de,{"Prüfen & Werkzeuge": "Werkzeuge", "← Zur Übersicht": "← Zurück", "Prüfen und exportieren": "Herunterladen", "Prüfen und herunterladen (PDF + Word)": "Bestätigen und herunterladen", "Diese Version prüfen": "Prüfung"});
 Object.assign(dictionaries.en,{"Prüfen & Werkzeuge": "Tools", "← Zur Übersicht": "← Back", "Prüfen und exportieren": "Download", "Prüfen und herunterladen (PDF + Word)": "Confirm and download"});
 Object.assign(dictionaries.ar,{"Prüfen & Werkzeuge": "الأدوات", "← Zur Übersicht": "رجوع →", "Prüfen und exportieren": "التنزيل", "Prüfen und herunterladen (PDF + Word)": "التأكيد والتنزيل"});
+Object.assign(dictionaries.de,{"Die Sprache wählst du unten in der Seitenleiste, das Design oben in diesen Einstellungen.": "Die Sprache wählst du unten in der Seitenleiste."});
+Object.assign(dictionaries.en,{"Die Sprache wählst du unten in der Seitenleiste, das Design oben in diesen Einstellungen.": "Choose the language at the bottom of the sidebar."});
+Object.assign(dictionaries.ar,{"Die Sprache wählst du unten in der Seitenleiste, das Design oben in diesen Einstellungen.": "اختر اللغة أسفل الشريط الجانبي."});
+Object.assign(dictionaries.de,{"Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.": "Oder schreib deine Antwort.", "Antworten senden & fortsetzen →": "Antworten senden und weiter"});
+Object.assign(dictionaries.en,{"Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.": "Or write your answer.", "Antworten senden & fortsetzen →": "Send answers and continue"});
+Object.assign(dictionaries.ar,{"Oder eigene Antwort eingeben. Eine unleserliche Stelle kannst du abschließend als unleserlich markieren.": "أو اكتب إجابتك.", "Antworten senden & fortsetzen →": "إرسال الإجابات والمتابعة"});
 })();

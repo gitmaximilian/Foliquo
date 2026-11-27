@@ -320,3 +320,70 @@ html #review-final>div:first-child{border:0;padding-bottom:0}
  .review-heading .review-heading-actions>button{flex:1 1 auto;width:auto;min-height:40px;padding:0 12px;font-size:14px}
 }
 html #review-guide .review-guide-check-list{max-height:none;overflow:visible}
+
+/* Einstellungen: three sections behind a segmented control. */
+.settings-tabs{display:flex;gap:4px;margin:4px 0 16px;padding:4px;border-radius:calc(var(--radius-control) + 4px);background:var(--color-surface-hover)}
+.settings-tabs [role=tab]{flex:1 1 0;min-height:38px;padding:0 12px;border:0;border-radius:var(--radius-control);background:transparent;color:var(--color-text-secondary);font-size:14px;font-weight:600}
+.settings-tabs [role=tab][aria-selected=true]{background:var(--color-surface-elevated,var(--color-surface));color:var(--color-text);box-shadow:var(--shadow-card)}
+.settings-tabs [role=tab]:focus-visible{outline:3px solid var(--color-focus);outline-offset:1px}
+#ai-settings-home[data-tab]>[data-settings-tab]{display:none}
+#ai-settings-home[data-tab=general]>[data-settings-tab=general],#ai-settings-home[data-tab=ai]>[data-settings-tab=ai],#ai-settings-home[data-tab=data]>[data-settings-tab=data]{display:revert}
+#ai-settings-home[data-tab=general]>.settings-design,#ai-settings-home[data-tab=general]>.settings-mode{display:grid}
+#ai-settings-home[data-tab=general]>.settings-certification{display:flex}
+#ai-settings-home>.settings-design{margin-top:0}
+.settings-certification{align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border:1px solid var(--color-border);border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card)}
+.settings-certification h2{margin:0 0 4px;font-size:16px}
+.settings-certification p{margin:0;font-size:14px}
+.settings-certification>button{width:auto;flex:none}
+.settings-more .settings-more-list #certification-settings-open{display:none}
+.settings-version{margin:12px 0 0;font-size:13px}
+html[data-ui-mode=simple] #provider-usage :is(.provider-usage-filters,.provider-usage-records,#provider-usage-date-range){display:none}
+html[data-ui-mode=simple] #provider-usage #provider-usage-note{display:none}
+#ai-settings-dialog .settings-tabs{margin:14px 22px 4px}
+#ai-settings-home .settings-design>p.muted{margin:0;font-size:13px}
+#ai-settings-home .settings-more{margin:0;padding:0;border:0}
+#ai-settings-home .settings-more>h2{display:none}
+#ai-settings-home .settings-more .settings-more-list{display:grid;gap:8px}
+#ai-settings-home .settings-more .settings-more-list>button{width:100%;justify-content:space-between;min-height:52px;padding:0 16px;text-align:start;font-weight:600}
+#ai-settings-home .settings-more .settings-more-list>button::after{content:"›";font-size:20px;line-height:1;color:var(--color-text-muted)}
+
+/* Consistency: three button levels. Main action filled, secondary quiet with a hairline, links in the accent colour. */
+.primary{border-radius:var(--radius-control);font-weight:650;letter-spacing:-.005em}
+.secondary{border-color:var(--color-border);background:var(--color-surface);color:var(--color-text);font-weight:600;border-radius:var(--radius-control);box-shadow:0 1px 1px rgb(16 24 40 / .03)}
+.secondary:hover:not(:disabled){border-color:var(--color-border-control);background:var(--color-surface-hover)}
+.text-button{border-radius:var(--radius-control)}
+/* Frames only for objects people act on. Groups inside a dialog are separated by space and a hairline. */
+#ai-settings-home>:is(.settings-design,.settings-mode,.settings-certification){margin:0;padding:18px 2px;border:0;border-top:1px solid var(--color-border);border-radius:0;background:transparent;box-shadow:none}
+#ai-settings-home>.settings-design{border-top:0;padding-top:8px}
+#document-cards.card{padding:0;border:0;background:transparent;box-shadow:none}
+#document-cards .library-toolbar{margin-bottom:12px}
+#library-content-toggle{border-radius:999px}
+#library-content-toggle[aria-pressed=true]{border-color:var(--color-primary);background:var(--color-selected);color:var(--color-primary)}
+
+/* Rückfragen: the question is the heading, the context a quiet line, actions are calm chips. */
+#clarification-card .card-marker{display:none}
+#clarification-card #clarification-title{font-size:20px;letter-spacing:-.01em}
+html[data-ui-mode=simple] #clarification-review-stage{display:none}
+#clarification-review-stage{font-size:13px}
+#clarification-steps{display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:4px 0 8px;list-style:none;counter-reset:step}
+#clarification-steps li{counter-increment:step;display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px 0 4px;border:0;border-radius:999px;background:transparent;color:var(--color-text-muted);font-size:13px;font-weight:600}
+#clarification-steps li::before{content:counter(step);display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--color-surface-hover);color:var(--color-text-muted);font-size:11px;font-weight:700}
+#clarification-steps li.is-done::before{content:"✓";background:var(--color-success-bg);color:var(--color-success)}
+#clarification-steps li.is-current{background:var(--color-selected);color:var(--color-primary)}
+#clarification-steps li.is-current::before{background:var(--color-primary);color:var(--color-on-primary)}
+#clarification-fields{display:grid;gap:12px}
+#clarification-fields .clarification-field{display:grid;gap:8px;margin:0;padding:16px 18px;border:1px solid var(--color-border);border-radius:var(--radius-card);background:var(--color-surface);box-shadow:none}
+#clarification-fields .clarification-field.is-current{border-color:var(--color-accent-border);box-shadow:0 0 0 3px var(--color-selected)}
+#clarification-fields .clarification-field>label{font-size:16px;font-weight:650;line-height:1.4;color:var(--color-text)}
+#clarification-fields .question-context{margin:-4px 0 0}
+#clarification-fields .question-context>summary{display:none}
+#clarification-fields .question-context>p{margin:0;font-size:13px;color:var(--color-text-muted)}
+#clarification-fields .clarification-actions{display:flex;flex-wrap:wrap;gap:8px}
+#clarification-fields .question-action{min-height:36px;padding:0 14px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);color:var(--color-text-secondary);font-size:13px;font-weight:600}
+#clarification-fields .question-action::before{display:none}
+#clarification-fields .question-action:hover{border-color:var(--color-primary);color:var(--color-primary)}
+#clarification-fields .question-action-hint{font-size:12px;color:var(--color-text-muted)}
+#clarification-fields .question-answer-submit{justify-self:start;width:auto}
+#clarification-submit{width:auto;min-width:240px}
+#clarification-dialog #clarification-fields .clarification-field>label{font-size:16px;font-weight:650;line-height:1.4;color:var(--color-text)}
+#foli-view .foli-examples .text-button{max-width:100%;white-space:normal;text-align:start;height:auto;padding-block:8px;line-height:1.35}
