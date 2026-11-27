@@ -68,10 +68,10 @@ for(const scenario of ['simple','questions','resume and correct']){
     await expect(page.locator('#direct-edit-dialog')).not.toBeVisible();
    }
    if(!baseline){
-    await expect(page.locator('#review-final-title')).toHaveText('Review and export');
+    await expect(page.locator('#review-final-title')).toHaveText('Download');
     await expect(page.locator('#review-final-status')).toContainText('Review this version against the original');
     await expect(page.locator('#review-learning-finish')).toBeHidden();
-    for(const [locale,title] of [['de','Prüfen und exportieren'],['ar','المراجعة والتصدير'],['en','Review and export']]){
+    for(const [locale,title] of [['de','Herunterladen'],['ar','التنزيل'],['en','Download']]){
      await page.evaluate(locale=>window.TOCRI18n.setLocale(locale),locale);
      await expect(page.locator('#review-final-title')).toHaveText(title);
      await expect(page.locator('html')).toHaveAttribute('dir',locale==='ar'?'rtl':'ltr');
@@ -79,7 +79,7 @@ for(const scenario of ['simple','questions','resume and correct']){
    }
    await capture('review');
    metrics.reviewActions=await visible('#review-final .export-actions button');
-   if(!baseline){expect(metrics.resultActions).toBe(1);expect(metrics.reviewActions).toBe(2);}
+   if(!baseline){expect(metrics.resultActions).toBe(1);expect(metrics.reviewActions).toBe(1);}
    const download=page.waitForEvent('download');await click('#review-final-both');
    const summary=page.locator('#review-final-summary');await expect(summary).toBeVisible();
    clicks++;await summary.getByRole('checkbox').check();

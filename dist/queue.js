@@ -320,4 +320,4 @@ $('#clarification-form').onsubmit=async event=>{
  if(answers.some(a=>!a.answer)){$('#clarification-error').textContent='Bitte jede Rückfrage beantworten.';return;}clarificationSubmitting=true;$('#clarification-submit').disabled=true;$('#clarification-error').textContent='';
  try{await saveClarificationDraft();await localRequest(`/api/jobs/${id}/answer`,{answers,files:[]});await Promise.all(answers.map(answer=>animateResolvedQuestion(answer.id)));clarificationDrafts.delete(id);closeClarifications();window.dismissedClarifications.delete(id);toast(queueText('Antworten übernommen. Der Auftrag wird fortgesetzt.'));await pollQueue();}catch(error){$('#clarification-error').textContent=error.message;}finally{clarificationSubmitting=false;$('#clarification-submit').disabled=false;}
 };
-$('#desk-all')?.addEventListener('click',()=>setJobsPanel(true));
+$('#desk-all')?.addEventListener('click',()=>{if(document.documentElement.dataset.uiMode==='simple')view('documents');else setJobsPanel(true);});

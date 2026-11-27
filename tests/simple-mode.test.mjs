@@ -32,9 +32,9 @@ test('Automatic answers for unclear places request an illegible note',()=>{
 test('Simple and professional navigation is declared in the page and the mode script is served',async()=>{
  const html=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');
  for(const section of ['style','rules','terms','dossiers'])assert.match(html,new RegExp(`data-section="${section}"`));
- assert.match(html,/id="ui-mode-pro"/);assert.match(html,/ui-mode\.js/);assert.match(html,/my-style\.js/);assert.match(html,/remember-spelling\.js/);assert.match(html,/modern\.css/);
+ assert.match(html,/id="ui-mode-pro"/);assert.match(html,/ui-mode\.js/);assert.match(html,/my-style\.js/);assert.match(html,/remember-spelling\.js/);assert.match(html,/modern\.css/);assert.match(html,/layout-refresh\.js/);
  const server=await readFile(new URL('../server.mjs',import.meta.url),'utf8');
- for(const asset of ['ui-mode.js','my-style.js','remember-spelling.js','modern.css'])assert.match(server,new RegExp(`'/${asset.replace('.','\\.')}':'${asset.replace('.','\\.')}'`));
+ for(const asset of ['ui-mode.js','my-style.js','remember-spelling.js','layout-refresh.js','modern.css'])assert.match(server,new RegExp(`'/${asset.replace('.','\\.')}':'${asset.replace('.','\\.')}'`));
  const css=await readFile(new URL('../dist/modern.css',import.meta.url),'utf8');
  assert.match(css,/html\[data-ui-mode=simple\] \[data-pro-only\]\{display:none!important\}/);
 });
