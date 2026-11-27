@@ -15,7 +15,7 @@ async function openIsolatedWorkspace(page){
  await new Promise((resolve,reject)=>{app.once('error',reject);app.listen(port,'127.0.0.1',resolve);});
  await page.goto(`http://127.0.0.1:${app.address().port}`,{waitUntil:'networkidle'});
  await page.locator('#intro-skip').click();
- await page.locator('header nav [data-view="workspace"]').click();
+ await page.locator('header nav [data-section="style"]').click();
  await expect(page.locator('#storage-recovery-info')).toContainText(/same disk/i,{timeout:15000});
  await page.evaluate(()=>document.querySelector('#guide-storage-dialog').showModal());
  await page.locator('#backup-passphrase').fill('fictional backup password');

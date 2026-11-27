@@ -165,3 +165,8 @@ html[data-ui-mode=simple] .format-disclosure small:nth-of-type(3){display:none}
 .design-picker-compact .design-option-copy small{display:none}
 @media (max-width:520px){.design-picker-compact{grid-template-columns:repeat(4,minmax(0,1fr))}.design-picker-compact .design-option{padding:6px}.design-picker-compact .design-option-copy strong{font-size:12px}}
 .design-option-copy strong{min-width:0;hyphens:auto;overflow-wrap:anywhere}
+/* Top bar on narrow windows: "Ask Foli" keeps its name for screen readers but shows only its icon. */
+@media (max-width:1023px){
+ .foli-nav>span:not(.nav-icon){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+ .foli-nav{min-width:44px;justify-content:center}
+}

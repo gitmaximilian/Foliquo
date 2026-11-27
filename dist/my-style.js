@@ -61,7 +61,7 @@
   const groups=new Map();for(const proposal of state.proposals){const id=sampleId(proposal);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(proposal);}
   for(const [id,items] of groups){
    const entry=entryFor(id),excluded=state.excluded.get(id)||new Set();state.excluded.set(id,excluded);
-   const card=node('article','','my-style-learned-card');card.dataset.sampleId=id;
+   const card=node('article','','my-style-learned-card');card.dataset.learnedSampleId=id;
    const head=node('div','','my-style-learned-head');head.append(node('h3',fill('Gelernt aus „{name}“',{name:entry?.name||t('deinem Beispiel')})));
    const scope=items[0]?.definition?.scope||{};const where=scopeLine({documentType:scope.documentType||entry?.documentType,sourceLanguage:scope.sourceLanguage||entry?.analysis?.sourceLanguage,targetLanguage:scope.targetLanguage||entry?.targetLanguage});
    if(where)head.append(node('p',fill('Gilt für {scope}',{scope:where}),'muted'));
