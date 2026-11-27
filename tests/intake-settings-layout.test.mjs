@@ -7,7 +7,7 @@ const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 test('Translate keeps the language bar, upload, contextual panel and action in specification order',async()=>{
  const [html,css,app,connection,queue,i18n]=await Promise.all(['dist/index.html','dist/style.css','dist/app.js','dist/connection.js','dist/queue.js','dist/i18n.js'].map(read));
  const language=html.indexOf('class="language-workspace"'),composer=html.indexOf('class="card translation-composer"'),upload=html.indexOf('class="upload-card"'),action=html.indexOf('id="translate"'),settings=html.indexOf('class="settings-card"');
- assert.ok(language<composer&&composer<upload&&upload<settings&&settings<action,'DOM focus order is language, documents, settings, action');
+ assert.ok(composer<language&&language<upload&&upload<settings&&settings<action,'DOM focus order is language, documents, settings, action, all inside the composer');
  assert.match(html,/id="additional-info"[^>]*maxlength="6000"/);
  assert.match(html,/id="provider-context-open"[^>]*aria-controls="ai-settings-dialog"/);
  assert.match(css,/#provider-context-open,\.learning-context-link\{[^}]*width:max-content;[^}]*justify-content:flex-start/);

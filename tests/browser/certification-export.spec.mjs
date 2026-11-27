@@ -68,7 +68,7 @@ test('certification: set the profile once, then the clause, header and checklist
 
   const download=page.waitForEvent('download');await page.locator('#review-final-both').click();
   const summary=page.locator('#review-final-summary');await expect(summary).toBeVisible();
-  await summary.getByRole('checkbox').check();await summary.getByRole('button',{name:'Diese Fassung herunterladen',exact:true}).press('Enter');
+  await summary.getByRole('checkbox').check();await summary.getByRole('button',{name:'Diese Version herunterladen',exact:true}).press('Enter');
   const zip=unzipSync(await readFile(await (await download).path())),word=unzipSync(Object.entries(zip).find(([name])=>name.endsWith('.docx'))[1]);
   const body=strFromU8(word['word/document.xml']).replace(/<[^>]+>/g,''),header=strFromU8(word['word/header1.xml']).replace(/<[^>]+>/g,'');
   expect(Object.keys(word).filter(name=>name.startsWith('word/media/original-'))).toHaveLength(1);

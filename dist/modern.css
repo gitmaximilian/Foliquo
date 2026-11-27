@@ -170,3 +170,153 @@ html[data-ui-mode=simple] .format-disclosure small:nth-of-type(3){display:none}
  .foli-nav>span:not(.nav-icon){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
  .foli-nav{min-width:44px;justify-content:center}
 }
+
+/* ===== 0.20: cleaner, simpler ===== */
+/* The footer belongs to the start page only. */
+html:not([data-view=studio]) footer{display:none}
+/* Sidebar: the language picker reads like the menu entries around it. */
+.rail-utilities .language-picker .locale-picker-trigger{border-color:transparent;background:transparent;box-shadow:none;font-weight:500;color:var(--color-text-secondary)}
+.rail-utilities .language-picker .locale-picker-trigger:hover{background:var(--color-surface-hover)}
+/* Mein Stil: note inside the drop area, setup as a link, quiet example rows, habits as one list. */
+#workspace-view .learning-drop .learning-drop-note{display:block;margin-top:6px;font-size:12px;line-height:1.45;color:var(--color-text-muted);order:0}
+#workspace-view .learning-ai-link{align-self:flex-start;min-height:32px;padding:0;color:var(--color-primary);font-weight:600}
+#workspace-view .learning-list{display:grid;gap:8px}
+#workspace-view .learning-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 16px;padding:14px 16px;margin:0}
+#workspace-view .learning-entry>*{grid-column:1/-1;margin:0}
+#workspace-view .learning-entry>.learning-entry-head{grid-column:1}
+#workspace-view .learning-entry>.learning-analysis-status{grid-column:1;font-size:13px;color:var(--color-text-muted)}
+#workspace-view .learning-entry>.learning-entry-actions{grid-column:2;grid-row:1/span 2;justify-content:flex-end}
+#workspace-view .learning-entry-actions>.learning-active{margin:0;font-size:13px}
+#workspace-view .learning-entry-actions .text-button,#workspace-view .learning-entry-actions button:not(.primary){min-height:36px;padding:0 10px;border-color:transparent;background:transparent;color:var(--color-text-secondary);font-size:13px}
+#workspace-view .learning-entry-actions button:not(.primary):hover{background:var(--color-surface-hover);color:var(--color-text)}
+@media (max-width:640px){#workspace-view .learning-entry>.learning-entry-actions{grid-column:1/-1;grid-row:auto;justify-content:flex-start}}
+.my-style-habit-grid{grid-template-columns:minmax(0,1fr)}
+/* Foli: one quiet toolbar, examples as chips right above the message field. */
+#foli-view .foli-toolbar.is-single-chat>select,#foli-view .foli-toolbar.is-single-chat>button.secondary{display:none}
+#foli-view .foli-toolbar.is-single-chat{justify-content:flex-end}
+#foli-view .foli-examples{display:flex;flex-wrap:wrap;gap:8px}
+#foli-view .foli-examples .text-button{min-height:36px;padding:0 14px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);color:var(--color-text-secondary);font-size:13px;font-weight:500}
+#foli-view .foli-examples .text-button:hover{border-color:var(--color-primary);color:var(--color-primary)}
+
+/* Übersetzen: one column. Languages read as a sentence at the top of one card, the drop area fills it,
+   "Mehr Optionen" and the start button share the bottom row. */
+html #studio-view{display:flex;flex-direction:column;gap:24px;max-width:960px;margin-inline:0}
+html #studio-view .translation-composer{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"lang lang" "upload upload" "options action";gap:0;padding:0;overflow:hidden;border-radius:calc(var(--radius-card) + 4px);box-shadow:var(--shadow-card-raised)}
+html #studio-view .translation-composer:has(.studio-options[open]){grid-template-areas:"lang lang" "upload upload" "options options" ". action"}
+html #studio-view .translation-composer .studio-grid{display:contents}
+html #studio-view .language-workspace{grid-area:lang;display:block;margin:0;padding:14px 20px;border:0;border-bottom:1px solid var(--color-border);border-radius:0;background:transparent;box-shadow:none}
+html #studio-view .language-pair{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:0;border:0;background:transparent;box-shadow:none}
+html #studio-view .language-sentence-label{color:var(--color-text-muted);font-size:15px;font-weight:500}
+html #studio-view .language-pair .language-control{flex:0 1 auto;min-width:0;width:auto}
+html #studio-view .language-pair .language-picker-trigger{width:auto;min-width:0;min-height:40px;height:40px;padding:0 12px 0 14px;gap:8px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface-muted);font-size:15px;font-weight:650}
+html #studio-view .language-pair .language-picker-trigger:hover{border-color:var(--color-border-control);background:var(--color-surface-hover)}
+html #studio-view .language-swap{width:36px;height:36px;min-width:36px;min-height:36px;border-radius:999px}
+html #studio-view .upload-card{grid-area:upload;margin:0;padding:20px;border:0;border-radius:0;background:transparent;box-shadow:none}
+html #studio-view .dropzone{min-height:240px;padding:32px 24px;gap:10px;border:1.5px dashed var(--color-border-control);border-radius:var(--radius-card);background:var(--color-surface-muted);transition:border-color var(--motion-fast) var(--ease-standard),background-color var(--motion-fast) var(--ease-standard)}
+html #studio-view .dropzone:hover,html #studio-view .dropzone.dragover{border-color:var(--color-primary);background:var(--color-selected)}
+html #studio-view .dropzone h3{font-size:18px;letter-spacing:-.01em}
+html #studio-view .dropzone .format-disclosure{margin-top:4px}
+html #studio-view .translation-composer .settings-card{grid-area:options;position:static;width:auto;inset:auto;display:block;align-self:center;margin:0;padding:10px 12px 10px 20px;border:0;border-top:1px solid var(--color-border);border-radius:0;background:transparent;box-shadow:none;min-width:0}
+html #studio-view .settings-card .studio-options{border:0;background:transparent;padding:0;margin:0}
+html #studio-view .settings-card .studio-options>summary{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 10px;margin-inline-start:-10px;border:0;border-radius:var(--radius-control);background:transparent;color:var(--color-text-secondary);font-size:14px;font-weight:600}
+html #studio-view .settings-card .studio-options>summary:hover{background:var(--color-surface-hover);color:var(--color-text)}
+html #studio-view .settings-card .studio-options[open]>summary{margin-bottom:8px}
+html #studio-view .action-footer{grid-area:action;display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin:0;padding:10px 20px 10px 12px;border-top:1px solid var(--color-border)}
+html #studio-view .translation-composer:has(.studio-options[open]) .action-footer{border-top:0}
+html #studio-view .action-footer .action-row{display:flex;gap:8px;justify-content:flex-end}
+html #studio-view .action-footer .translate-button{width:auto;min-width:160px}
+html #studio-view .action-footer #error:empty{display:none}
+html #studio-view #job-rules{display:none}
+html[data-ui-mode=pro] #studio-view #job-rules{display:inline-flex}
+html #studio-view .job-style-note{align-self:flex-end;font-size:13px}
+/* Deine Dokumente: one row per document across the full width. */
+html #desk{max-width:960px;margin:0}
+html #desk .desk-list{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+html #desk .desk-card{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:6px 16px;width:auto;min-height:64px;padding:10px 12px 10px 18px}
+html #desk .desk-card>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html #desk .desk-card>button{width:auto;min-height:40px}
+@media (max-width:640px){
+ html #studio-view .translation-composer{grid-template-columns:minmax(0,1fr);grid-template-areas:"lang" "upload" "options" "action"}
+ html #studio-view .action-footer{border-top:0;padding-top:0;align-items:stretch}
+ html #studio-view .action-footer .translate-button{width:100%}
+ html #desk .desk-card{grid-template-columns:minmax(0,1fr) auto}
+ html #desk .desk-card>strong{grid-column:1/-1}
+ html #desk .desk-card>button{grid-column:1/-1;width:100%}
+}
+html #desk .desk-card>strong,html #desk .desk-card>.secondary{grid-column:auto}
+html #desk .desk-card>.desk-meta{white-space:nowrap}
+@media (max-width:640px){html #desk .desk-card>strong{grid-column:1/-1}html #desk .desk-card>.secondary{grid-column:1/-1}}
+/* "Mehr Optionen" shows it folds; simple mode keeps only what matters for one document. */
+html #studio-view .settings-card .studio-options>summary::after{content:"";width:8px;height:8px;margin-inline-start:4px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform var(--motion-fast) var(--ease-standard)}
+html #studio-view .settings-card .studio-options[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
+html[data-ui-mode=simple] #studio-view :is(#translation-context,.learning-context-link){display:none}
+html #studio-view .provider-context{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding-bottom:12px}
+html #studio-view .provider-context #provider-context-open{width:auto;min-height:36px;padding:0 12px}
+
+/* Prüfen: documents, then the check list beside a column that holds the Beglaubigung line and the download. */
+html #review-view{display:flex;flex-direction:column;gap:20px}
+html #review-view>*{margin:0}
+html #review-view .review-finish{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);gap:20px;align-items:start}
+html #review-view .review-finish-aside{position:sticky;top:16px;display:flex;flex-direction:column;gap:16px;min-width:0}
+html #review-view .review-finish-aside>.card{margin:0;padding:18px 20px}
+@media (max-width:1180px){html #review-view .review-finish{grid-template-columns:minmax(0,1fr)}html #review-view .review-finish-aside{position:static}}
+/* Compact steps: finished steps are small ticks, the current step names itself. */
+html #review-view #review-steps{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0;margin:0;list-style:none;counter-reset:step}
+html #review-view #review-steps li{counter-increment:step;display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px 0 4px;border:0;border-radius:999px;background:transparent;color:var(--color-text-muted);font-size:13px;font-weight:600}
+html #review-view #review-steps li::before{content:counter(step);display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--color-surface-hover);color:var(--color-text-muted);font-size:11px;font-weight:700}
+html #review-view #review-steps li.is-done::before{content:"✓";background:var(--color-success-bg);color:var(--color-success)}
+html #review-view #review-steps li.is-current{background:var(--color-selected);color:var(--color-primary)}
+html #review-view #review-steps li.is-current::before{background:var(--color-primary);color:var(--color-on-primary)}
+/* Final card: a short heading, one main action, single formats as a quiet link. */
+html #review-final>div:first-child{display:flex;flex-direction:column;gap:6px}
+html #review-final #review-final-title{font-size:17px}
+html #review-final .review-draft-status{margin:4px 0 0;padding:8px 12px;font-size:13px;line-height:1.45;border-radius:var(--radius-control)}
+html #review-final .review-final-access{display:flex;flex-wrap:wrap;gap:8px}
+html #review-final .review-final-access:empty{display:none}
+html #review-final .export-actions{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin-top:14px;padding-top:0;border-top:0}
+html #review-final #review-final-both{width:100%;min-height:48px}
+html #review-final .review-open-cue{display:none}
+html #review-final #review-other-formats{align-self:center}
+/* Beglaubigung: one summary line; the full form opens on "Ändern" or when the profile still needs setting up. */
+html #certification-panel .certification-head{min-height:0;margin-bottom:4px}
+html #certification-panel .certification-head h2{font-size:17px}
+html #certification-panel .certification-summary{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;margin:2px 0 8px}
+html #certification-panel .certification-summary-text{margin:0;color:var(--color-text-secondary);font-size:14px;line-height:1.45}
+html #certification-panel .certification-summary-toggle{min-height:36px;padding:0 8px;font-weight:600;color:var(--color-primary)}
+html #certification-panel:not(.is-expanded):not(.needs-setup) :is(#certification-options,#certification-preview,.certification-boundary,#certification-profile-open){display:none}
+html #certification-panel.needs-setup .certification-summary-toggle{display:none}
+html #certification-panel #certification-options{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:12px}
+html #certification-panel .certification-preview{font-size:13px}
+/* Check list: a to-do list. The tick leads, the label and comparison follow, actions are quiet links. */
+html #review-guide{padding:20px 22px}
+html #review-guide>.card-heading{margin-bottom:6px}
+html #review-guide>.card-heading h3{font-size:17px}
+html #review-guide>.review-progress-copy+p{display:none}
+html #review-guide>small.muted{display:block;font-size:12px;margin-bottom:6px}
+html #review-guide>details[data-empty]{display:none}
+html #review-guide .review-guide-check{display:grid;grid-template-columns:28px minmax(0,1fr) auto;grid-auto-flow:row dense;align-items:center;gap:4px 12px;padding:12px 0;border:0;border-top:1px solid var(--color-border);background:transparent;box-shadow:none;border-radius:0}
+html #review-guide .review-guide-check>*{grid-column:2/-1;margin:0}
+html #review-guide .review-guide-check>strong{grid-column:2;font-size:15px}
+html #review-guide .review-guide-check>.status-chip{grid-column:3;grid-row:1;justify-self:end}
+html #review-guide .review-guide-check>label.check-label{grid-column:1;grid-row:1;justify-self:center;width:28px;min-height:28px;gap:0}
+html #review-guide .review-guide-check>label.check-label>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+html #review-guide .review-guide-check>label.check-label input{width:20px;height:20px;margin:0}
+html #review-guide .review-guide-check>.check-compare{grid-column:2/-1}
+html #review-guide .review-guide-check>button.text-button{grid-column:auto;justify-self:start;min-height:32px;padding:0 8px;margin-inline-start:-8px;font-size:13px;color:var(--color-primary)}
+html #review-guide .review-guide-check>button.text-button:last-of-type{grid-column:3;justify-self:end;margin:0 -8px 0 0}
+html #review-guide .review-guide-check>button.text-button:not(:last-of-type){grid-column:2}
+html #review-guide .review-guide-check-list{display:grid}
+html #review-guide>details>summary{font-size:13px;font-weight:700;color:var(--color-text-muted);margin:14px 0 2px}
+/* The zoom hint lives in the viewer's tooltip; the visible caption is gone. */
+.source-zoom-help{display:none}
+html #review-guide{max-height:none;overflow:visible}
+html #review-final>div:first-child{border:0;padding-bottom:0}
+@media (max-width:640px){
+ html #review-guide{padding:16px}
+ html #review-guide .review-guide-check{grid-template-columns:28px minmax(0,1fr)}
+ html #review-guide .review-guide-check>.status-chip{grid-column:2;grid-row:auto;justify-self:start}
+ html #review-guide .review-guide-check>button.text-button:last-of-type{grid-column:2;justify-self:start;margin:0 0 0 -8px}
+ .review-heading .review-heading-actions{display:flex;flex-wrap:wrap;gap:8px}
+ .review-heading .review-heading-actions>button{flex:1 1 auto;width:auto;min-height:40px;padding:0 12px;font-size:14px}
+}
+html #review-guide .review-guide-check-list{max-height:none;overflow:visible}

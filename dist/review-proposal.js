@@ -17,7 +17,7 @@
   discard:['Discard','Verwerfen','تجاهل'],
   none:['Select at least one passage or discard the suggestion.','Wähle mindestens eine Stelle oder verwirf den Vorschlag.','اختر موضعًا واحدًا على الأقل أو تجاهل الاقتراح.'],
   applied:['Applied as version {version}.','Als Version {version} übernommen.','طُبّق كنسخة {version}.'],
-  discarded:['Suggestion discarded. The current version stays unchanged.','Vorschlag verworfen. Die aktuelle Fassung bleibt unverändert.','تم تجاهل الاقتراح. تبقى النسخة الحالية دون تغيير.'],
+  discarded:['Suggestion discarded. The current version stays unchanged.','Vorschlag verworfen. Die aktuelle Version bleibt unverändert.','تم تجاهل الاقتراح. تبقى النسخة الحالية دون تغيير.'],
   noChange:['This suggestion changes layout or formatting only; the text stays the same.','Dieser Vorschlag ändert nur Layout oder Formatierung; der Text bleibt gleich.','يغيّر هذا الاقتراح التخطيط أو التنسيق فقط؛ يبقى النص كما هو.'],
  };
  const t=(key,values={})=>COPY[key][index()].replace(/\{(\w+)\}/g,(_,name)=>values[name]??'');
