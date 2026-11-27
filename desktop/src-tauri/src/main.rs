@@ -279,6 +279,25 @@ fn request_update(app: AppHandle) {
     });
 }
 
+// The Glass design asks for real window translucency: macOS vibrancy or Windows 11 Mica, so the
+// desktop shows through blurred. The page reports the result and keeps solid surfaces if it fails.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn apply_window_glass(app: &AppHandle, enabled: bool) {
+    use tauri::window::{Effect, EffectState, EffectsBuilder};
+    let Some(window) = app.get_webview_window("main") else { return };
+    let applied = if enabled {
+        #[cfg(target_os = "macos")]
+        let effect = Effect::UnderWindowBackground;
+        #[cfg(target_os = "windows")]
+        let effect = Effect::Mica;
+        window.set_effects(EffectsBuilder::new().effect(effect).state(EffectState::FollowsWindowActiveState).build()).is_ok()
+    } else {
+        let _ = window.set_effects(None::<tauri::utils::config::WindowEffectsConfig>);
+        false
+    };
+    let _ = window.eval(&format!("window.dispatchEvent(new CustomEvent('foliquo-window-glass',{{detail:{{applied:{applied}}}}}));"));
+}
+
 fn main() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init());
@@ -295,16 +314,24 @@ fn main() {
             };
             if let Ok((port, _)) = &startup {
                 let origin = format!("http://127.0.0.1:{port}");
-                builder = builder.initialization_script(format!("if (location.origin === {}) {{ window.__FOLIQUO_DESKTOP__ = true; window.__FOLIQUO_UPDATER__ = {}; }}", serde_json::to_string(&origin)?, cfg!(any(target_os = "macos", target_os = "windows"))));
+                builder = builder.initialization_script(format!("if (location.origin === {}) {{ window.__FOLIQUO_DESKTOP__ = true; window.__FOLIQUO_UPDATER__ = {}; window.__FOLIQUO_WINDOW_GLASS__ = {}; }}", serde_json::to_string(&origin)?, cfg!(any(target_os = "macos", target_os = "windows")), cfg!(any(target_os = "macos", target_os = "windows"))));
             } else if let Err(message) = &startup {
                 builder = builder.initialization_script(format!("window.__FOLIQUO_START_ERROR__ = {};", serde_json::to_string(message)?));
             }
             let local_port = startup.as_ref().ok().map(|(port, _)| *port);
+            // A transparent window lets the Glass design show the desktop through; every other design paints an opaque page.
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            { builder = builder.transparent(true); }
             builder = builder
                 .title("Foliquo")
                 .inner_size(1280.0, 820.0)
                 .min_inner_size(800.0, 560.0)
                 .on_navigation(move |url| {
+                    if url.scheme() == "foliquo-window" {
+                        #[cfg(any(target_os = "macos", target_os = "windows"))]
+                        apply_window_glass(&app_for_navigation, url.host_str() == Some("glass"));
+                        return false;
+                    }
                     if url.scheme() == "foliquo-update" {
                         if url.host_str() == Some("install") {
                             #[cfg(any(target_os = "macos", target_os = "windows"))]

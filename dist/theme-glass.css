@@ -1,0 +1,80 @@
+/* Glas: a translucent design with depth. Soft colour fields sit behind frosted surfaces; paper documents
+   stay opaque so translations are always read on white. Follows the system's light or dark setting. */
+
+html[data-design=glass]:not([data-theme=dark]){
+ --glass-wallpaper:radial-gradient(1100px 760px at 6% -8%,#D9E5FF 0%,rgb(217 229 255 / 0) 62%),radial-gradient(900px 700px at 102% 4%,#F1E2FF 0%,rgb(241 226 255 / 0) 58%),radial-gradient(1000px 860px at 62% 112%,#D8F3EA 0%,rgb(216 243 234 / 0) 60%),#EDF0F6;
+ --glass-fill:rgb(255 255 255 / .62);--glass-fill-strong:rgb(255 255 255 / .82);--glass-sidebar:rgb(255 255 255 / .42);--glass-edge:rgb(255 255 255 / .75);
+ --color-canvas:#EDF0F6;--color-surface:rgb(255 255 255 / .66);--color-surface-elevated:rgb(255 255 255 / .86);--color-sidebar:rgb(255 255 255 / .42);
+ --color-surface-muted:rgb(255 255 255 / .42);--color-surface-hover:rgb(15 23 42 / .05);--color-surface-active:rgb(15 23 42 / .08);
+ --color-text:#1D1D1F;--color-text-secondary:#3C4350;--color-text-muted:#5F6670;
+ --color-border:rgb(15 23 42 / .09);--color-border-control:rgb(15 23 42 / .28);--color-focus:#0066D6;
+ --color-primary:#0066D6;--color-primary-hover:#0058BA;--color-primary-active:#004FA8;--color-on-primary:#fff;
+ --color-selected:rgb(0 102 214 / .12);--color-accent:#0066D6;--color-info:#0066D6;--color-info-bg:rgb(0 102 214 / .10);--color-accent-border:rgb(0 102 214 / .32);
+ --shadow-card:inset 0 1px 0 rgb(255 255 255 / .8),0 1px 2px rgb(15 23 42 / .04),0 12px 32px -16px rgb(15 23 42 / .18);
+ --shadow-card-raised:inset 0 1px 0 rgb(255 255 255 / .85),0 2px 4px rgb(15 23 42 / .05),0 22px 48px -20px rgb(15 23 42 / .28);
+ --shadow-dialog:inset 0 1px 0 rgb(255 255 255 / .85),0 30px 80px -20px rgb(15 23 42 / .35);
+ --mode-switch-off:rgb(15 23 42 / .18);
+}
+html[data-design=glass][data-theme=dark]{
+ --glass-wallpaper:radial-gradient(1100px 760px at 6% -8%,#18305E 0%,rgb(24 48 94 / 0) 62%),radial-gradient(900px 700px at 102% 4%,#3A1F5C 0%,rgb(58 31 92 / 0) 58%),radial-gradient(1000px 860px at 62% 112%,#0F3D36 0%,rgb(15 61 54 / 0) 60%),#0A0D14;
+ --glass-fill:rgb(30 36 48 / .55);--glass-fill-strong:rgb(30 36 48 / .82);--glass-sidebar:rgb(20 24 34 / .45);--glass-edge:rgb(255 255 255 / .10);
+ --color-canvas:#0A0D14;--color-surface:rgb(34 40 54 / .58);--color-surface-elevated:rgb(34 40 54 / .86);--color-sidebar:rgb(20 24 34 / .45);
+ --color-surface-muted:rgb(255 255 255 / .04);--color-surface-hover:rgb(255 255 255 / .07);--color-surface-active:rgb(255 255 255 / .11);
+ --color-text:#F5F5F7;--color-text-secondary:#D2D6DE;--color-text-muted:#AEB4BE;
+ --color-border:rgb(255 255 255 / .10);--color-border-control:rgb(255 255 255 / .28);--color-focus:#64B0FF;
+ --color-primary:#4DA3FF;--color-primary-hover:#6DB4FF;--color-primary-active:#3A92F0;--color-on-primary:#05111F;
+ --color-selected:rgb(77 163 255 / .18);--color-accent:#64B0FF;--color-info:#64B0FF;--color-info-bg:rgb(77 163 255 / .14);--color-accent-border:rgb(100 176 255 / .38);
+ --shadow-card:inset 0 1px 0 rgb(255 255 255 / .06),0 14px 36px -18px rgb(0 0 0 / .7);
+ --shadow-card-raised:inset 0 1px 0 rgb(255 255 255 / .08),0 24px 56px -20px rgb(0 0 0 / .8);
+ --shadow-dialog:inset 0 1px 0 rgb(255 255 255 / .08),0 30px 90px -20px rgb(0 0 0 / .85);
+ --mode-switch-off:rgb(255 255 255 / .22);
+}
+html[data-design=glass]{
+ --radius-control:12px;--radius-card:22px;--radius-panel:22px;--radius-dialog:26px;--radius-small:8px;
+ --font-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI","Manrope",system-ui,"Noto Sans Arabic","Geeza Pro",Tahoma,sans-serif;
+ --glass-blur:saturate(180%) blur(24px);
+}
+
+/* Wallpaper behind everything; the layout itself stays transparent so the colour fields show through. */
+html[data-design=glass] body{background:var(--glass-wallpaper);background-attachment:fixed;font-family:var(--font-ui);-webkit-font-smoothing:antialiased}
+html[data-design=glass] :is(.app-shell,footer){background:transparent}
+
+/* Frosted surfaces */
+html[data-design=glass] :is(.app-header,.card,.my-style-habit-card,.my-style-learned-card,.settings-mode,.settings-design,.remember-spelling,.queue-rail .queue-card,.learning-entry,.rule-card){
+ border-color:var(--glass-edge);background-color:var(--color-surface);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+}
+html[data-design=glass] .app-header{background-color:var(--glass-sidebar);border-inline-end-color:var(--color-border)}
+html[data-design=glass] dialog{border:1px solid var(--glass-edge);background-color:var(--color-surface-elevated);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);box-shadow:var(--shadow-dialog)}
+html[data-design=glass] dialog::backdrop{background:rgb(15 23 42 / .22);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+html[data-design=glass][data-theme=dark] dialog::backdrop{background:rgb(0 0 0 / .45)}
+
+/* Controls: fields read as solid enough to type in; buttons are soft capsules. */
+html[data-design=glass] :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea){background-color:var(--glass-fill-strong);border-color:var(--color-border-control)}
+html[data-design=glass] :is(.primary,.secondary,.header-tool,.nav-item,.text-button){border-radius:var(--radius-control)}
+html[data-design=glass] .primary{box-shadow:inset 0 1px 0 rgb(255 255 255 / .25),0 6px 16px -8px var(--color-primary)}
+html[data-design=glass] .secondary{background-color:var(--glass-fill);border-color:var(--color-border)}
+html[data-design=glass] .secondary:hover:not(:disabled){background-color:var(--glass-fill-strong)}
+html[data-design=glass] :is(.primary-navigation,.rail-utilities) .nav-item.active{background:var(--color-selected);color:var(--color-primary)}
+html[data-design=glass][data-theme=dark] :is(.primary-navigation,.rail-utilities) .nav-item.active{color:var(--color-text)}
+html[data-design=glass] .dropzone,html[data-design=glass] #workspace-view .learning-collection .learning-drop{background-color:var(--glass-fill);border-color:var(--color-border-control)}
+html[data-design=glass] .page-masthead h1{font-weight:700;letter-spacing:-.025em}
+
+/* Documents keep their paper: never translucent. */
+html[data-design=glass] :is(.paper,.document-page,.pdf-page,canvas){-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* Systems without blur support get solid, readable surfaces. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+ html[data-design=glass]:not([data-theme=dark]){--color-surface:rgb(255 255 255 / .94);--color-sidebar:rgb(255 255 255 / .9);--glass-sidebar:rgb(255 255 255 / .9)}
+ html[data-design=glass][data-theme=dark]{--color-surface:rgb(30 36 48 / .96);--color-sidebar:rgb(20 24 34 / .95);--glass-sidebar:rgb(20 24 34 / .95)}
+}
+@media (prefers-reduced-transparency:reduce){
+ html[data-design=glass]:not([data-theme=dark]){--color-surface:rgb(255 255 255 / .96);--glass-sidebar:rgb(255 255 255 / .96);--color-surface-elevated:#fff}
+ html[data-design=glass][data-theme=dark]{--color-surface:rgb(30 36 48 / .97);--glass-sidebar:rgb(20 24 34 / .97);--color-surface-elevated:#1E2430}
+}
+
+/* Desktop apps: real window translucency. The window blurs the desktop behind it (macOS vibrancy,
+   Windows 11 Mica); the page drops its colour fields and lets that blur show through a light tint. */
+html[data-design=glass][data-window-glass]{background:transparent}
+html[data-design=glass][data-window-glass]:not([data-theme=dark]){--glass-wallpaper:linear-gradient(rgb(246 248 252 / .30),rgb(246 248 252 / .30));--color-surface:rgb(255 255 255 / .52);--glass-sidebar:rgb(255 255 255 / .18);--color-sidebar:rgb(255 255 255 / .18);--glass-fill:rgb(255 255 255 / .5)}
+html[data-design=glass][data-window-glass][data-theme=dark]{--glass-wallpaper:linear-gradient(rgb(10 13 20 / .38),rgb(10 13 20 / .38));--color-surface:rgb(34 40 54 / .46);--glass-sidebar:rgb(20 24 34 / .16);--color-sidebar:rgb(20 24 34 / .16);--glass-fill:rgb(40 46 60 / .45)}
+html[data-design=glass][data-window-glass] body{background:var(--glass-wallpaper)}

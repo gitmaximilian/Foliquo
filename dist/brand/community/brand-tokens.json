@@ -9,7 +9,8 @@
   },
   "colors": {
     "ink": "#0F1115",
-    "accent": "#3B82F6",
+    "accent": "#2F6BFF",
+    "accentSecondary": "#7C3AED",
     "white": "#FFFFFF",
     "darkSurface": "#0B0E12"
   },
@@ -18,17 +19,27 @@
     "wordmark": "25% of icon height"
   },
   "symbol": {
+    "name": "Glasblätter",
+    "meaning": "Two overlapping pages: the original and its translation",
     "viewBox": "0 0 400 400",
-    "outerCenterline": "M 75 306 V 168 C 75 117 116 76 167 76 H 323",
-    "standardStroke": 90,
-    "pill": {
-      "x": 143,
-      "y": 149,
-      "width": 185,
-      "height": 87,
-      "radius": 43.5
+    "back": {
+      "x": 50,
+      "y": 50,
+      "width": 200,
+      "height": 262,
+      "rx": 50,
+      "rotate": "-9 150 181"
     },
-    "communityStyle": "transparent fill, 9-unit stroke around the same standard silhouette and pill"
+    "front": {
+      "x": 150,
+      "y": 88,
+      "width": 200,
+      "height": 262,
+      "rx": 50,
+      "rotate": "7 250 219"
+    },
+    "lines": "M194 169h100M194 212h100M194 256h62",
+    "style": "translucent glass: back #7FB2FF→#2F6BFF, front #C4A6FF→#7C3AED at 78% opacity"
   },
   "allowedVariants": [
     "color",

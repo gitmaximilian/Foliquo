@@ -1,0 +1,172 @@
+/* Foliquo 0.19 · simple and professional modes, "Mein Stil", and a calmer, more modern surface.
+   Layered after style.css and theme.css: tokens first, then the few components that carry the look. */
+
+/* Tokens: cooler neutral canvas so paper documents stand out, softer edges, elevation instead of outlines. */
+:root{
+ --color-canvas:#F4F5F7;--color-surface-muted:#F7F8FA;--color-surface-hover:#EEF0F4;--color-sidebar:#FBFBFC;
+ --color-border:#E3E6EB;--color-selected:#E8EEFC;--color-surface-active:#E1E8F8;
+ --radius-control:10px;--radius-card:16px;--radius-panel:16px;--radius-dialog:20px;
+ --shadow-card:0 1px 2px rgb(16 24 40 / .04),0 1px 1px rgb(16 24 40 / .02);
+ --shadow-card-raised:0 1px 2px rgb(16 24 40 / .05),0 8px 24px -8px rgb(16 24 40 / .10);
+ --mode-switch-off:#C5CBD3;
+}
+html[data-theme=dark]{
+ --color-canvas:#0E1116;--color-sidebar:#12151B;--color-border:#2A3340;
+ --shadow-card:0 1px 0 rgb(255 255 255 / .03) inset,0 1px 2px rgb(0 0 0 / .3);
+ --shadow-card-raised:0 1px 0 rgb(255 255 255 / .04) inset,0 10px 28px -10px rgb(0 0 0 / .6);
+ --mode-switch-off:#4A5666;
+}
+
+/* Modes: professional tools are hidden in simple mode, never removed. */
+html[data-ui-mode=simple] [data-pro-only]{display:none!important}
+
+/* Sidebar */
+.app-header{background:var(--color-sidebar)}
+.primary-navigation .nav-item,.rail-utilities .nav-item{border-radius:var(--radius-control);transition:background-color var(--motion-fast) var(--ease-standard),color var(--motion-fast) var(--ease-standard)}
+.primary-navigation .nav-item.active,.rail-utilities .nav-item.active{background:var(--color-selected);color:var(--color-primary);font-weight:700}
+html[data-theme=dark] .primary-navigation .nav-item.active,html[data-theme=dark] .rail-utilities .nav-item.active{color:var(--color-text)}
+.primary-navigation .nav-item.active .nav-icon,.rail-utilities .nav-item.active .nav-icon{color:inherit}
+.foli-nav .nav-icon{font-size:15px;line-height:1}
+
+/* Cards: one quiet elevation, larger radius than controls so hierarchy reads at a glance. */
+.card{border-color:var(--color-border);border-radius:var(--radius-card);box-shadow:var(--shadow-card)}
+.page-masthead h1{letter-spacing:-.02em}
+
+/* Settings: mode switch */
+.settings-mode{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start;padding:18px 20px;border:1px solid var(--color-border);border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card);margin-block:16px}
+.settings-mode h2{margin:0 0 4px;font-size:16px;line-height:1.35}
+.settings-mode p{margin:0;font-size:14px;line-height:1.5}
+.settings-mode .error:empty{display:none}
+.mode-switch,.switch-control{position:relative;display:inline-flex;flex:none;align-items:center;min-width:44px;min-height:44px;justify-content:center;cursor:pointer}
+.mode-switch input,.switch-control input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.mode-switch-track,.switch-track{position:relative;display:block;width:40px;height:24px;border-radius:999px;background:var(--mode-switch-off);transition:background-color var(--motion-control) var(--ease-standard)}
+.mode-switch-track::after,.switch-track::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgb(0 0 0 / .25);transition:transform var(--motion-control) var(--ease-standard)}
+.mode-switch input:checked+.mode-switch-track,.switch-control input:checked+.switch-track{background:var(--color-primary)}
+.mode-switch input:checked+.mode-switch-track::after,.switch-control input:checked+.switch-track::after{transform:translateX(16px)}
+[dir=rtl] .mode-switch input:checked+.mode-switch-track::after,[dir=rtl] .switch-control input:checked+.switch-track::after{transform:translateX(-16px)}
+.mode-switch input:focus-visible+.mode-switch-track,.switch-control input:focus-visible+.switch-track{outline:3px solid var(--color-focus);outline-offset:2px}
+.mode-switch input:disabled+.mode-switch-track,.switch-control input:disabled+.switch-track{opacity:.55}
+@media (prefers-reduced-motion:reduce){.mode-switch-track,.mode-switch-track::after,.switch-track,.switch-track::after{transition:none}}
+
+/* Style area: the navigation picks one section; the old tab bar is replaced by it. */
+#workspace-view .rule-tabs{display:none}
+#workspace-view .style-area-bar{justify-content:flex-end}
+#workspace-view:not([data-section=rules]) .style-area-bar{display:none}
+#workspace-view[data-section=style]>:is(.dossier-collection,#glossary-manager,#personal-rules-panel),
+#workspace-view[data-section=rules]>:is(.dossier-collection,#glossary-manager,.learning-collection),
+#workspace-view[data-section=terms]>:is(.dossier-collection,.learning-collection,#personal-rules-panel),
+#workspace-view[data-section=dossiers]>:is(#glossary-manager,.learning-collection,#personal-rules-panel){display:none!important}
+#workspace-view>#glossary-manager{margin-top:0}
+#glossary-manager .glossary-heading h2{margin:0 0 4px;font-size:18px}
+
+/* Mein Stil */
+#workspace-view .learning-collection>.card-heading,#workspace-view .learning-collection>.learning-help{display:none}
+#workspace-view .learning-collection{display:flex;flex-direction:column;gap:16px}
+#workspace-view .learning-collection>*{margin-block:0}
+#workspace-view .learning-collection .learning-drop{order:-2;min-height:96px;padding:20px 22px;border:1.5px dashed var(--color-border-control);border-radius:var(--radius-card);background:var(--color-surface-muted);transition:border-color var(--motion-fast) var(--ease-standard),background-color var(--motion-fast) var(--ease-standard)}
+#workspace-view .learning-collection .learning-drop:hover,#workspace-view .learning-collection .learning-drop:focus-within{border-color:var(--color-primary);background:var(--color-selected)}
+#workspace-view .learning-collection #learning-provider-note{order:-1;font-size:13px;margin-top:-6px}
+#workspace-view .learning-collection #learning-status:empty,#workspace-view .learning-collection #workspace-error:empty{display:none}
+.my-style-learned{display:grid;gap:16px}
+.my-style-learned:empty{display:none}
+.my-style-learned-card{display:grid;gap:12px;padding:20px 22px;border:1px solid var(--color-accent-border);border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card-raised)}
+.my-style-learned-head h3{margin:0;font-size:17px;line-height:1.35}
+.my-style-learned-head p{margin:2px 0 0;font-size:14px}
+.my-style-habit-list{list-style:none;margin:0;padding:0}
+.my-style-habit-list li{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:52px;padding-block:6px;border-top:1px solid var(--color-border)}
+.my-style-habit-list li:first-child{border-top:0}
+.my-style-check{color:var(--color-success);font-weight:800;text-align:center}
+.my-style-habit-text{min-width:0;overflow-wrap:anywhere;font-size:15px;line-height:1.45}
+.my-style-habit-list li.is-excluded .my-style-habit-text{color:var(--color-text-muted);text-decoration:line-through;text-decoration-thickness:1px}
+.my-style-strike{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:1px solid var(--color-border);border-radius:var(--radius-control);background:var(--color-surface);color:var(--color-text-muted);font-size:15px;line-height:1}
+.my-style-strike:hover{border-color:var(--color-border-control);color:var(--color-text)}
+.my-style-learned-actions{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.my-style-learned-actions .primary{width:auto}
+.my-style-learned-actions small{margin-inline-start:auto;font-size:13px}
+.my-style-learned-card .error:empty{display:none}
+.my-style-habits{display:grid;gap:12px}
+.my-style-habits:empty{display:none}
+.my-style-habits-title,.my-style-examples-title{margin:8px 0 0;font-size:18px;line-height:1.35;letter-spacing:-.01em}
+.my-style-habit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:12px}
+.my-style-habit-card{display:grid;gap:6px;padding:6px 8px 6px 6px;border:1px solid var(--color-border);border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card)}
+.my-style-habit-head{display:flex;align-items:center;gap:8px}
+.my-style-habit-expand{display:grid;flex:1;min-width:0;min-height:56px;padding:8px 12px;border:0;border-radius:var(--radius-control);background:transparent;color:var(--color-text);text-align:start;cursor:pointer}
+.my-style-habit-expand:hover{background:var(--color-surface-hover)}
+.my-style-habit-expand strong{font-size:15px;line-height:1.35}
+.my-style-habit-expand small{color:var(--color-text-muted);font-size:13px;line-height:1.4}
+.my-style-habit-rules{margin:0 12px 10px;padding:8px 0 0 18px;border-top:1px solid var(--color-border);font-size:14px;line-height:1.5}
+.my-style-habit-rules li+li{margin-top:4px}
+.my-style-habit-rules li.is-off{color:var(--color-text-muted);text-decoration:line-through}
+.my-style-empty{margin:0;padding:4px 2px}
+.my-style-pro-hint{margin:0;font-size:13px}
+html[data-ui-mode=simple] #workspace-view .learning-filters,
+html[data-ui-mode=simple] #workspace-view .learning-canonical-rules,
+html[data-ui-mode=simple] #workspace-view .learning-analysis-disclosure,
+html[data-ui-mode=simple] #workspace-view .learning-entry-details{display:none}
+#workspace-view .learning-collection:not(.has-examples) .my-style-examples-title{display:none}
+.rail-utilities .header-tool{border-color:transparent;background:transparent;box-shadow:none}
+.rail-utilities .header-tool:hover{background:var(--color-surface-hover)}
+#workspace-view .learning-ai-open{justify-self:start;align-self:flex-start;width:auto}
+#workspace-view .learning-entry{border-radius:var(--radius-card)}
+#workspace-view .learning-entry-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:8px 12px}
+#workspace-view .learning-entry-actions>.learning-active{margin-inline-end:auto}
+#workspace-view .learning-entry-actions>button{width:auto}
+#personal-rules-panel>.rule-panel-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+#personal-rules-panel>.rule-panel-actions h2{display:none}
+#personal-rules-panel>.rule-panel-actions>button{width:auto}
+#workspace-view .learning-collection.card{padding:0;border:0;background:transparent;box-shadow:none}
+html[data-ui-mode=simple] #workspace-view .learning-edit-button{display:none}
+html[data-ui-mode=simple] .format-disclosure small:nth-of-type(3){display:none}
+.job-style-note{margin:0;align-self:center;color:var(--color-success);font-size:14px;font-weight:600}
+
+/* Immer so schreiben */
+.remember-spelling{position:fixed;inset-block-end:calc(20px + env(safe-area-inset-bottom,0px));inset-inline-end:calc(20px + env(safe-area-inset-right,0px));z-index:60;width:min(420px,calc(100vw - 32px));display:grid;gap:10px;padding:18px 20px;border:1px solid var(--color-border);border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-dialog)}
+@media (prefers-reduced-motion:no-preference){.remember-spelling{animation:remember-in var(--motion-dialog) var(--ease-standard)}@keyframes remember-in{from{opacity:0;transform:translateY(8px)}}}
+.remember-spelling-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.remember-spelling h2{margin:0;font-size:16px;line-height:1.35}
+.remember-spelling>p{margin:0;font-size:14px;line-height:1.5}
+.remember-spelling-close{display:inline-grid;place-items:center;width:36px;height:36px;min-height:36px;padding:0;border:0;border-radius:var(--radius-control);background:transparent;color:var(--color-text-muted)}
+.remember-spelling-close:hover{background:var(--color-surface-hover);color:var(--color-text)}
+.remember-spelling-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.remember-spelling-list li{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--color-border)}
+.remember-spelling-change{margin:0;font-size:15px;overflow-wrap:anywhere}
+.remember-spelling-change del{color:var(--color-text-muted)}
+.remember-spelling-actions{display:flex;flex-wrap:wrap;gap:8px}
+.remember-spelling-actions button{width:auto;min-height:40px}
+.remember-spelling-status{margin:0;font-size:13px}
+.remember-spelling-status:empty{display:none}
+
+/* Design picker: Settings and intro */
+.settings-design{display:grid;gap:12px;padding:18px 20px;border:1px solid var(--color-border);border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card);margin-block:16px 0}
+.settings-design h2{margin:0;font-size:16px;line-height:1.35}
+.design-picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.design-option{position:relative;display:grid;gap:8px;align-content:start;padding:8px;border:1px solid var(--color-border);border-radius:calc(var(--radius-control) + 4px);background:var(--color-surface);cursor:pointer;transition:border-color var(--motion-fast) var(--ease-standard),box-shadow var(--motion-fast) var(--ease-standard)}
+.design-option:hover{border-color:var(--color-border-control)}
+.design-option input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.design-option:has(input:checked){border-color:var(--color-primary);box-shadow:0 0 0 1px var(--color-primary)}
+.design-option:has(input:focus-visible){outline:3px solid var(--color-focus);outline-offset:2px}
+.design-option-copy{display:grid;gap:2px;padding-inline:2px}
+.design-option-copy strong{font-size:14px;line-height:1.3}
+.design-option-copy small{color:var(--color-text-muted);font-size:12px;line-height:1.35}
+.design-swatch{position:relative;display:block;aspect-ratio:16/10;border-radius:var(--radius-control);overflow:hidden;border:1px solid rgb(15 23 42 / .08)}
+.design-swatch .swatch-side{position:absolute;inset:0 auto 0 0;width:28%}
+.design-swatch .swatch-card{position:absolute;inset:16% 8% auto 36%;height:34%;border-radius:6px}
+.design-swatch .swatch-card-small{inset:58% 30% auto 36%;height:22%}
+.design-swatch[data-swatch=light]{background:#F4F5F7}.design-swatch[data-swatch=light] .swatch-side{background:#FBFBFC;border-inline-end:1px solid #E3E6EB}.design-swatch[data-swatch=light] .swatch-card{background:#fff;box-shadow:0 1px 2px rgb(16 24 40 / .08)}.design-swatch[data-swatch=light] .swatch-card-small{background:#1E3A8A}
+.design-swatch[data-swatch=dark]{background:#0E1116}.design-swatch[data-swatch=dark] .swatch-side{background:#12151B;border-inline-end:1px solid #2A3340}.design-swatch[data-swatch=dark] .swatch-card{background:#161A21;border:1px solid #2A3340}.design-swatch[data-swatch=dark] .swatch-card-small{background:#8FB0FF;border:0}
+.design-swatch[data-swatch=system]{background:linear-gradient(90deg,#F4F5F7 0 50%,#0E1116 50% 100%)}.design-swatch[data-swatch=system] .swatch-side{background:#FBFBFC;border-inline-end:1px solid #E3E6EB}.design-swatch[data-swatch=system] .swatch-card{background:linear-gradient(90deg,#fff 0 40%,#161A21 40% 100%);border:1px solid rgb(127 127 127 / .25)}.design-swatch[data-swatch=system] .swatch-card-small{background:linear-gradient(90deg,#1E3A8A 0 40%,#8FB0FF 40% 100%)}
+.design-swatch[data-swatch=glass]{background:radial-gradient(80% 90% at 10% 0%,#CFDDFF,transparent 70%),radial-gradient(70% 80% at 100% 10%,#EBD6FF,transparent 65%),radial-gradient(80% 90% at 60% 110%,#CDEFE3,transparent 70%),#E9EDF5}
+.design-swatch[data-swatch=glass] .swatch-side{background:rgb(255 255 255 / .45);border-inline-end:1px solid rgb(255 255 255 / .7)}
+.design-swatch[data-swatch=glass] .swatch-card{background:rgb(255 255 255 / .6);border:1px solid rgb(255 255 255 / .85);box-shadow:0 6px 14px -8px rgb(15 23 42 / .35)}
+.design-swatch[data-swatch=glass] .swatch-card-small{background:#0066D6;border:0}
+@media (max-width:720px){.design-picker{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.intro-design-label{display:block;margin-top:6px;font-weight:600}
+.design-picker-compact{gap:8px}
+.design-picker-compact .design-option-copy small{display:none}
+@media (max-width:520px){.design-picker-compact{grid-template-columns:repeat(4,minmax(0,1fr))}.design-picker-compact .design-option{padding:6px}.design-picker-compact .design-option-copy strong{font-size:12px}}
+.design-option-copy strong{min-width:0;hyphens:auto;overflow-wrap:anywhere}
+/* Top bar on narrow windows: "Ask Foli" keeps its name for screen readers but shows only its icon. */
+@media (max-width:1023px){
+ .foli-nav>span:not(.nav-icon){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+ .foli-nav{min-width:44px;justify-content:center}
+}
