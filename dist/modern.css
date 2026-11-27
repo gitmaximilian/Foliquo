@@ -387,3 +387,6 @@ html[data-ui-mode=simple] #clarification-review-stage{display:none}
 #clarification-submit{width:auto;min-width:240px}
 #clarification-dialog #clarification-fields .clarification-field>label{font-size:16px;font-weight:650;line-height:1.4;color:var(--color-text)}
 #foli-view .foli-examples .text-button{max-width:100%;white-space:normal;text-align:start;height:auto;padding-block:8px;line-height:1.35}
+.my-style-habit-expand{justify-items:start;justify-content:start;align-content:center;text-align:start}
+#workspace-view .learning-drop .learning-upload-copy{display:flex;flex-direction:column;align-items:flex-start}
+#workspace-view .learning-drop .learning-upload-copy>#learning-provider-note{order:3;margin-top:4px}
